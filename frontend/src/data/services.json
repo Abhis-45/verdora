@@ -1,0 +1,64 @@
+[
+  {
+    "slug": "plant-care",
+    "title": "Plant Care & Maintenance",
+    "desc": "Keep your plants healthy and thriving with our expert care.",
+    "details": "Our plant care service includes watering, pruning, fertilization, and pest control to ensure your plants stay vibrant all year round.",
+    "image": "/images/plant-care.jpg",
+    "packages": [
+      {
+        "id": "plant-basic",
+        "name": "Basic Care",
+        "desc": "Weekly watering and pruning for small gardens."
+      },
+      {
+        "id": "plant-premium",
+        "name": "Premium Care",
+        "desc": "Comprehensive care including fertilization and pest control."
+      }
+    ]
+  },
+  {
+    "slug": "home-decor",
+    "title": "Home Decor & Styling",
+    "desc": "Elevate your living spaces with elegant, plant-inspired decor.",
+    "details": "We design and style homes with lush greenery, natural accents, and premium plant-based decor that brings warmth and sophistication to your interiors.",
+    "image": "/images/home-decor.jpg",
+    "packages": [
+      {
+        "id": "decor-livingroom",
+        "name": "Living Room Styling",
+        "desc": "Transform your living room with curated plants, accent pieces, and cozy layouts."
+      },
+      {
+        "id": "decor-bedroom",
+        "name": "Bedroom Decor",
+        "desc": "Create a calming, nature-inspired bedroom with elegant plant styling."
+      },
+      {
+        "id": "decor-balcony",
+        "name": "Balcony & Outdoor Styling",
+        "desc": "Design refreshing balcony and patio spaces with greenery and decor accents."
+      }
+    ]
+  },
+  {
+    "slug": "landscaping",
+    "title": "Landscaping & Garden Design",
+    "desc": "Create stunning outdoor spaces with our expert landscaping.",
+    "details": "From concept to completion, we design and build gardens that inspire.",
+    "image": "/images/landscaping.jpg",
+    "packages": [
+      {
+        "id": "land-basic",
+        "name": "Basic Landscaping",
+        "desc": "Simple layouts for small spaces."
+      },
+      {
+        "id": "land-premium",
+        "name": "Premium Landscaping",
+        "desc": "Full-scale design with premium plants and features."
+      }
+    ]
+  }
+]
