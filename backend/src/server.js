@@ -60,9 +60,28 @@ app.get("/api/health", (req, res) => {
   res.json({ message: "Verdora API is running" });
 });
 
+// Start server
+const port = process.env.PORT || 5000;
+const server = app.listen(port, "0.0.0.0", () => {
+  console.log(`✅ Server running on port ${port}`);
+});
+
+// Connect to MongoDB
 connectToMongo()
   .then(() => {
-    const port = process.env.PORT || 5000;
-    app.listen(port, "0.0.0.0", () => {});
+    console.log("✅ MongoDB connected successfully");
   })
-  .catch((err) => {});
+  .catch((err) => {
+    console.error("❌ MongoDB connection error:", err.message);
+    // Server still runs even if MongoDB fails - client can still use API
+    // But data operations will fail
+  });
+
+// Graceful shutdown
+process.on("SIGTERM", () => {
+  console.log("SIGTERM signal received: closing HTTP server");
+  server.close(() => {
+    console.log("HTTP server closed");
+    process.exit(0);
+  });
+});
