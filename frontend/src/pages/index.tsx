@@ -85,3 +85,11 @@ export default function Home() {
     </>
   );
 }
+
+// Optimize page for ISR (Incremental Static Regeneration) - revalidate every 3600 seconds (1 hour)
+export const getStaticProps = async () => {
+  return {
+    props: {},
+    revalidate: 3600, // ISR - revalidate every hour
+  };
+};

@@ -14,6 +14,7 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: false,
   },
   images: {
+    unoptimized: process.env.NODE_ENV === "production",
     domains: ["images.unsplash.com", "res.cloudinary.com"],
   },
   rewrites: async () => {
@@ -28,6 +29,8 @@ const nextConfig: NextConfig = {
       ],
     };
   },
+  // Ensure proper handling of trailing slashes
+  trailingSlash: false,
 };
 
 export default nextConfig;

@@ -1,0 +1,11 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "framework": "nextjs",
+  "nodeVersion": "18.x",
+  "env": {
+    "NEXT_PUBLIC_BACKEND_URL": "https://verdora.onrender.com",
+    "NEXT_PUBLIC_API_URL": "/api",
+    "NEXT_PUBLIC_FRONTEND_URL": "https://verdora-two.vercel.app"
+  }
+}
