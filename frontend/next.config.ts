@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   /* config options here */
   devIndicators: false,
-  allowedDevOrigins: ["http://localhost:3000"],
+  allowedDevOrigins: ["http://localhost:3000", "https://verdora-two.vercel.app"],
   onDemandEntries: {
     maxInactiveAge: 60 * 1000,
     pagesBufferLength: 5,
@@ -17,17 +17,16 @@ const nextConfig: NextConfig = {
     domains: ["images.unsplash.com", "res.cloudinary.com"],
   },
   rewrites: async () => {
+    const apiUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
+    
     return {
       beforeFiles: [
         {
           source: "/api/:path*",
-          destination: "http://localhost:5000/api/:path*",
+          destination: `${apiUrl}/api/:path*`,
         },
       ],
     };
-  },
-  env: {
-    NEXT_PUBLIC_API_URL: "/api",
   },
 };
 
