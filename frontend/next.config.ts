@@ -17,18 +17,8 @@ const nextConfig: NextConfig = {
     unoptimized: process.env.NODE_ENV === "production",
     domains: ["images.unsplash.com", "res.cloudinary.com"],
   },
-  rewrites: async () => {
-    const apiUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
-    
-    return {
-      beforeFiles: [
-        {
-          source: "/api/:path*",
-          destination: `${apiUrl}/api/:path*`,
-        },
-      ],
-    };
-  },
+  // Rewrites can have limitations on Vercel, so we call backend directly from client side
+  // See: frontend/src/lib/api.ts where BACKEND_URL is used directly
   // Ensure proper handling of trailing slashes
   trailingSlash: false,
 };

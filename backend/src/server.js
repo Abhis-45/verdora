@@ -17,14 +17,30 @@ dotenv.config();
 const app = express();
 
 // Configure CORS to allow frontend origin
+const allowedOrigins = [
+  "http://localhost:3000",
+  "http://localhost:3001",
+  "https://verdora-two.vercel.app",
+  process.env.FRONTEND_URL,
+].filter(Boolean);
+
 const corsOptions = {
-  origin: process.env.FRONTEND_URL || "http://localhost:3000",
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS not allowed for origin: ${origin}`));
+    }
+  },
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
 };
 
 app.use(cors(corsOptions));
+// Pre-flight requests
+app.options("*", cors(corsOptions));
 app.use(express.json());
 
 // Routes
