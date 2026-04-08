@@ -65,7 +65,11 @@ export default function EditProduct() {
 
     const fetchProduct = async () => {
       try {
-        const response = await fetch(`/api/products/${id}`);
+        const BACKEND_URL =
+          typeof window !== "undefined"
+            ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+            : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+        const response = await fetch(`${BACKEND_URL}/api/products/${id}`);
         if (!response.ok) throw new Error("Failed to fetch product");
 
         const data = await response.json();
@@ -160,7 +164,11 @@ export default function EditProduct() {
     try {
       const token = localStorage.getItem("token");
       const adminToken = localStorage.getItem("adminToken");
-      const response = await fetch(`/api/products/${id}`, {
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+      const response = await fetch(`${BACKEND_URL}/api/products/${id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -198,7 +206,11 @@ export default function EditProduct() {
 
     try {
       const token = localStorage.getItem("adminToken");
-      const response = await fetch(`/api/products/${id}`, {
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+      const response = await fetch(`${BACKEND_URL}/api/products/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });

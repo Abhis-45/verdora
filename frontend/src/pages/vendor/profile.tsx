@@ -36,7 +36,12 @@ export default function VendorProfile() {
     try {
       const token = localStorage.getItem("token");
 
-      const res = await fetch(`/api/admin/profile`, {
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+
+      const res = await fetch(`${BACKEND_URL}/api/admin/profile`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -74,7 +79,12 @@ export default function VendorProfile() {
     try {
       const token = localStorage.getItem("token");
 
-      const res = await fetch(`/api/admin/profile`, {
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+
+      const res = await fetch(`${BACKEND_URL}/api/admin/profile`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",

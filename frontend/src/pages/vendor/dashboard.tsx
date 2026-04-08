@@ -241,7 +241,11 @@ export default function VendorDashboard() {
     if (!confirm("Delete this product?")) return;
 
     try {
-      const res = await fetch(`/api/vendor/products/${id}`, {
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+      const res = await fetch(`${BACKEND_URL}/api/vendor/products/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });

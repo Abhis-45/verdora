@@ -96,15 +96,20 @@ export default function ProductsPages() {
           setTimeout(() => reject(new Error("Network timeout")), 15000),
         );
 
-        let apiUrl = "/api/products";
+        const BACKEND_URL =
+          typeof window !== "undefined"
+            ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+            : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+
+        let apiUrl = `${BACKEND_URL}/api/products`;
 
         // Build API URL based on query parameters
         if (category && typeof category === "string") {
-          apiUrl = `/api/products/featured/by-category/${encodeURIComponent(category)}`;
+          apiUrl = `${BACKEND_URL}/api/products/featured/by-category/${encodeURIComponent(category)}`;
         } else if (color && typeof color === "string") {
-          apiUrl = `/api/products/featured/by-color?color=${encodeURIComponent(color)}`;
+          apiUrl = `${BACKEND_URL}/api/products/featured/by-color?color=${encodeURIComponent(color)}`;
         } else if (size && typeof size === "string") {
-          apiUrl = `/api/products/featured/by-size?size=${encodeURIComponent(size)}`;
+          apiUrl = `${BACKEND_URL}/api/products/featured/by-size?size=${encodeURIComponent(size)}`;
         } else if (priceRange && typeof priceRange === "string") {
           // Parse price range (e.g., "0-199", "1000-above")
           const rangeParts = (priceRange as string).split("-");
@@ -113,10 +118,10 @@ export default function ProductsPages() {
             rangeParts[1] === "above"
               ? 100000
               : parseInt(rangeParts[1]) || 10000;
-          apiUrl = `/api/products/featured/by-price?min=${minPrice}&max=${maxPrice}`;
+          apiUrl = `${BACKEND_URL}/api/products/featured/by-price?min=${minPrice}&max=${maxPrice}`;
         } else if (urlTag && typeof urlTag === "string") {
           // For tags, use the characteristics endpoint
-          apiUrl = `/api/products/featured/by-characteristics?characteristics=${encodeURIComponent(urlTag)}`;
+          apiUrl = `${BACKEND_URL}/api/products/featured/by-characteristics?characteristics=${encodeURIComponent(urlTag)}`;
         }
 
         const response = (await Promise.race([
