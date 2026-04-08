@@ -78,7 +78,11 @@ export default function ProductDetailPage() {
     if (!id) return;
     const fetchProduct = async () => {
       try {
-        const response = await fetch(`/api/products/${id}`);
+        const BACKEND_URL =
+          typeof window !== "undefined"
+            ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+            : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+        const response = await fetch(`${BACKEND_URL}/api/products/${id}`);
         if (!response.ok) {
           router.push("/products");
           return;

@@ -128,7 +128,11 @@ export default function AdminDashboard() {
 
   const fetchStats = useCallback(async (authToken: string) => {
     try {
-      const res = await fetch("/api/admin/manage/stats", {
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+      const res = await fetch(`${BACKEND_URL}/api/admin/manage/stats`, {
         headers: { Authorization: `Bearer ${authToken}` },
       });
       if (res.ok) {
@@ -143,8 +147,12 @@ export default function AdminDashboard() {
     async (authToken: string, searchTerm = "") => {
       setLoading(true);
       try {
+        const BACKEND_URL =
+          typeof window !== "undefined"
+            ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+            : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
         const res = await fetch(
-          `/api/admin/manage/products?search=${searchTerm}`,
+          `${BACKEND_URL}/api/admin/manage/products?search=${searchTerm}`,
           { headers: { Authorization: `Bearer ${authToken}` } },
         );
         if (res.ok) {
@@ -161,7 +169,11 @@ export default function AdminDashboard() {
   const fetchUsers = useCallback(async (authToken: string, searchTerm = "") => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/admin/manage/users?search=${searchTerm}`, {
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+      const res = await fetch(`${BACKEND_URL}/api/admin/manage/users?search=${searchTerm}`, {
         headers: { Authorization: `Bearer ${authToken}` },
       });
       if (res.ok) {
@@ -1115,7 +1127,11 @@ function EditUserForm({
         return;
       }
 
-      const res = await fetch(`/api/admin/manage/users/${user._id}`, {
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+      const res = await fetch(`${BACKEND_URL}/api/admin/manage/users/${user._id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -1206,7 +1222,11 @@ function EditVendorForm({
         return;
       }
 
-      const res = await fetch(`/api/admin/manage/vendors/${vendor._id}`, {
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+      const res = await fetch(`${BACKEND_URL}/api/admin/manage/vendors/${vendor._id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -1357,7 +1377,11 @@ function EditAdminForm({
         return;
       }
 
-      const res = await fetch(`/api/admin/manage/admins/${admin._id}`, {
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+      const res = await fetch(`${BACKEND_URL}/api/admin/manage/admins/${admin._id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -1482,7 +1506,11 @@ function CreateUserForm({
         return;
       }
 
-      const res = await fetch("/api/admin/manage/users", {
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+      const res = await fetch(`${BACKEND_URL}/api/admin/manage/users`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1583,7 +1611,11 @@ function CreateVendorForm({
         return;
       }
 
-      const res = await fetch("/api/admin/manage/vendors", {
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+      const res = await fetch(`${BACKEND_URL}/api/admin/manage/vendors`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1728,7 +1760,11 @@ function CreateAdminForm({
         return;
       }
 
-      const res = await fetch("/api/admin/manage/admins", {
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+      const res = await fetch(`${BACKEND_URL}/api/admin/manage/admins`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

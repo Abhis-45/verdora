@@ -111,7 +111,11 @@ ${prev.name || "Your Name"}`,
                 }
                 setIsLoading(true);
                 try {
-                  const res = await fetch(`/api/contact`, {
+                  const BACKEND_URL =
+                    typeof window !== "undefined"
+                      ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+                      : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+                  const res = await fetch(`${BACKEND_URL}/api/contact`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(formData),

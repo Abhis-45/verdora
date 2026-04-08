@@ -117,7 +117,11 @@ export default function CartPage() {
     );
 
     Promise.race([
-      fetch(`/api/profile`, {
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+      fetch(`${BACKEND_URL}/api/profile`, {
         headers: { Authorization: `Bearer ${token}` },
       }),
       timeoutPromise,
@@ -257,7 +261,11 @@ export default function CartPage() {
     setFeedback(null);
 
     try {
-      const response = await fetch(`/api/profile/orders`, {
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+      const response = await fetch(`${BACKEND_URL}/api/profile/orders`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

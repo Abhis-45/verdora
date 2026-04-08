@@ -30,7 +30,11 @@ export default function ProductsPage() {
 
   const fetchProducts = async () => {
     try {
-      const response = await fetch(`/api/products`);
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+      const response = await fetch(`${BACKEND_URL}/api/products`);
       if (!response.ok) throw new Error("Failed to fetch products");
       const data = await response.json();
       setProducts(Array.isArray(data) ? data : data.products || []);
@@ -45,7 +49,11 @@ export default function ProductsPage() {
     if (!confirm("Are you sure you want to delete this product?")) return;
     try {
       const token = localStorage.getItem("adminToken");
-      const response = await fetch(`/api/products/${productId}`, {
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+      const response = await fetch(`${BACKEND_URL}/api/products/${productId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });

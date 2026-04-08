@@ -93,7 +93,11 @@ export default function OrdersPage() {
       );
 
       const response = (await Promise.race([
-        fetch(`/api/profile/orders`, {
+        const BACKEND_URL =
+          typeof window !== "undefined"
+            ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+            : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+        fetch(`${BACKEND_URL}/api/profile/orders`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
         timeoutPromise,

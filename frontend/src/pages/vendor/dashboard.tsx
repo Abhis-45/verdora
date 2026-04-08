@@ -110,7 +110,11 @@ export default function VendorDashboard() {
 
   const fetchVendorProfile = async (authToken: string) => {
     try {
-      const res = await fetch("/api/vendor/profile", {
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+      const res = await fetch(`${BACKEND_URL}/api/vendor/profile`, {
         headers: { Authorization: `Bearer ${authToken}` },
       });
       if (res.ok) {
@@ -126,7 +130,11 @@ export default function VendorDashboard() {
   const fetchProducts = async (authToken: string, searchTerm = "") => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/vendor/products?search=${searchTerm}`, {
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+      const res = await fetch(`${BACKEND_URL}/api/vendor/products?search=${searchTerm}`, {
         headers: { Authorization: `Bearer ${authToken}` },
       });
       if (res.ok) {
@@ -141,7 +149,11 @@ export default function VendorDashboard() {
 
   const fetchStats = async (authToken: string) => {
     try {
-      const res = await fetch("/api/vendor/stats", {
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+      const res = await fetch(`${BACKEND_URL}/api/vendor/stats`, {
         headers: { Authorization: `Bearer ${authToken}` },
       });
       if (res.ok) {
@@ -154,7 +166,11 @@ export default function VendorDashboard() {
 
   const fetchVendorOrders = async (authToken: string) => {
     try {
-      const res = await fetch("/api/vendor/orders", {
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+      const res = await fetch(`${BACKEND_URL}/api/vendor/orders`, {
         headers: { Authorization: `Bearer ${authToken}` },
       });
       if (res.ok) {
@@ -169,7 +185,11 @@ export default function VendorDashboard() {
   const handleUpdateProfile = async (e: any) => {
     e.preventDefault();
     try {
-      const res = await fetch("/api/vendor/profile", {
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+      const res = await fetch(`${BACKEND_URL}/api/vendor/profile`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -193,7 +213,11 @@ export default function VendorDashboard() {
     if (!selectedProduct) return;
 
     try {
-      const res = await fetch(`/api/vendor/products/${selectedProduct.id}`, {
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+      const res = await fetch(`${BACKEND_URL}/api/vendor/products/${selectedProduct.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

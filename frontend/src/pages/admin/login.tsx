@@ -26,7 +26,11 @@ export default function AdminLogin() {
     setIsLoading(true);
 
     try {
-      const response = await fetch(`/api/admin/login`, {
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+      const response = await fetch(`${BACKEND_URL}/api/admin/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),

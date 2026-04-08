@@ -80,8 +80,12 @@ export default function DynamicTestimonials() {
   const fetchReviews = async () => {
     try {
       // Fetch trending products first to get product IDs
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
       const trendingResponse = await fetch(
-        `/api/products/featured/trending?limit=5`,
+        `${BACKEND_URL}/api/products/featured/trending?limit=5`,
         {
           method: "GET",
           headers: { "Content-Type": "application/json" },

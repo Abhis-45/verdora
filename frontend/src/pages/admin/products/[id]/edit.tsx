@@ -45,7 +45,11 @@ export default function EditProduct() {
 
     const fetchProduct = async () => {
       try {
-        const response = await fetch(`/api/products/${id}`);
+        const BACKEND_URL =
+          typeof window !== "undefined"
+            ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+            : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+        const response = await fetch(`${BACKEND_URL}/api/products/${id}`);
         if (!response.ok) throw new Error("Product not found");
         const data = await response.json();
         const product = data.product || data;
@@ -134,7 +138,11 @@ export default function EditProduct() {
 
     try {
       const token = localStorage.getItem("adminToken");
-      const response = await fetch(`/api/admin/manage/products/${id}`, {
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+      const response = await fetch(`${BACKEND_URL}/api/admin/manage/products/${id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

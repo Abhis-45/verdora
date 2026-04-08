@@ -63,7 +63,11 @@ export default function AdminRegister() {
     try {
       const token = localStorage.getItem("token");
 
-      const res = await fetch(`/api/admin/register`, {
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+      const res = await fetch(`${BACKEND_URL}/api/admin/register`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -68,7 +68,15 @@ export default function AddProduct() {
 
     const fetchCategoryOptions = async () => {
       try {
-        const response = await fetch("/api/products");
+        const BACKEND_URL =
+          typeof window !== "undefined"
+            ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+            : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+        const response = await fetch(`${BACKEND_URL}/api/products`
+          typeof window !== "undefined"
+            ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+            : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+        const response = await fetch(`${BACKEND_URL}/api/products`);
         if (!response.ok) return;
 
         const data = await response.json();
@@ -87,11 +95,19 @@ export default function AddProduct() {
       }
     };
 
-    const fetchVendorDefaults = async () => {
+    const fetcBACKEND_URL =
+          typeof window !== "undefined"
+            ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+            : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+        const response = await fetch(`${BACKEND_URL}/api/vendor/profile`
       if (role !== "vendor") return;
 
       try {
-        const response = await fetch("/api/vendor/profile", {
+        const BACKEND_URL =
+          typeof window !== "undefined"
+            ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+            : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+        const response = await fetch(`${BACKEND_URL}/api/vendor/profile`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -186,7 +202,11 @@ export default function AddProduct() {
       return null;
     }
 
-    setUploading(true);
+    setUploadiBACKEND_URL =
+          typeof window !== "undefined"
+            ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+            : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+        const response = await fetch(`${BACKEND_URL}
     try {
       const uploadedUrls = [];
       for (const image of images) {
@@ -194,7 +214,11 @@ export default function AddProduct() {
         formDataUpload.append("image", image.file);
 
         const token = localStorage.getItem("adminToken");
-        const response = await fetch(`/api/products/upload`, {
+        const BACKEND_URL =
+          typeof window !== "undefined"
+            ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+            : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+        const response = await fetch(`${BACKEND_URL}/api/products/upload`, {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },
           body: formDataUpload,
@@ -242,7 +266,11 @@ export default function AddProduct() {
       setError("Please select at least one product image");
       return;
     }
-
+BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+      const response = await fetch(`${BACKEND_URL}
     setLoading(true);
     try {
       const uploadedUrls = await uploadImagesToCloudinary();
@@ -254,7 +282,11 @@ export default function AddProduct() {
       const token = localStorage.getItem("adminToken");
       const mainImage = uploadedUrls[mainImageIndex];
 
-      const response = await fetch(`/api/products`, {
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+      const response = await fetch(`${BACKEND_URL}/api/products`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

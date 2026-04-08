@@ -112,7 +112,11 @@ export default function ProfilePage() {
         ),
       );
 
-      const fetchPromise = fetch(`/api/profile`, {
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+      const fetchPromise = fetch(`${BACKEND_URL}/api/profile`, {
         headers: { Authorization: `Bearer ${authToken}` },
       });
 
@@ -188,7 +192,11 @@ export default function ProfilePage() {
     if (!token) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/profile/update-field`, {
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+      const res = await fetch(`${BACKEND_URL}/api/profile/update-field`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -263,7 +271,11 @@ export default function ProfilePage() {
     if (!token) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/profile/address/${addressId}`, {
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+      const res = await fetch(`${BACKEND_URL}/api/profile/address/${addressId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -287,7 +299,11 @@ export default function ProfilePage() {
     if (!token) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/profile/address/${addressId}`, {
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+      const res = await fetch(`${BACKEND_URL}/api/profile/address/${addressId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -380,7 +396,11 @@ export default function ProfilePage() {
     }
     setLoading(true);
     try {
-      const res = await fetch(`/api/profile/update-password`, {
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+      const res = await fetch(`${BACKEND_URL}/api/profile/update-password`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -422,7 +442,11 @@ export default function ProfilePage() {
       if (newValue)
         body.newValue = field === "mobile" ? ensurePlus91(newValue) : newValue;
 
-      const res = await fetch(`/api/profile/send-otp`, {
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+      const res = await fetch(`${BACKEND_URL}/api/profile/send-otp`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -457,7 +481,7 @@ export default function ProfilePage() {
         field === "mobile" ? ensurePlus91(newValueRaw) : newValueRaw;
       const otp = field === "email" ? emailOtp : mobileOtp;
 
-      const res = await fetch(`/api/profile/verify-otp-update`, {
+      const res = await fetch(`${BACKEND_URL}/api/profile/verify-otp-update`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -496,7 +520,7 @@ export default function ProfilePage() {
     if (!token) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/profile/delete-account`, {
+      const res = await fetch(`${BACKEND_URL}/api/profile/delete-account`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

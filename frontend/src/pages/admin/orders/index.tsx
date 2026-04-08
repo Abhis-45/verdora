@@ -18,7 +18,11 @@ export default function OrdersPage() {
 
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/admin/manage/orders`, {
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+      const response = await fetch(`${BACKEND_URL}/api/admin/manage/orders`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await response.json();
