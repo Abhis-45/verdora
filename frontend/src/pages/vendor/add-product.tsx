@@ -72,10 +72,6 @@ export default function AddProduct() {
           typeof window !== "undefined"
             ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
             : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
-        const response = await fetch(`${BACKEND_URL}/api/products`
-          typeof window !== "undefined"
-            ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-            : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
         const response = await fetch(`${BACKEND_URL}/api/products`);
         if (!response.ok) return;
 
@@ -95,11 +91,7 @@ export default function AddProduct() {
       }
     };
 
-    const fetcBACKEND_URL =
-          typeof window !== "undefined"
-            ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-            : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
-        const response = await fetch(`${BACKEND_URL}/api/vendor/profile`
+    const fetchVendorDefaults = async () => {
       if (role !== "vendor") return;
 
       try {
@@ -202,11 +194,7 @@ export default function AddProduct() {
       return null;
     }
 
-    setUploadiBACKEND_URL =
-          typeof window !== "undefined"
-            ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-            : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
-        const response = await fetch(`${BACKEND_URL}
+    setUploading(true);
     try {
       const uploadedUrls = [];
       for (const image of images) {
@@ -266,11 +254,7 @@ export default function AddProduct() {
       setError("Please select at least one product image");
       return;
     }
-BACKEND_URL =
-        typeof window !== "undefined"
-          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
-      const response = await fetch(`${BACKEND_URL}
+
     setLoading(true);
     try {
       const uploadedUrls = await uploadImagesToCloudinary();

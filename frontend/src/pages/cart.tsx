@@ -116,11 +116,12 @@ export default function CartPage() {
       setTimeout(() => reject(new Error("Request timeout")), timeoutMs),
     );
 
+    const BACKEND_URL =
+      typeof window !== "undefined"
+        ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+        : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+
     Promise.race([
-      const BACKEND_URL =
-        typeof window !== "undefined"
-          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
       fetch(`${BACKEND_URL}/api/profile`, {
         headers: { Authorization: `Bearer ${token}` },
       }),

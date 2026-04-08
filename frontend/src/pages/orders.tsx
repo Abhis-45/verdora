@@ -92,11 +92,12 @@ export default function OrdersPage() {
         setTimeout(() => reject(new Error("Request timeout")), 15000),
       );
 
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+
       const response = (await Promise.race([
-        const BACKEND_URL =
-          typeof window !== "undefined"
-            ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-            : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
         fetch(`${BACKEND_URL}/api/profile/orders`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
