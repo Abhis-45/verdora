@@ -5,6 +5,8 @@
   "env": {
     "NEXT_PUBLIC_BACKEND_URL": "https://verdora.onrender.com",
     "NEXT_PUBLIC_API_URL": "/api",
-    "NEXT_PUBLIC_FRONTEND_URL": "https://verdora-two.vercel.app"
+    "NEXT_PUBLIC_FRONTEND_URL": "https://verdora-two.vercel.app",
+    "NEXT_PUBLIC_FRONTEND_URL_2": "https://verdora-3ahq50zb3-abhishe-kumars-projects.vercel.app",
+    "NEXT_PUBLIC_FRONTEND_URL_3": "https://www.verdora.in"
   }
 }

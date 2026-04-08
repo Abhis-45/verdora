@@ -21,7 +21,11 @@ const allowedOrigins = [
   "http://localhost:3000",
   "http://localhost:3001",
   "https://verdora-two.vercel.app",
-  process.env.FRONTEND_URL,
+  "https://verdora-3ahq50zb3-abhishe-kumars-projects.vercel.app",
+  "https://www.verdora.in",
+  process.env.FRONTEND_URL_1,
+  process.env.FRONTEND_URL_2,
+  process.env.FRONTEND_URL_3,
 ].filter(Boolean);
 
 const corsOptions = {
