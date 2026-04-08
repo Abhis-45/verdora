@@ -11,8 +11,11 @@ export default function ProductMeta({
 
   useEffect(() => {
     let mounted = true;
-    const base = "/api"; // Use Next.js proxy
-    fetch(`${base}/api/products/${productId}/stats`, {})
+    const BACKEND_URL =
+      typeof window !== "undefined"
+        ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+        : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+    fetch(`${BACKEND_URL}/api/products/${productId}/stats`, {})
       .then((r) => r.json())
       .then((d) => {
         if (!mounted) return;

@@ -96,7 +96,11 @@ export default function ReviewSection({
 
     const fetchOrders = async () => {
       try {
-        const response = await fetch("/api/profile/orders", {
+        const BACKEND_URL =
+          typeof window !== "undefined"
+            ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+            : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+        const response = await fetch(`${BACKEND_URL}/api/profile/orders`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -121,7 +125,11 @@ export default function ReviewSection({
 
   const fetchReviews = async () => {
     try {
-      const response = await fetch(`/api/reviews/product/${productId}`);
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+      const response = await fetch(`${BACKEND_URL}/api/reviews/product/${productId}`);
       if (!response.ok) throw new Error("Failed to fetch reviews");
       const data = await response.json();
       setReviews(data);
@@ -134,7 +142,11 @@ export default function ReviewSection({
 
   const fetchStats = async () => {
     try {
-      const response = await fetch(`/api/reviews/product/${productId}/stats`);
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+      const response = await fetch(`${BACKEND_URL}/api/reviews/product/${productId}/stats`);
       if (!response.ok) throw new Error("Failed to fetch stats");
       const data = await response.json();
       setStats(data);
@@ -161,10 +173,14 @@ export default function ReviewSection({
       const uploadedImages = await uploadImages({
         files: reviewImages.map((image) => image.file),
         token,
-        endpoint: "/api/reviews/upload-images",
+        endpoint: "https://verdora.onrender.com/api/reviews/upload-images",
       });
 
-      const response = await fetch("/api/reviews", {
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+      const response = await fetch(`${BACKEND_URL}/api/reviews`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -96,7 +96,11 @@ export default function AuthPopup({
       const payloadIdentifier = identifier.includes("@")
         ? identifier.trim()
         : ensurePlus91(identifier.trim());
-      const res = await fetch(`/api/auth/send-otp`, {
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+      const res = await fetch(`${BACKEND_URL}/api/auth/send-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ identifier: payloadIdentifier }),
@@ -142,7 +146,11 @@ export default function AuthPopup({
       const payloadIdentifier = identifier.includes("@")
         ? identifier.trim()
         : ensurePlus91(identifier.trim());
-      const res = await fetch(`/api/auth/verify-otp`, {
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+      const res = await fetch(`${BACKEND_URL}/api/auth/verify-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -205,7 +213,11 @@ export default function AuthPopup({
       const mobilePayload = !identifier.includes("@")
         ? ensurePlus91(identifier.trim())
         : null;
-      const res = await fetch(`/api/auth/password`, {
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+      const res = await fetch(`${BACKEND_URL}/api/auth/password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -14,6 +14,7 @@ import {
   Bars3Icon,
 } from "@heroicons/react/24/solid";
 import servicesData from "../../data/services.json";
+import { getFromBackend } from "../../lib/fetchWrapper";
 
 interface Category {
   name: string;
@@ -98,25 +99,9 @@ export default function CategoryDropdown({
     try {
       setLoading(true);
 
-      // Create timeout promise for race condition
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(
-          () => reject(new Error("Fetch timeout")),
-          10000, // 10 seconds
-        ),
-      );
-
-      const fetchPromise = fetch(`/api/products`, {
-        method: "GET",
-      });
-
-      const response = (await Promise.race([
-        fetchPromise,
-        timeoutPromise,
-      ])) as Response;
-
-      if (response.ok) {
-        const data = await response.json();
+      // Fetch from backend using wrapper
+      const data = await getFromBackend<any>("/api/products");
+      if (data) {
         const productsArray = Array.isArray(data) ? data : data.products || [];
 
         const uniqueCategories = [
@@ -135,6 +120,8 @@ export default function CategoryDropdown({
         }));
 
         setCategories(categoryList);
+      } else {
+        throw new Error("Failed to fetch products");
       }
 
       // Load services from JSON

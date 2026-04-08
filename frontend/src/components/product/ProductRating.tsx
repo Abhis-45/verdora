@@ -24,7 +24,11 @@ export default function ProductRating({
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await fetch(`/api/reviews/product/${productId}/stats`);
+        const BACKEND_URL =
+          typeof window !== "undefined"
+            ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+            : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+        const response = await fetch(`${BACKEND_URL}/api/reviews/product/${productId}/stats`);
         if (response.ok) {
           const data = await response.json();
           setStats(data);

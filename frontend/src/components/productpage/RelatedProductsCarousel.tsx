@@ -31,8 +31,12 @@ export default function RelatedProductsCarousel({
     const fetchRelated = async () => {
       try {
         setIsLoading(true);
-        const res = await fetch(
-          `/api/products/featured/by-category/${encodeURIComponent(category)}?limit=12`,
+        const BACKEND_URL =
+          typeof window !== "undefined"
+            ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+            : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+        const response = await fetch(
+          `${BACKEND_URL}/api/products/featured/by-category/${encodeURIComponent(category)}?limit=12`,
         );
 
         if (!res.ok) {

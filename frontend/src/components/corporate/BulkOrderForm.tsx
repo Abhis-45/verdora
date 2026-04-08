@@ -22,7 +22,11 @@ export default function BulkOrderForm() {
 
   useEffect(() => {
     (async () => {
-      const res = await fetch("/api/products");
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+      const res = await fetch(`${BACKEND_URL}/api/products`);
       const data = await res.json();
       const normalized = (Array.isArray(data) ? data : data.products || []).map(
         (p: any) => ({
