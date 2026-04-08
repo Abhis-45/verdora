@@ -226,7 +226,8 @@ export default function AdminDashboard() {
   );
 
   useEffect(() => {
-    if (!token) {
+    const role = localStorage.getItem("role");
+    if (!token || role === "vendor") {
       router.push("/admin/login");
       return;
     }
