@@ -39,8 +39,6 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-// Pre-flight requests
-app.options("*", cors(corsOptions));
 app.use(express.json());
 
 // Routes
