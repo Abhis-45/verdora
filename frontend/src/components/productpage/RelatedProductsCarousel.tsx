@@ -39,11 +39,11 @@ export default function RelatedProductsCarousel({
           `${BACKEND_URL}/api/products/featured/by-category/${encodeURIComponent(category)}?limit=12`,
         );
 
-        if (!res.ok) {
-          throw new Error(`Failed to fetch: ${res.status}`);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch: ${response.status}`);
         }
 
-        const data = await res.json();
+        const data = await response.json();
         const allProducts = Array.isArray(data) ? data : [];
         const filtered = allProducts.filter(
           (p: any) => String(p._id || p.id) !== String(productId),

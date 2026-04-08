@@ -64,10 +64,14 @@ export default function ReviewSubmitModal({
       const uploadedImages = await uploadImages({
         files: images.map((image) => image.file),
         token,
-        endpoint: "/api/reviews/upload-images",
+        endpoint: "https://verdora.onrender.com/api/reviews/upload-images",
       });
 
-      const response = await fetch("/api/reviews", {
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+      const response = await fetch(`${BACKEND_URL}/api/reviews`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

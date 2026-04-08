@@ -103,7 +103,11 @@ export default function BulkOrderForm() {
         price: p.product.basePrice * sizeMultiplier(p.size),
       })),
     };
-    await fetch("/api/sendCorporateInquiry", {
+    const BACKEND_URL =
+      typeof window !== "undefined"
+        ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+        : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+    await fetch(`${BACKEND_URL}/api/sendCorporateInquiry`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),

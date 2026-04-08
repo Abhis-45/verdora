@@ -35,7 +35,11 @@ export default function DiscountSaleProducts() {
         setTimeout(() => reject(new Error("Fetch timeout")), 15000),
       );
 
-      const fetchPromise = fetch(`/api/products/featured/discount?limit=8`, {
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+      const fetchPromise = fetch(`${BACKEND_URL}/api/products/featured/discount?limit=8`, {
         method: "GET",
         headers: { "Content-Type": "application/json" },
       });

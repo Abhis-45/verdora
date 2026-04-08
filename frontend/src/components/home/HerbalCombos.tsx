@@ -35,8 +35,12 @@ export default function HerbalCombos({
       async function fetchHerbalCombos() {
         try {
           // ✅ Fetch products with herbal/combo tag
+          const BACKEND_URL =
+            typeof window !== "undefined"
+              ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+              : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
           const res = await fetch(
-            "/api/products/featured/by-characteristics?characteristics=herbal,combo&limit=8",
+            `${BACKEND_URL}/api/products/featured/by-characteristics?characteristics=herbal,combo&limit=8`,
           );
           const data = await res.json();
 

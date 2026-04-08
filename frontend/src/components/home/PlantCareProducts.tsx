@@ -34,7 +34,11 @@ export default function PlantCareProducts({
     if (!initialProducts) {
       async function fetchPlantCare() {
         try {
-          const res = await fetch("/api/products/featured/plant-care?limit=8");
+          const BACKEND_URL =
+            typeof window !== "undefined"
+              ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+              : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+          const res = await fetch(`${BACKEND_URL}/api/products/featured/plant-care?limit=8`);
 
           if (!res.ok) {
             throw new Error("Failed to fetch");
