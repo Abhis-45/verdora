@@ -15,6 +15,7 @@ import Link from "next/link";
 import { HeartIcon as HeartSolid } from "@heroicons/react/24/solid";
 import {
   ArrowLeftIcon,
+  BoltIcon,
   HeartIcon as HeartOutline,
   ShoppingCartIcon,
 } from "@heroicons/react/24/outline";
@@ -600,6 +601,9 @@ export default function ProductsPages() {
                           <div className="min-w-0">
                             <p className="text-sm font-bold text-green-700 sm:text-base">
                               ₹{defaultSize.price}
+                                <span className="text-[10px] text-red-500 sm:text-xs line-through">
+                                  ₹{defaultSize.mrp}
+                                </span>
                             </p>
                             <p className="text-[10px] text-gray-500 sm:text-xs">
                               {plantSizes.length > 1
@@ -610,10 +614,10 @@ export default function ProductsPages() {
                           {cartItem ? (
                             <button
                               onClick={() => router.push("/cart")}
-                              className="flex w-full items-center justify-center gap-2 rounded-lg bg-green-900 px-3 py-2 text-xs font-medium text-white transition hover:bg-green-700 min-[380px]:w-auto sm:text-sm"
+                              className="flex w-full items-center justify-center gap-2 rounded-lg bg-green-900 px-2 py-2 text-xs font-medium text-white transition hover:bg-green-700 min-[380px]:w-auto sm:gap-2 sm:px-3 sm:text-sm"
                             >
-                              <ShoppingCartIcon className="h-4 w-4" />
-                              <span>Buy Now</span>
+                              <BoltIcon className="h-4 w-4 shrink-0" />
+                              <span className="hidden sm:inline">Buy Now</span>
                             </button>
                           ) : (
                             <button
@@ -639,10 +643,10 @@ export default function ProductsPages() {
                                   type: "success",
                                 });
                               }}
-                              className="flex w-full items-center justify-center gap-2 rounded-lg bg-green-600 px-3 py-2 text-xs font-medium text-white transition hover:bg-green-700 min-[380px]:w-auto sm:text-sm"
+                              className="flex w-full items-center justify-center gap-2 rounded-lg bg-green-600 px-2 py-2 text-xs font-medium text-white transition hover:bg-green-700 min-[380px]:w-auto sm:gap-2 sm:px-3 sm:text-sm"
                             >
-                              <ShoppingCartIcon className="h-4 w-4" />
-                              <span>Add to cart</span>
+                              <ShoppingCartIcon className="h-4 w-4 shrink-0" />
+                              <span className="hidden sm:inline">Add to cart</span>
                             </button>
                           )}
                         </div>

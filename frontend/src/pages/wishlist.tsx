@@ -148,8 +148,8 @@ export default function WishlistPage() {
                       className="w-full flex items-center justify-center gap-1 px-2 sm:px-3 py-1.5 text-[11px] sm:text-xs bg-green-600 text-white rounded-md hover:bg-green-500 transition"
                       aria-label="Move to Cart"
                     >
-                      <ShoppingCartIcon className="h-4 w-4" />
-                      <span>Move to Cart</span>
+                      <ShoppingCartIcon className="h-4 w-4 shrink-0" />
+                      <span className="hidden sm:inline">Move to Cart</span>
                     </button>
                   </div>
                 </div>

@@ -50,11 +50,11 @@ export default function ProductRating({
       >
         <span className="flex items-center gap-1 font-semibold">
           <StarIcon className="h-4 w-4 text-green-500" />
-          <span>| New rating</span>
-        </span>
-        {showDetails && (
-          <span className="text-xs text-gray-500">0 ratings</span>
+          <span>| N/A</span>
+                  {showDetails && (
+          <span className="text-xs text-gray-500">N/A</span>
         )}
+        </span>
       </div>
     );
   }
@@ -63,10 +63,10 @@ export default function ProductRating({
     <div className={`flex flex-wrap items-center gap-2 ${className}`}>
       <div className="flex items-center gap-1 text-sm font-semibold text-green-700">
         <StarIcon className="h-4 w-4 fill-green-500 text-green-500" />
-        <span>| {stats.averageRating} rating</span>
+        <span>| {stats.averageRating} </span>
       </div>
       <span className="text-xs text-gray-600">
-        {stats.totalReviews} {stats.totalReviews === 1 ? "rating" : "ratings"}
+        ({stats.totalReviews})
       </span>
     </div>
   );

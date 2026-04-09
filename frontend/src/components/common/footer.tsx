@@ -65,11 +65,10 @@ export default function Footer() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Enter your email"
-              className={`flex-1 w-full p-2 sm:p-3 text-sm rounded border focus:outline-none focus:ring-2 focus:ring-green-400 ${
-                feedback?.type === "error"
+              className={`flex-1 w-full p-2 sm:p-3 text-sm rounded border focus:outline-none focus:ring-2 focus:ring-green-400 ${feedback?.type === "error"
                   ? "border-red-500 bg-red-50"
                   : "border-gray-300 bg-white text-gray-800"
-              }`}
+                }`}
             />
             <button
               type="submit"
@@ -101,9 +100,8 @@ export default function Footer() {
                   className="h-12 w-auto mb-3"
                 />
               </div>
-              <h3 className="text-lg font-semibold mb-4">Verdora</h3>
               <p className="text-sm text-gray-300">
-                Your go-to platform for fresh and organic plants and supplies.
+                Verdora – A complete online marketplace platform for nursery businesses enabling them to sell products, manage vendors, and serve customers at scale.
               </p>
             </div>
             <div>
@@ -156,7 +154,7 @@ export default function Footer() {
               <ul className="space-y-2 text-sm">
                 <li>
                   <Link
-                    href="/faq"
+                    href="/404"
                     className="text-gray-300 hover:text-white transition"
                   >
                     FAQ
@@ -164,7 +162,7 @@ export default function Footer() {
                 </li>
                 <li>
                   <Link
-                    href="/shipping"
+                    href="/404"
                     className="text-gray-300 hover:text-white transition"
                   >
                     Shipping
@@ -172,7 +170,7 @@ export default function Footer() {
                 </li>
                 <li>
                   <Link
-                    href="/returns"
+                    href="/404"
                     className="text-gray-300 hover:text-white transition"
                   >
                     Returns
@@ -189,14 +187,6 @@ export default function Footer() {
                     className="text-gray-300 hover:text-white transition"
                   >
                     Vendor Login
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/vendor/signup"
-                    className="text-gray-300 hover:text-white transition"
-                  >
-                    Become a Vendor
                   </Link>
                 </li>
                 <li>
@@ -272,14 +262,6 @@ export default function Footer() {
                     className="text-gray-300 hover:text-white"
                   >
                     Vendor Login
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/vendor/signup"
-                    className="text-gray-300 hover:text-white"
-                  >
-                    Become a Vendor
                   </Link>
                 </li>
                 <li>

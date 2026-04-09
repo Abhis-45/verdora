@@ -29,7 +29,7 @@ export default function SearchBar({ mobile = false }: { mobile?: boolean }) {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className={`px-4 py-2 rounded-lg bg-white text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-400 ${
-              mobile ? "w-full" : "w-150"
+              mobile ? "w-full" : "w-130"
             }`}
           />
           <button

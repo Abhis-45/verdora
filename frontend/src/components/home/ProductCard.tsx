@@ -190,7 +190,7 @@ export default function ProductCard({
               title="Buy Now"
             >
               <BoltIcon className="h-3.5 w-3.5" />
-              <span>Buy</span>
+              <span className="hidden sm:inline">Buy</span>
             </button>
           </div>
         </div>
