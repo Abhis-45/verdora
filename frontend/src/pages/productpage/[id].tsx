@@ -297,12 +297,12 @@ export default function ProductDetailPage() {
                     </p>
 
                     <div className="mt-2 flex flex-wrap items-center gap-3">
-                      <span className="text-2xl sm:text-3xl text-green-700 [text-shadow:0_0_6px_rgba(34,197,94,0.6)]">
+                      <span className="text-2xl sm:text-3xl text-green-700 font-bold">
                         ₹{selectedSize.price}
                       </span>
                       {discount > 0 && (
                         <>
-                          <span className="text-sm sm:text-base line-through text-gray-400">
+                          <span className="text-sm sm:text-base line-through text-red-500">
                             ₹{selectedSize.mrp}
                           </span>
                           <span className="rounded-full bg-linear-to-r from-red-500 to-red-600 px-2 py-0.5 text-xs sm:text-sm text-white shadow-sm">
@@ -447,7 +447,7 @@ export default function ProductDetailPage() {
                 </div>
 
                 {/* Cart Actions for mobile/tablet (sticky bottom bar) */}
-                <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md p-3 sm:p-4 shadow-t">
+                <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md p-3 sm:p-4 shadow-lg">
                   <CartActions
                     cartItem={cartItem}
                     cartKey={cartKey}

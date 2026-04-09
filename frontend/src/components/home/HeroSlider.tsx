@@ -8,7 +8,6 @@ type Promo = {
   title: string;
   desc: string;
   img: string;
-  cta: string;
   href: string;
 };
 

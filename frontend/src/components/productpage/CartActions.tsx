@@ -35,7 +35,7 @@ export default function CartActions({
           className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-green-600 px-2 py-2 text-xs font-semibold text-white shadow transition hover:bg-green-700 min-h-10 sm:px-4 sm:py-2.5 sm:text-sm sm:gap-2"
         >
           <ShoppingCartIcon className="h-4 w-4 shrink-0" />
-          <span className="hidden sm:inline">Add to Cart</span>
+          <span>Add to Cart</span>
         </button>
       ) : (
         <>
@@ -73,7 +73,7 @@ export default function CartActions({
             className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-green-900 px-2 py-2 text-xs font-semibold text-white shadow transition hover:bg-green-700 min-h-10 sm:px-4 sm:py-2.5 sm:text-sm sm:gap-2"
           >
             <ShoppingCartIcon className="h-4 w-4 shrink-0" />
-            <span className="hidden sm:inline">Go to Cart</span>
+            <span>Go to Cart</span>
           </button>
         </>
       )}
@@ -83,7 +83,7 @@ export default function CartActions({
         className="flex items-center justify-center gap-1 rounded-lg bg-emerald-900 px-2 py-2 text-xs font-semibold text-white shadow transition hover:bg-emerald-950 min-h-10 sm:px-4 sm:py-2.5 sm:text-sm sm:gap-2"
       >
         <BoltIcon className="h-4 w-4 shrink-0" />
-        <span className="hidden sm:inline">Buy Now</span>
+        <span>Buy Now</span>
       </button>
     </>
   );
@@ -92,12 +92,8 @@ export default function CartActions({
     <>
       {/* Mobile fixed bar */}
       <div className="lg:hidden">
-        <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-gray-300 bg-white shadow-lg">
-          <div className="mx-auto w-full px-2 py-1.5 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:px-3 sm:py-2">
-            <div className="flex flex-col gap-1.5 sm:flex-row sm:gap-2">
-              {renderButtons()}
-            </div>
-          </div>
+        <div className="flex flex-row gap-2">
+          {renderButtons()}
         </div>
       </div>
 

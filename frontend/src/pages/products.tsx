@@ -599,9 +599,9 @@ export default function ProductsPages() {
 
                         <div className="mt-3 flex flex-col gap-3 min-[380px]:flex-row min-[380px]:items-center min-[380px]:justify-between">
                           <div className="min-w-0">
-                            <p className="text-sm font-bold text-green-700 sm:text-base">
+                            <p className=" flex gap-2 text-sm font-bold text-green-700 sm:text-base">
                               ₹{defaultSize.price}
-                                <span className="text-[10px] text-red-500 sm:text-xs line-through">
+                                <span className="text-[10px] text-red-500 sm:text-xs mt-1 line-through">
                                   ₹{defaultSize.mrp}
                                 </span>
                             </p>

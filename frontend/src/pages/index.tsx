@@ -23,21 +23,18 @@ const promos = [
     title: "Style Your Greens",
     desc: "Elegant pots, planters & accessories to elevate your garden style.",
     img: "/images/promo-style.jpg",
-    cta: "Shop Now",
     href: "/products",
   },
   {
     title: "Nurture Your Plants",
     desc: "Fertilizers, soil & care essentials for healthy growth.",
     img: "/images/promo-nurture.jpg",
-    cta: "Explore Essentials",
     href: "/products?category=Plant%20Care",
   },
   {
     title: "Gardening Tools & Accessories",
     desc: "Essential tools & accessories to make gardening easier.",
     img: "/images/promo-tools.jpg",
-    cta: "Discover Tools",
     href: "/products?tag=tools,accessories",
   },
 ];
