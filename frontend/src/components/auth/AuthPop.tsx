@@ -165,8 +165,11 @@ export default function AuthPopup({
         login(data.user, data.token);
         setMessage("Login successful!");
         setMessageType("success");
-        if (onLogin) onLogin(data.user);
-        setTimeout(() => onClose(), 500);
+        if (onLogin) {
+          onLogin(data.user);
+        } else {
+          setTimeout(() => onClose(), 500);
+        }
       } else {
         setMessage(data.message || "Invalid OTP");
         setMessageType("error");
@@ -233,8 +236,11 @@ export default function AuthPopup({
         login(data.user, data.token);
         setMessage("Login successful!");
         setMessageType("success");
-        if (onLogin) onLogin(data.user);
-        setTimeout(() => onClose(), 500);
+        if (onLogin) {
+          onLogin(data.user);
+        } else {
+          setTimeout(() => onClose(), 500);
+        }
       } else {
         setMessage(data.message || "Login failed");
         setMessageType("error");

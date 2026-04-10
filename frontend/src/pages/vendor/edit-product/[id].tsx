@@ -36,6 +36,7 @@ export default function EditProduct() {
   const router = useRouter();
   const { id } = router.query;
   const [product, setProduct] = useState<Product | null>(null);
+  const [tagOptions, setTagOptions] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     name: "",
     category: "Indoor Plants",
@@ -102,6 +103,11 @@ export default function EditProduct() {
               DEFAULT_DELIVERY_LOCATION.country,
           },
         });
+
+        const productTags = Array.isArray(productData.tags)
+          ? productData.tags.map((tag: string) => String(tag).trim())
+          : [];
+        setTagOptions(productTags.filter(Boolean));
         setPlantSizes(
           normalizePlantSizes(
             productData.plantSizes,
@@ -117,6 +123,31 @@ export default function EditProduct() {
       }
     };
 
+    const fetchTagSuggestions = async () => {
+      try {
+        const BACKEND_URL =
+          typeof window !== "undefined"
+            ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+            : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+        const response = await fetch(`${BACKEND_URL}/api/products`);
+        if (!response.ok) return;
+        const data = await response.json();
+        const allProducts = Array.isArray(data) ? data : data.products || [];
+        const tags = Array.from(
+          new Set(
+            allProducts
+              .flatMap((product: any) => product.tags || [])
+              .map((tag: string) => String(tag).trim())
+              .filter(Boolean),
+          ),
+        ) as string[];
+        setTagOptions(tags);
+      } catch (err) {
+        console.error("Failed to fetch tag suggestions", err);
+      }
+    };
+
+    fetchTagSuggestions();
     fetchProduct();
   }, [id, router]);
 
@@ -149,6 +180,23 @@ export default function EditProduct() {
             : ""
           : value,
     }));
+  };
+
+  const parseTags = (value: string) =>
+    value
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter(Boolean);
+
+  const addTag = (tag: string) => {
+    const current = parseTags(formData.tags);
+    if (current.includes(tag)) return;
+    setFormData({ ...formData, tags: [...current, tag].join(", ") });
+  };
+
+  const removeTag = (tag: string) => {
+    const current = parseTags(formData.tags).filter((t) => t !== tag);
+    setFormData({ ...formData, tags: current.join(", ") });
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -406,6 +454,44 @@ export default function EditProduct() {
                   onChange={handleChange}
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
                 />
+                {parseTags(formData.tags).length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {parseTags(formData.tags).map((tag) => (
+                      <span
+                        key={tag}
+                        className="inline-flex items-center gap-2 rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700"
+                      >
+                        {tag}
+                        <button
+                          type="button"
+                          onClick={() => removeTag(tag)}
+                          className="text-emerald-700/80 hover:text-emerald-900"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {tagOptions.length > 0 && (
+                  <div className="mt-4 rounded-lg border border-dashed border-gray-200 bg-green-50 p-3">
+                    <p className="mb-2 text-xs uppercase tracking-wide text-green-700">
+                      Tag Suggestions
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {tagOptions.map((tag) => (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => addTag(tag)}
+                          className="rounded-full border border-green-200 bg-white px-3 py-1 text-xs text-green-700 transition hover:border-green-300 hover:bg-green-100"
+                        >
+                          {tag}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="flex gap-3">

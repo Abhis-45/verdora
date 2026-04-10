@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import Product from "../models/Product.js";
 import User from "../models/User.js";
 import Admin from "../models/Admin.js";
+import VendorRequest from "../models/VendorRequest.js";
 import { ORDER_STATUSES } from "../config/constants.js";
 import {
   DEFAULT_ORIGIN_ADDRESS,
@@ -841,6 +842,190 @@ router.get("/vendors/:id/details", async (req, res) => {
     res
       .status(500)
       .json({ message: "Failed to fetch vendor details", error: err.message });
+  }
+});
+
+// ✅ GET VENDOR REQUESTS (Pending vendor registrations)
+router.get("/vendor-requests", adminAuthMiddleware, async (req, res) => {
+  try {
+    const requests = await VendorRequest.find({ status: "pending" })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    res.json(requests);
+  } catch (err) {
+    res
+      .status(500)
+      .json({
+        message: "Failed to fetch vendor requests",
+        error: err.message,
+      });
+  }
+});
+
+// ✅ GET SINGLE VENDOR REQUEST
+router.get("/vendor-requests/:id", adminAuthMiddleware, async (req, res) => {
+  try {
+    const request = await VendorRequest.findById(req.params.id)
+      .populate("approvedBy", "username email")
+      .populate("rejectedBy", "username email")
+      .lean();
+
+    if (!request) {
+      return res.status(404).json({ message: "Vendor request not found" });
+    }
+
+    res.json(request);
+  } catch (err) {
+    res
+      .status(500)
+      .json({
+        message: "Failed to fetch vendor request",
+        error: err.message,
+      });
+  }
+});
+
+// ✅ APPROVE VENDOR REQUEST
+router.post("/vendor-requests/:id/approve", adminAuthMiddleware, async (req, res) => {
+  try {
+    const vendorRequest = await VendorRequest.findById(req.params.id);
+
+    if (!vendorRequest) {
+      return res.status(404).json({ message: "Vendor request not found" });
+    }
+
+    if (vendorRequest.status !== "pending") {
+      return res
+        .status(400)
+        .json({ message: "Only pending requests can be approved" });
+    }
+
+    // Update vendor request status
+    vendorRequest.status = "approved";
+    vendorRequest.approvedAt = new Date();
+    vendorRequest.approvedBy = req.adminId;
+    await vendorRequest.save();
+
+    res.json({
+      message: "Vendor request approved",
+      vendorRequest,
+    });
+  } catch (err) {
+    res
+      .status(500)
+      .json({
+        message: "Failed to approve vendor request",
+        error: err.message,
+      });
+  }
+});
+
+// ✅ REJECT VENDOR REQUEST
+router.post(
+  "/vendor-requests/:id/reject",
+  adminAuthMiddleware,
+  async (req, res) => {
+    const { rejectionReason } = req.body;
+
+    try {
+      const vendorRequest = await VendorRequest.findById(req.params.id);
+
+      if (!vendorRequest) {
+        return res.status(404).json({ message: "Vendor request not found" });
+      }
+
+      if (vendorRequest.status !== "pending") {
+        return res
+          .status(400)
+          .json({ message: "Only pending requests can be rejected" });
+      }
+
+      // Update vendor request status
+      vendorRequest.status = "rejected";
+      vendorRequest.rejectedAt = new Date();
+      vendorRequest.rejectedBy = req.adminId;
+      vendorRequest.rejectionReason = rejectionReason || "";
+      await vendorRequest.save();
+
+      res.json({
+        message: "Vendor request rejected",
+        vendorRequest,
+      });
+    } catch (err) {
+      res
+        .status(500)
+        .json({
+          message: "Failed to reject vendor request",
+          error: err.message,
+        });
+    }
+  }
+);
+
+// ✅ CREATE VENDOR ACCOUNT (Admin creates vendor)
+router.post("/create-vendor", adminAuthMiddleware, async (req, res) => {
+  const {
+    username,
+    email,
+    password,
+    vendorName,
+    businessName,
+    businessPhone,
+    businessLocation,
+    businessWebsite,
+  } = req.body;
+
+  if (!username || !email || !password || !businessName) {
+    return res
+      .status(400)
+      .json({
+        message: "Username, email, password, and business name are required",
+      });
+  }
+
+  try {
+    // Check if vendor already exists
+    const existing = await Admin.findOne({ email: email.toLowerCase().trim() });
+    if (existing) {
+      return res
+        .status(400)
+        .json({ message: "A vendor with this email already exists" });
+    }
+
+    // Create new vendor account
+    const vendor = new Admin({
+      username: username.trim(),
+      email: email.toLowerCase().trim(),
+      password,
+      role: "vendor",
+      status: "active",
+      vendorName: vendorName.trim(),
+      businessName: businessName.trim(),
+      businessPhone: businessPhone.trim(),
+      businessLocation: businessLocation.trim(),
+      businessWebsite: businessWebsite.trim(),
+    });
+
+    await vendor.save();
+
+    res.json({
+      message: "Vendor account created successfully",
+      vendor: {
+        _id: vendor._id,
+        username: vendor.username,
+        email: vendor.email,
+        role: vendor.role,
+        businessName: vendor.businessName,
+      },
+    });
+  } catch (err) {
+    res
+      .status(500)
+      .json({
+        message: "Failed to create vendor account",
+        error: err.message,
+      });
   }
 });
 

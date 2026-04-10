@@ -2,12 +2,14 @@ import express from "express";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import User from "../models/User.js";
+import Admin from "../models/Admin.js";
 import Product from "../models/Product.js";
 import upload from "../middleware/multerConfig.js";
 import { sendOtpSMS } from "../services/twilioService.js";
 import {
   sendOtpEmail,
   sendAccountDeletedEmail,
+  sendVendorOrderNotificationEmail,
 } from "../services/emailService.js";
 import { uploadToCloudinary } from "../services/cloudinaryService.js";
 import {
@@ -892,6 +894,49 @@ router.post("/orders", authMiddleware, async (req, res) => {
       await user.save();
     } catch (saveErr) {
       throw saveErr;
+    }
+
+    // Notify vendors whose products are included in this order
+    try {
+      const uniqueVendorIds = Array.from(
+        new Set(
+          order.items
+            .map((item) => String(item.vendorId || "").trim())
+            .filter(Boolean),
+        ),
+      );
+
+      if (uniqueVendorIds.length > 0) {
+        const vendors = await Admin.find({
+          _id: { $in: uniqueVendorIds },
+          role: "vendor",
+        }).select("email businessName vendorName").lean();
+
+        await Promise.allSettled(
+          vendors.map((vendor) => {
+            const vendorItems = order.items.filter(
+              (item) => String(item.vendorId || "").trim() === String(vendor._id),
+            );
+
+            if (!vendor.email || !vendorItems.length) {
+              return Promise.resolve();
+            }
+
+            return sendVendorOrderNotificationEmail(
+              vendor.email,
+              vendor.businessName || vendor.vendorName || "Vendor",
+              String(user.orders[user.orders.length - 1]._id || order.id || ""),
+              String(user.name || "Customer"),
+              { email: String(user.email || ""), mobile: String(user.mobile || "") },
+              order.address,
+              vendorItems,
+              order.total,
+            );
+          }),
+        );
+      }
+    } catch (emailErr) {
+      console.error("Vendor notification email failed:", emailErr);
     }
 
     res.json({

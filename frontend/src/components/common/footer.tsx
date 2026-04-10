@@ -183,6 +183,14 @@ export default function Footer() {
               <ul className="space-y-2 text-sm">
                 <li>
                   <Link
+                    href="/vendor-signup"
+                    className="text-gray-300 hover:text-white transition"
+                  >
+                    Become a Vendor
+                  </Link>
+                </li>
+                <li>
+                  <Link
                     href="/vendor/login"
                     className="text-gray-300 hover:text-white transition"
                   >
@@ -258,6 +266,14 @@ export default function Footer() {
               <ul className="space-y-2 text-sm">
                 <li>
                   <Link
+                    href="/vendor-signup"
+                    className="text-gray-300 hover:text-white"
+                  >
+                    Become a Vendor
+                  </Link>
+                </li>
+                <li>
+                  <Link
                     href="/vendor/login"
                     className="text-gray-300 hover:text-white"
                   >
@@ -326,6 +342,12 @@ export default function Footer() {
                   ACCESS
                 </p>
                 <div className="flex justify-center gap-4 flex-wrap">
+                  <Link
+                    href="/vendor-signup"
+                    className="text-gray-300 hover:text-white text-sm"
+                  >
+                    Become a Vendor
+                  </Link>
                   <Link
                     href="/vendor/login"
                     className="text-gray-300 hover:text-white text-sm"

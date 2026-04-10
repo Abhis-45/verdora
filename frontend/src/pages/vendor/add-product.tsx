@@ -54,8 +54,11 @@ export default function AddProduct() {
   const [categoryOptions, setCategoryOptions] = useState<string[]>(
     PRODUCT_CATEGORY_OPTIONS,
   );
+  const [tagOptions, setTagOptions] = useState<string[]>([]);
   const [customCategory, setCustomCategory] = useState("");
   const [vendorProfile, setVendorProfile] = useState<{ username?: string; businessName?: string; vendorName?: string; businessLocation?: string } | null>(null);
+  const [productId, setProductId] = useState<string | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("adminToken");
@@ -81,11 +84,20 @@ export default function AddProduct() {
           .map((product: { category?: string }) => product.category?.trim?.())
           .filter(Boolean);
 
-        setCategoryOptions(
-          Array.from(
-            new Set([...PRODUCT_CATEGORY_OPTIONS, ...dynamicCategories]),
-          ),
+        const uniqueCategories = Array.from(
+          new Set([...PRODUCT_CATEGORY_OPTIONS, ...dynamicCategories]),
         );
+        setCategoryOptions(uniqueCategories);
+
+        const collectedTags = Array.from(
+          new Set(
+            products
+              .flatMap((product: any) => product.tags || [])
+              .map((tag: string) => String(tag).trim())
+              .filter(Boolean),
+          ),
+        ) as string[];
+        setTagOptions(collectedTags);
       } catch {
         // Keep default category list when fetch fails.
       }
@@ -128,6 +140,74 @@ export default function AddProduct() {
     fetchVendorDefaults();
   }, [router]);
 
+  useEffect(() => {
+    if (!router.isReady) return;
+
+    const { productId: id } = router.query;
+    if (id && typeof id === "string") {
+      setProductId(id);
+      setIsEditMode(true);
+      fetchExistingProduct(id);
+    }
+  }, [router.isReady]);
+
+  const fetchExistingProduct = async (id: string) => {
+    try {
+      const token = localStorage.getItem("adminToken");
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+
+      const response = await fetch(`${BACKEND_URL}/api/products/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        setError("Failed to load product details");
+        return;
+      }
+
+      const product = await response.json();
+
+      // Pre-fill form with existing product data
+      setFormData({
+        name: product.name || "",
+        category: product.category || "Indoor Plants",
+        price: product.price || "",
+        mrp: product.mrp || "",
+        brand: product.brand || "",
+        description: product.description || "",
+        tags: (product.tags || []).join(", "),
+        originAddress: product.originAddress || {
+          ...DEFAULT_DELIVERY_LOCATION,
+          address: "",
+        },
+      });
+
+      // Pre-fill plant sizes
+      if (product.plantSizes && product.plantSizes.length > 0) {
+        setPlantSizes(product.plantSizes);
+      }
+
+      // Pre-fill images if available
+      if (product.image) {
+        setImages([
+          {
+            id: product.cloudinaryPublicId || "existing",
+            file: new File([], "existing-image"),
+            preview: product.image,
+          },
+        ]);
+        setMainImageIndex(0);
+      }
+    } catch (err) {
+      setError(`Failed to load product: ${err}`);
+    }
+  };
+
   const handleChange = (
     event: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
@@ -143,6 +223,26 @@ export default function AddProduct() {
             : ""
           : value,
     }));
+  };
+
+  const parseTags = (value: string) =>
+    value
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter(Boolean);
+
+  const addTag = (tag: string) => {
+    const current = parseTags(formData.tags);
+    if (current.includes(tag)) return;
+    setFormData({
+      ...formData,
+      tags: [...current, tag].join(", "),
+    });
+  };
+
+  const removeTag = (tag: string) => {
+    const current = parseTags(formData.tags).filter((t) => t !== tag);
+    setFormData({ ...formData, tags: current.join(", ") });
   };
 
   useEffect(() => {
@@ -250,62 +350,90 @@ export default function AddProduct() {
       return;
     }
 
-    if (images.length === 0) {
+    if (!isEditMode && images.length === 0) {
       setError("Please select at least one product image");
       return;
     }
 
     setLoading(true);
     try {
-      const uploadedUrls = await uploadImagesToCloudinary();
-      if (!uploadedUrls?.length) {
-        setLoading(false);
-        return;
+      let uploadedUrls: { url: string; publicId: string }[] = [];
+      
+      // Only upload new images if we have files to upload (not just previews)
+      const hasNewImages = images.some((img) => img.file.size > 0);
+      if (hasNewImages) {
+        const result = await uploadImagesToCloudinary();
+        if (!result?.length) {
+          setLoading(false);
+          return;
+        }
+        uploadedUrls = result;
+      } else if (isEditMode && images.length > 0) {
+        // Use existing image URLs if editing without new uploads
+        uploadedUrls = images.map((img) => ({
+          url: img.preview,
+          publicId: img.id === "existing" ? "" : img.id,
+        }));
       }
 
       const token = localStorage.getItem("adminToken");
-      const mainImage = uploadedUrls[mainImageIndex];
+      const mainImage = uploadedUrls[mainImageIndex] || uploadedUrls[0];
 
       const BACKEND_URL =
         typeof window !== "undefined"
           ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
           : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
-      const response = await fetch(`${BACKEND_URL}/api/products`, {
-        method: "POST",
+
+      const endpoint = isEditMode
+        ? `${BACKEND_URL}/api/products/${productId}`
+        : `${BACKEND_URL}/api/products`;
+      
+      const method = isEditMode ? "PATCH" : "POST";
+      
+      const requestBody = {
+        ...formData,
+        category:
+          formData.category === CUSTOM_CATEGORY_OPTION
+            ? customCategory.trim()
+            : formData.category,
+        image: mainImage?.url,
+        cloudinaryPublicId: mainImage?.publicId,
+        ...(uploadedUrls.length > 0 && { images: uploadedUrls }),
+        price: Number(formData.price),
+        mrp: Number(formData.mrp),
+        brand: formData.brand || "Verdora",
+        tags: formData.tags
+          ? formData.tags.split(",").map((tag) => tag.trim())
+          : [],
+        plantSizes,
+        originAddress: formData.originAddress,
+      };
+
+      const response = await fetch(endpoint, {
+        method,
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          ...formData,
-          category:
-            formData.category === CUSTOM_CATEGORY_OPTION
-              ? customCategory.trim()
-              : formData.category,
-          image: mainImage.url,
-          cloudinaryPublicId: mainImage.publicId,
-          images: uploadedUrls,
-          price: Number(formData.price),
-          mrp: Number(formData.mrp),
-          brand: formData.brand || "Verdora",
-          tags: formData.tags
-            ? formData.tags.split(",").map((tag) => tag.trim())
-            : [],
-          plantSizes,
-          originAddress: formData.originAddress,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
         const data = await response.json();
-        setError(data.message || "Failed to create product");
+        setError(
+          data.message ||
+            `Failed to ${isEditMode ? "update" : "create"} product`
+        );
         return;
       }
 
-      alert("Product created successfully with sizes and delivery details.");
+      const successMessage = isEditMode
+        ? "Product updated successfully!"
+        : "Product created successfully with sizes and delivery details.";
+      alert(successMessage);
       router.push("/vendor/dashboard");
     } catch (submitError) {
-      setError(`Error creating product: ${submitError}`);
+      setError(`Error ${isEditMode ? "updating" : "creating"} product: ${submitError}`);
       console.error("Error:", submitError);
     } finally {
       setLoading(false);
@@ -315,17 +443,14 @@ export default function AddProduct() {
   return (
     <>
       <Head>
-        <title>Add Product | Verdora</title>
+        <title>{isEditMode ? "Edit Product" : "Add Product"} | Verdora</title>
       </Head>
             <div className="bg-linear-to-r from-emerald-700 to-teal-600 text-white shadow-lg">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-6 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h1 className="text-2xl font-bold sm:text-3xl">
-              Verdora Vendor Dashboard
+            <h1 className="text-3xl font-bold">
+              {isEditMode ? "Edit Product" : "Add New Product"}
             </h1>
-            <p className="text-emerald-100 mt-1">
-              Welcome, {vendorProfile?.username}
-            </p>
           </div>
           <div className="flex flex-wrap gap-3">
             <button
@@ -341,7 +466,7 @@ export default function AddProduct() {
           <div className="mx-auto max-w-3xl rounded-lg bg-white p-6 shadow-lg">
             <div className="mb-6 flex items-center justify-between">
               <h1 className="text-3xl font-bold text-green-700">
-                Add New Product
+                {isEditMode ? "Edit Product Details" : "Add New Product"}
               </h1>
               <Link
                 href="/vendor/dashboard"
@@ -590,6 +715,44 @@ export default function AddProduct() {
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
                   placeholder="e.g., indoor, low-maintenance, air-purifying"
                 />
+                {parseTags(formData.tags).length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {parseTags(formData.tags).map((tag) => (
+                      <span
+                        key={tag}
+                        className="inline-flex items-center gap-2 rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700"
+                      >
+                        {tag}
+                        <button
+                          type="button"
+                          onClick={() => removeTag(tag)}
+                          className="text-emerald-700/80 hover:text-emerald-900"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {tagOptions.length > 0 && (
+                  <div className="mt-4 rounded-lg border border-dashed border-gray-200 bg-green-50 p-3">
+                    <p className="mb-2 text-xs uppercase tracking-wide text-green-700">
+                      Tag Suggestions
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {tagOptions.map((tag) => (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => addTag(tag)}
+                          className="rounded-full border border-green-200 bg-white px-3 py-1 text-xs text-green-700 transition hover:border-green-300 hover:bg-green-100"
+                        >
+                          {tag}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <button
@@ -598,10 +761,14 @@ export default function AddProduct() {
                 className="w-full rounded-lg bg-green-600 py-3 font-bold text-white transition hover:bg-green-700 disabled:opacity-50"
               >
                 {loading
-                  ? "Adding Product..."
+                  ? isEditMode
+                    ? "Updating Product..."
+                    : "Adding Product..."
                   : uploading
                     ? "Uploading..."
-                    : "Add Product"}
+                    : isEditMode
+                      ? "Update Product"
+                      : "Add Product"}
               </button>
             </form>
           </div>

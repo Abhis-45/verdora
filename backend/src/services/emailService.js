@@ -85,3 +85,63 @@ export const sendAccountDeletedEmail = async (email) => {
   });
 };
 
+// ✅ Send vendor order notification email
+export const sendVendorOrderNotificationEmail = async (
+  email,
+  vendorName,
+  orderId,
+  customer,
+  contact,
+  deliveryAddress,
+  items,
+  total,
+) => {
+  const itemRows = items
+    .map(
+      (item) => `
+        <tr style="border-bottom:1px solid #e2e8f0;">
+          <td style="padding:10px;text-align:left;">${item.title}</td>
+          <td style="padding:10px;text-align:center;">${item.quantity}</td>
+          <td style="padding:10px;text-align:center;">${item.selectedSize?.label || "-"}</td>
+          <td style="padding:10px;text-align:right;">₹${item.price.toFixed(2)}</td>
+          <td style="padding:10px;text-align:right;">₹${(
+            item.price * item.quantity
+          ).toFixed(2)}</td>
+        </tr>
+      `,
+    )
+    .join("");
+
+  return transporter.sendMail({
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: `New Verdora Order #${orderId.slice(-6)} Received`,
+    html: `
+      <h2>Hello ${vendorName},</h2>
+      <p>You have received a new order from Verdora.</p>
+      <p><strong>Order #:</strong> ${orderId}</p>
+      <p><strong>Customer:</strong> ${customer}</p>
+      <p><strong>Contact:</strong> ${contact.email || "N/A"} / ${contact.mobile || "N/A"}</p>
+      <p><strong>Delivery address:</strong> ${deliveryAddress.address}, ${deliveryAddress.city}, ${deliveryAddress.state} - ${deliveryAddress.pincode}</p>
+      <p><strong>Total:</strong> ₹${total.toFixed(2)}</p>
+      <table style="width:100%;border-collapse:collapse;margin-top:16px;">
+        <thead>
+          <tr style="background:#f1f5f9;">
+            <th style="padding:10px;text-align:left;">Product</th>
+            <th style="padding:10px;text-align:center;">Qty</th>
+            <th style="padding:10px;text-align:center;">Size</th>
+            <th style="padding:10px;text-align:right;">Unit</th>
+            <th style="padding:10px;text-align:right;">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${itemRows}
+        </tbody>
+      </table>
+      <p style="margin-top:16px;">Please process this order promptly and update its status in your Verdora vendor dashboard.</p>
+      <hr>
+      <p style="color: #888; font-size: 12px;">© 2026 Verdora. All rights reserved.</p>
+    `,
+  });
+};
+

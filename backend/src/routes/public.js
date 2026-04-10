@@ -1,6 +1,7 @@
 import express from "express";
 import Subscriber from "../models/Subscriber.js";
 import Contact from "../models/Contact.js";
+import VendorRequest from "../models/VendorRequest.js";
 
 const router = express.Router();
 
@@ -42,6 +43,50 @@ router.post("/contact", async (req, res) => {
     res
       .status(500)
       .json({ message: "Failed to save message", error: err.message });
+  }
+});
+
+// POST /api/vendor-register - Submit vendor registration request
+router.post("/vendor-register", async (req, res) => {
+  const { vendorName, shopName, email, phone, address } = req.body;
+
+  if (!vendorName || !shopName || !email || !phone || !address) {
+    return res
+      .status(400)
+      .json({ message: "All fields are required" });
+  }
+
+  try {
+    // Check if vendor request already exists
+    const existing = await VendorRequest.findOne({
+      email: email.toLowerCase().trim(),
+      status: "pending",
+    });
+
+    if (existing) {
+      return res
+        .status(400)
+        .json({ message: "You have already submitted a vendor registration request" });
+    }
+
+    const vendorRequest = new VendorRequest({
+      vendorName: vendorName.trim(),
+      shopName: shopName.trim(),
+      email: email.toLowerCase().trim(),
+      phone: phone.trim(),
+      address: address.trim(),
+    });
+
+    await vendorRequest.save();
+
+    res.json({
+      message:
+        "Thank you for your interest! We will contact you shortly to complete your vendor registration.",
+    });
+  } catch (err) {
+    res
+      .status(500)
+      .json({ message: "Failed to submit registration", error: err.message });
   }
 });
 

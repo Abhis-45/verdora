@@ -569,6 +569,7 @@ export default function ProfilePage() {
 
   const handleAuthClose = () => {
     setShowAuthPopup(false);
+    router.replace("/");
   };
 
   const handleAuthLogin = () => {

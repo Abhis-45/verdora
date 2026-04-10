@@ -31,7 +31,24 @@ interface Product {
   category: string;
   price: number;
   mrp: number;
-  brand: string;
+  brand?: string;
+  description?: string;
+  tags?: string[];
+  image?: string;
+  originAddress?: {
+    address?: string;
+    city?: string;
+    state?: string;
+    pincode?: string;
+    country?: string;
+  };
+  plantSizes?: {
+    id: string;
+    label: string;
+    price: number;
+    mrp: number;
+    isDefault?: boolean;
+  }[];
 }
 
 interface VendorStats {
@@ -87,8 +104,6 @@ export default function VendorDashboard() {
   const [token, setToken] = useState("");
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [formData, setFormData] = useState<Partial<VendorProfile>>({});
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [showEditProductModal, setShowEditProductModal] = useState(false);
   const [vendorOrders, setVendorOrders] = useState<VendorOrder[]>([]);
   const [updatingOrderItemId, setUpdatingOrderItemId] = useState<string | null>(
     null,
@@ -205,35 +220,6 @@ export default function VendorDashboard() {
       }
     } catch (err) {
       console.error("Update profile error:", err);
-    }
-  };
-
-  const handleUpdateProduct = async (e: any) => {
-    e.preventDefault();
-    if (!selectedProduct) return;
-
-    try {
-      const BACKEND_URL =
-        typeof window !== "undefined"
-          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
-      const res = await fetch(`${BACKEND_URL}/api/vendor/products/${selectedProduct.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(selectedProduct),
-      });
-
-      if (res.ok) {
-        alert("Product updated successfully!");
-        setShowEditProductModal(false);
-        setSelectedProduct(null);
-        fetchProducts(token);
-      }
-    } catch (err) {
-      console.error("Update product error:", err);
     }
   };
 
@@ -506,13 +492,34 @@ export default function VendorDashboard() {
                     className="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-4"
                   >
                     <div className="flex flex-col gap-3">
-                      <div>
-                        <p className="text-base font-semibold text-gray-900">
-                          {product.name}
-                        </p>
-                        <p className="mt-1 text-sm text-gray-500">
-                          {product.category}
-                        </p>
+                      <div className="flex items-start gap-3">
+                        {product.image && (
+                          <img
+                            src={product.image}
+                            alt={product.name}
+                            className="h-16 w-16 rounded-xl object-cover"
+                          />
+                        )}
+                        <div>
+                          <p className="text-base font-semibold text-gray-900">
+                            {product.name}
+                          </p>
+                          <p className="mt-1 text-sm text-gray-500">
+                            {product.category}
+                          </p>
+                          {product.tags && product.tags.length > 0 && (
+                            <div className="mt-2 flex flex-wrap gap-2">
+                            {product.tags.slice(0, 4).map((tag) => (
+                              <span
+                                key={tag}
+                                className="rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-semibold text-emerald-700"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        </div>
                       </div>
                       <div className="grid grid-cols-2 gap-3 text-sm">
                         <div className="rounded-xl bg-white p-3">
@@ -531,8 +538,7 @@ export default function VendorDashboard() {
                       <div className="flex flex-col gap-2 min-[420px]:flex-row">
                         <button
                           onClick={() => {
-                            setSelectedProduct(product);
-                            setShowEditProductModal(true);
+                            router.push(`/vendor/add-product?productId=${product.id}`);
                           }}
                           className="inline-flex items-center justify-center gap-2 rounded-lg bg-yellow-500 px-3 py-2 text-white transition hover:bg-yellow-600"
                         >
@@ -577,15 +583,23 @@ export default function VendorDashboard() {
                         key={product.id}
                         className="border-t border-emerald-100 hover:bg-emerald-50"
                       >
-                        <td className="px-6 py-3">{product.name}</td>
+                        <td className="px-6 py-3">
+                          <div className="flex flex-col gap-1">
+                            <span>{product.name}</span>
+                            {product.tags && product.tags.length > 0 && (
+                              <span className="text-xs text-emerald-600">
+                                {product.tags.slice(0, 3).join(", ")}
+                              </span>
+                            )}
+                          </div>
+                        </td>
                         <td className="px-6 py-3">{product.category}</td>
                         <td className="px-6 py-3">₹{product.price}</td>
                         <td className="px-6 py-3">₹{product.mrp}</td>
                         <td className="px-6 py-3 text-center">
                           <button
                             onClick={() => {
-                              setSelectedProduct(product);
-                              setShowEditProductModal(true);
+                              router.push(`/vendor/add-product?productId=${product.id}`);
                             }}
                             className="mr-2 inline-flex items-center gap-2 rounded-lg bg-yellow-500 px-3 py-1 text-white hover:bg-yellow-600"
                           >
@@ -861,79 +875,7 @@ export default function VendorDashboard() {
         </div>
       )}
 
-      {/* Edit Product Modal */}
-      {showEditProductModal && selectedProduct && (
-        <div className="app-modal-shell">
-          <div className="app-modal-card w-full max-w-md rounded-lg bg-white p-5 shadow-2xl sm:p-8">
-            <h2 className="text-2xl font-bold text-emerald-700 mb-6">
-              Edit Product
-            </h2>
-            <form onSubmit={handleUpdateProduct}>
-              <input
-                type="text"
-                value={selectedProduct.name}
-                onChange={(e) =>
-                  setSelectedProduct({
-                    ...selectedProduct,
-                    name: e.target.value,
-                  })
-                }
-                placeholder="Product Name"
-                className="w-full px-3 py-2 border border-emerald-300 rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-emerald-600"
-              />
-              <input
-                type="text"
-                value={selectedProduct.category}
-                onChange={(e) =>
-                  setSelectedProduct({
-                    ...selectedProduct,
-                    category: e.target.value,
-                  })
-                }
-                placeholder="Category"
-                className="w-full px-3 py-2 border border-emerald-300 rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-emerald-600"
-              />
-              <input
-                type="number"
-                value={selectedProduct.price}
-                onChange={(e) =>
-                  setSelectedProduct({
-                    ...selectedProduct,
-                    price: Number(e.target.value),
-                  })
-                }
-                placeholder="Price"
-                className="w-full px-3 py-2 border border-emerald-300 rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-emerald-600"
-              />
-              <input
-                type="number"
-                value={selectedProduct.mrp}
-                onChange={(e) =>
-                  setSelectedProduct({
-                    ...selectedProduct,
-                    mrp: Number(e.target.value),
-                  })
-                }
-                placeholder="MRP"
-                className="w-full px-3 py-2 border border-emerald-300 rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-emerald-600"
-              />
-              <button
-                type="submit"
-                className="w-full bg-emerald-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-emerald-700 transition mb-3"
-              >
-                Update Product
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowEditProductModal(false)}
-                className="w-full bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400"
-              >
-                Close
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Edit Product Modal - Removed, now redirects to add-product page */}
     </div>
   );
 }

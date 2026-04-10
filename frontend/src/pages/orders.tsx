@@ -296,6 +296,7 @@ export default function OrdersPage() {
 
   const handleAuthClose = () => {
     setShowAuthPopup(false);
+    router.replace("/");
   };
 
   const handleAuthLogin = () => {

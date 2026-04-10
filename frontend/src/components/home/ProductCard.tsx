@@ -74,7 +74,7 @@ export default function ProductCard({
 
           {/* Shimmer skeleton */}
           <div
-            className={`absolute inset-0 shimmer transition-opacity duration-700 ease-in-out ${
+            className={`absolute inset-0 shimmer transition-opacity duration-300 ease-in-out ${
               loaded ? "opacity-0" : "opacity-100"
             }`}
           />
