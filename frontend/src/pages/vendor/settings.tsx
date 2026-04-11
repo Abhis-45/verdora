@@ -60,7 +60,9 @@ export default function VendorSettings() {
       return;
     }
 
-    fetchVendorProfile(token);
+    if (token) {
+      fetchVendorProfile(token);
+    }
   }, [router]);
 
   const fetchVendorProfile = async (token: string) => {
@@ -124,7 +126,9 @@ export default function VendorSettings() {
 
       if (res.ok) {
         setProfileMessage("✅ Profile updated successfully!");
-        fetchVendorProfile(token);
+        if (token) {
+          fetchVendorProfile(token);
+        }
       } else {
         const data = await res.json();
         setProfileMessage(`❌ ${data.message || "Failed to update profile"}`);
