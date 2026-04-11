@@ -1,39 +1,66 @@
 import express from "express";
 import jwt from "jsonwebtoken";
 import Admin from "../models/Admin.js";
+import Vendor from "../models/Vendor.js";
 
 const router = express.Router();
 
-// ✅ Admin Login
+// ✅ Admin/Vendor Login (Unified)
 router.post("/login", async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
     return res.status(400).json({ message: "Email and password required" });
   }
   try {
-    const admin = await Admin.findOne({ email, status: "active" });
-    if (!admin) {
-      return res.status(401).json({ message: "Invalid email or password" });
+    // Check Admin first
+    let admin = await Admin.findOne({ email, status: "active" });
+    if (admin) {
+      const isValid = await admin.verifyPassword(password);
+      if (!isValid) {
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+      const token = jwt.sign(
+        { id: admin._id, email: admin.email, role: "admin" },
+        process.env.JWT_SECRET,
+        { expiresIn: "7d" },
+      );
+      return res.json({
+        message: "Admin login successful",
+        token,
+        admin: {
+          id: admin._id,
+          username: admin.username,
+          email: admin.email,
+          role: "admin",
+        },
+      });
     }
-    const isValid = await admin.verifyPassword(password);
-    if (!isValid) {
-      return res.status(401).json({ message: "Invalid email or password" });
+
+    // Check Vendor
+    let vendor = await Vendor.findOne({ email, status: "active" });
+    if (vendor) {
+      const isValid = await vendor.verifyPassword(password);
+      if (!isValid) {
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+      const token = jwt.sign(
+        { id: vendor._id, email: vendor.email, role: "vendor" },
+        process.env.JWT_SECRET,
+        { expiresIn: "7d" },
+      );
+      return res.json({
+        message: "Vendor login successful",
+        token,
+        admin: {
+          id: vendor._id,
+          username: vendor.username,
+          email: vendor.email,
+          role: "vendor",
+        },
+      });
     }
-    const token = jwt.sign(
-      { id: admin._id, email: admin.email, role: admin.role },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" },
-    );
-    res.json({
-      message: "Login successful",
-      token,
-      admin: {
-        id: admin._id,
-        username: admin.username,
-        email: admin.email,
-        role: admin.role,
-      },
-    });
+
+    res.status(401).json({ message: "Invalid email or password" });
   } catch (err) {
     res.status(500).json({ message: "Login failed", error: err.message });
   }
@@ -41,27 +68,30 @@ router.post("/login", async (req, res) => {
 
 // ✅ Vendor Self-Registration (Public - no token required)
 router.post("/vendor/register", async (req, res) => {
-  const { vendorName, mobileNumber, username, email, password } = req.body;
+  const { vendorName, mobileNumber, username, email, password, businessName, businessPhone, businessLocation } = req.body;
 
-  if (!vendorName || !mobileNumber || !username || !email || !password) {
-    return res.status(400).json({ message: "All fields are required" });
+  if (!vendorName || !mobileNumber || !username || !email || !password || !businessName) {
+    return res.status(400).json({ message: "All required fields must be provided" });
   }
 
   try {
-    const existing = await Admin.findOne({ $or: [{ email }, { username }] });
-    if (existing) {
-      return res
-        .status(400)
-        .json({ message: "Email or username already exists" });
+    // Check both Admin and Vendor for duplicates
+    const existingAdmin = await Admin.findOne({ $or: [{ email }, { username }] });
+    const existingVendor = await Vendor.findOne({ $or: [{ email }, { username }] });
+    
+    if (existingAdmin || existingVendor) {
+      return res.status(400).json({ message: "Email or username already exists" });
     }
 
-    const vendor = new Admin({
+    const vendor = new Vendor({
       vendorName,
       mobileNumber,
       username,
       email,
       password,
-      role: "vendor",
+      businessName,
+      businessPhone: businessPhone || mobileNumber,
+      businessLocation: businessLocation || "",
       status: "active",
     });
 
@@ -75,13 +105,11 @@ router.post("/vendor/register", async (req, res) => {
         mobileNumber: vendor.mobileNumber,
         username: vendor.username,
         email: vendor.email,
-        role: vendor.role,
+        businessName: vendor.businessName,
       },
     });
   } catch (err) {
-    res
-      .status(500)
-      .json({ message: "Registration failed", error: err.message });
+    res.status(500).json({ message: "Registration failed", error: err.message });
   }
 });
 

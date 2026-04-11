@@ -3,7 +3,9 @@
  */
 
 export const ORDER_STATUSES = [
+  "pending",
   "accepted",
+  "cancelled",
   "shipped",
   "delivered",
   "returned",
@@ -12,6 +14,12 @@ export const ORDER_STATUSES = [
 ];
 
 export const VENDOR_MANAGEABLE_STATUSES = ["accepted", "shipped", "delivered"];
+
+// Customer can cancel orders before they are shipped
+export const CUSTOMER_CANCELLABLE_STATUSES = ["pending", "accepted"];
+
+// After shipped, customers can only request return or refund
+export const CUSTOMER_RETURNABLE_STATUSES = ["delivered"];
 
 export const ADMIN_ROLES = {
   ADMIN: "admin",

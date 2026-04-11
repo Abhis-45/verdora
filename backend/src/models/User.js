@@ -1,7 +1,9 @@
 import mongoose from "mongoose";
 
 const ORDER_STATUSES = [
+  "pending",
   "accepted",
+  "cancelled",
   "shipped",
   "delivered",
   "returned",
@@ -89,7 +91,7 @@ const userSchema = new mongoose.Schema(
             status: {
               type: String,
               enum: ORDER_STATUSES,
-              default: "accepted",
+              default: "pending",
             },
             statusReason: { type: String, default: "" },
             returnReason: { type: String, default: "" },
@@ -123,7 +125,7 @@ const userSchema = new mongoose.Schema(
         status: {
           type: String,
           enum: ORDER_STATUSES,
-          default: "accepted",
+          default: "pending",
         },
         statusReason: { type: String, default: "" },
         returnReason: { type: String, default: "" },
