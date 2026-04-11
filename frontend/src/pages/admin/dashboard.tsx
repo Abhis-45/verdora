@@ -243,16 +243,22 @@ export default function AdminDashboard() {
     async (authToken: string, searchTerm = "") => {
       setLoading(true);
       try {
-        const res = await fetch(
-          `/api/admin/manage/vendors?search=${searchTerm}`,
-          { headers: { Authorization: `Bearer ${authToken}` } },
-        );
+        const BACKEND_URL =
+          typeof window !== "undefined"
+            ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+            : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+        const res = await fetch(`${BACKEND_URL}/api/admin/manage/vendors?search=${searchTerm}`, {
+          headers: { Authorization: `Bearer ${authToken}` },
+        });
         if (res.ok) {
           const data = await res.json();
           setVendors(Array.isArray(data) ? data : data.vendors || []);
         } else {
+          console.error("Failed to fetch vendors:", res.statusText);
         }
-      } catch {}
+      } catch (err) {
+        console.error("Error fetching vendors:", err);
+      }
       setLoading(false);
     },
     [],
@@ -262,18 +268,22 @@ export default function AdminDashboard() {
     async (authToken: string, searchTerm = "") => {
       setLoading(true);
       try {
-        const res = await fetch(
-          `/api/admin/manage/admins?search=${searchTerm}`,
-          {
-            headers: { Authorization: `Bearer ${authToken}` },
-          },
-        );
+        const BACKEND_URL =
+          typeof window !== "undefined"
+            ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+            : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+        const res = await fetch(`${BACKEND_URL}/api/admin/manage/admins?search=${searchTerm}`, {
+          headers: { Authorization: `Bearer ${authToken}` },
+        });
         if (res.ok) {
           const data = await res.json();
           setAdmins(Array.isArray(data) ? data : data.admins || []);
         } else {
+          console.error("Failed to fetch admins:", res.statusText);
         }
-      } catch {}
+      } catch (err) {
+        console.error("Error fetching admins:", err);
+      }
       setLoading(false);
     },
     [],
@@ -1364,11 +1374,13 @@ function EditVendorForm({
   const [formData, setFormData] = useState({
     username: vendor?.username || "",
     vendorName: vendor?.vendorName || "",
+    email: vendor?.email || "",
     mobileNumber: vendor?.mobileNumber || "",
     businessName: vendor?.businessName || "",
-    email: vendor?.email || "",
+    businessDescription: vendor?.businessDescription || "",
     businessPhone: vendor?.businessPhone || "",
     businessLocation: vendor?.businessLocation || "",
+    businessWebsite: vendor?.businessWebsite || "",
     status: vendor?.status || "active",
   });
   const [loading, setLoading] = useState(false);
@@ -1376,8 +1388,8 @@ function EditVendorForm({
     e.preventDefault();
     setLoading(true);
     try {
-      if (!formData.email || !formData.status) {
-        alert("❌ Email and status are required");
+      if (!formData.email || !formData.status || !formData.businessName) {
+        alert("❌ Email, business name, and status are required");
         setLoading(false);
         return;
       }
@@ -1410,75 +1422,94 @@ function EditVendorForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="space-y-4 max-h-96 overflow-y-auto"
+      className="space-y-4 max-h-[600px] overflow-y-auto pr-2"
     >
+      <div className="grid grid-cols-2 gap-3">
+        <input
+          type="text"
+          value={formData.username}
+          onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+          placeholder="Username"
+          disabled={loading}
+          className="w-full px-4 py-3 border-2 border-emerald-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 disabled:bg-gray-100 text-sm"
+        />
+        <input
+          type="email"
+          value={formData.email}
+          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+          placeholder="Email"
+          required
+          disabled={loading}
+          className="w-full px-4 py-3 border-2 border-emerald-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 disabled:bg-gray-100 text-sm"
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <input
+          type="text"
+          value={formData.vendorName}
+          onChange={(e) => setFormData({ ...formData, vendorName: e.target.value })}
+          placeholder="Vendor Name"
+          disabled={loading}
+          className="w-full px-4 py-3 border-2 border-emerald-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 disabled:bg-gray-100 text-sm"
+        />
+        <input
+          type="text"
+          value={formData.businessName}
+          onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
+          placeholder="Business Name"
+          required
+          disabled={loading}
+          className="w-full px-4 py-3 border-2 border-emerald-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 disabled:bg-gray-100 text-sm"
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <input
+          type="tel"
+          value={formData.mobileNumber}
+          onChange={(e) => setFormData({ ...formData, mobileNumber: e.target.value })}
+          placeholder="Mobile Number"
+          disabled={loading}
+          className="w-full px-4 py-3 border-2 border-emerald-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 disabled:bg-gray-100 text-sm"
+        />
+        <input
+          type="tel"
+          value={formData.businessPhone}
+          onChange={(e) => setFormData({ ...formData, businessPhone: e.target.value })}
+          placeholder="Business Phone"
+          disabled={loading}
+          className="w-full px-4 py-3 border-2 border-emerald-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 disabled:bg-gray-100 text-sm"
+        />
+      </div>
+
       <input
         type="text"
-        value={formData.username || ""}
-        onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-        placeholder="Username"
+        value={formData.businessLocation}
+        onChange={(e) => setFormData({ ...formData, businessLocation: e.target.value })}
+        placeholder="Business Location/Address"
         disabled={loading}
-        className="w-full px-4 py-3 border-2 border-emerald-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 disabled:bg-gray-100"
+        className="w-full px-4 py-3 border-2 border-emerald-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 disabled:bg-gray-100 text-sm"
       />
+
       <input
-        type="text"
-        value={formData.vendorName || ""}
-        onChange={(e) =>
-          setFormData({ ...formData, vendorName: e.target.value })
-        }
-        placeholder="Vendor Name"
+        type="url"
+        value={formData.businessWebsite}
+        onChange={(e) => setFormData({ ...formData, businessWebsite: e.target.value })}
+        placeholder="Business Website (optional)"
         disabled={loading}
-        className="w-full px-4 py-3 border-2 border-emerald-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 disabled:bg-gray-100"
+        className="w-full px-4 py-3 border-2 border-emerald-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 disabled:bg-gray-100 text-sm"
       />
-      <input
-        type="tel"
-        value={formData.mobileNumber || ""}
-        onChange={(e) =>
-          setFormData({ ...formData, mobileNumber: e.target.value })
-        }
-        placeholder="Mobile Number"
+
+      <textarea
+        value={formData.businessDescription}
+        onChange={(e) => setFormData({ ...formData, businessDescription: e.target.value })}
+        placeholder="Business Description (optional)"
         disabled={loading}
-        className="w-full px-4 py-3 border-2 border-emerald-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 disabled:bg-gray-100"
+        rows={3}
+        className="w-full px-4 py-3 border-2 border-emerald-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 disabled:bg-gray-100 resize-none text-sm"
       />
-      <input
-        type="text"
-        value={formData.businessName || ""}
-        onChange={(e) =>
-          setFormData({ ...formData, businessName: e.target.value })
-        }
-        placeholder="Business Name"
-        disabled={loading}
-        className="w-full px-4 py-3 border-2 border-emerald-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 disabled:bg-gray-100"
-      />
-      <input
-        type="email"
-        value={formData.email}
-        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-        placeholder="Email"
-        required
-        disabled={loading}
-        className="w-full px-4 py-3 border-2 border-emerald-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 disabled:bg-gray-100"
-      />
-      <input
-        type="text"
-        value={formData.businessPhone || ""}
-        onChange={(e) =>
-          setFormData({ ...formData, businessPhone: e.target.value })
-        }
-        placeholder="Business Phone"
-        disabled={loading}
-        className="w-full px-4 py-3 border-2 border-emerald-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 disabled:bg-gray-100"
-      />
-      <input
-        type="text"
-        value={formData.businessLocation || ""}
-        onChange={(e) =>
-          setFormData({ ...formData, businessLocation: e.target.value })
-        }
-        placeholder="Business Location"
-        disabled={loading}
-        className="w-full px-4 py-3 border-2 border-emerald-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 disabled:bg-gray-100"
-      />
+
       <select
         value={formData.status}
         onChange={(e) =>
@@ -1488,17 +1519,18 @@ function EditVendorForm({
           })
         }
         disabled={loading}
-        className="w-full px-4 py-3 border-2 border-emerald-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 disabled:bg-gray-100"
+        className="w-full px-4 py-3 border-2 border-emerald-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 disabled:bg-gray-100 text-sm"
       >
-        <option value="active">Active</option>
-        <option value="inactive">Inactive</option>
+        <option value="active">🟢 Active</option>
+        <option value="inactive">🔴 Inactive</option>
       </select>
+
       <button
         type="submit"
         disabled={loading}
-        className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-400 text-white px-4 py-3 rounded-lg font-bold transition shadow-md"
+        className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-400 text-white px-4 py-3 rounded-lg font-bold transition shadow-md text-sm"
       >
-        {loading ? "⏳ Updating..." : "✅ Update"}
+        {loading ? "⏳ Updating..." : "✅ Update Vendor"}
       </button>
     </form>
   );
@@ -1565,26 +1597,29 @@ function EditAdminForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="space-y-4 max-h-96 overflow-y-auto"
+      className="space-y-4 max-h-[600px] overflow-y-auto pr-2"
     >
-      <input
-        type="text"
-        value={formData.username}
-        onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-        placeholder="Username"
-        required
-        disabled={loading}
-        className="w-full px-4 py-3 border-2 border-emerald-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 disabled:bg-gray-100"
-      />
-      <input
-        type="email"
-        value={formData.email}
-        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-        placeholder="Email"
-        required
-        disabled={loading}
-        className="w-full px-4 py-3 border-2 border-emerald-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 disabled:bg-gray-100"
-      />
+      <div className="grid grid-cols-2 gap-3">
+        <input
+          type="text"
+          value={formData.username}
+          onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+          placeholder="Username"
+          required
+          disabled={loading}
+          className="w-full px-4 py-3 border-2 border-emerald-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 disabled:bg-gray-100 text-sm"
+        />
+        <input
+          type="email"
+          value={formData.email}
+          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+          placeholder="Email"
+          required
+          disabled={loading}
+          className="w-full px-4 py-3 border-2 border-emerald-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 disabled:bg-gray-100 text-sm"
+        />
+      </div>
+
       <select
         value={formData.status}
         onChange={(e) =>
@@ -1594,16 +1629,17 @@ function EditAdminForm({
           })
         }
         disabled={loading}
-        className="w-full px-4 py-3 border-2 border-emerald-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 disabled:bg-gray-100"
+        className="w-full px-4 py-3 border-2 border-emerald-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 disabled:bg-gray-100 text-sm"
       >
-        <option value="active">Active</option>
-        <option value="inactive">Inactive</option>
+        <option value="active">🟢 Active</option>
+        <option value="inactive">🔴 Inactive</option>
       </select>
+
       <div className="bg-emerald-50 p-4 rounded-lg border-2 border-emerald-300">
-        <p className="text-sm font-bold text-emerald-700 mb-3">Permissions:</p>
+        <p className="text-sm font-bold text-emerald-700 mb-4">👮 Admin Permissions:</p>
         <div className="space-y-2">
           {adminPermissionKeys.map((perm) => (
-            <label key={perm} className="flex items-center gap-2">
+            <label key={perm} className="flex items-center gap-3 cursor-pointer hover:bg-white p-2 rounded transition">
               <input
                 type="checkbox"
                 checked={formData.permissions?.[perm] ?? false}
@@ -1617,21 +1653,25 @@ function EditAdminForm({
                   })
                 }
                 disabled={loading}
-                className="w-4 h-4 accent-emerald-600 rounded disabled:opacity-50"
+                className="w-4 h-4 accent-emerald-600 rounded disabled:opacity-50 cursor-pointer"
               />
-              <span className="text-sm text-gray-700">
-                {perm.replace(/([A-Z])/g, " $1").trim()}
+              <span className="text-sm text-gray-700 capitalize">
+                {perm
+                  .replace(/([A-Z])/g, " $1")
+                  .trim()
+                  .replace(/^./, (str) => str.toUpperCase())}
               </span>
             </label>
           ))}
         </div>
       </div>
+
       <button
         type="submit"
         disabled={loading}
-        className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-400 text-white px-4 py-3 rounded-lg font-bold transition shadow-md"
+        className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-400 text-white px-4 py-3 rounded-lg font-bold transition shadow-md text-sm"
       >
-        {loading ? "⏳ Updating..." : "✅ Update"}
+        {loading ? "⏳ Updating..." : "✅ Update Admin"}
       </button>
     </form>
   );
