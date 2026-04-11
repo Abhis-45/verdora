@@ -339,7 +339,7 @@ router.delete("/users/:id", adminAuthMiddleware, async (req, res) => {
 // ✅ DELETE VENDOR
 router.delete("/vendors/:id", adminAuthMiddleware, async (req, res) => {
   try {
-    const vendor = await Admin.findByIdAndDelete(req.params.id);
+    const vendor = await Vendor.findByIdAndDelete(req.params.id);
     if (!vendor) {
       return res.status(404).json({ message: "Vendor not found" });
     }
