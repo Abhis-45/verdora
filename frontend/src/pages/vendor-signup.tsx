@@ -40,7 +40,7 @@ export default function VendorSignup() {
           : "https://verdora.onrender.com";
 
       const response = await fetch(
-        `${BACKEND_URL}/api/public/vendor-register`,
+        `${BACKEND_URL}/api/vendor-register`,
         {
           method: "POST",
           headers: {

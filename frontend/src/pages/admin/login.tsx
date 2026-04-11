@@ -57,16 +57,7 @@ export default function AdminLogin() {
         return;
       }
 
-      // Verify the role is admin (not vendor)
-      if (data.admin?.role === "vendor") {
-        setToast({
-          message: "This is a vendor account. Please use vendor login.",
-          type: "error",
-        });
-        return;
-      }
-
-      // Store token and admin info
+      // Store token and role info
       localStorage.setItem("adminToken", data.token);
       localStorage.setItem("role", data.admin?.role || "admin");
       localStorage.setItem("adminName", data.admin?.username || "Admin");
@@ -76,8 +67,12 @@ export default function AdminLogin() {
         type: "success",
       });
 
-      // Route to admin dashboard
-      setTimeout(() => router.push("/admin/dashboard"), 1000);
+      // Route to appropriate dashboard based on role
+      if (data.admin?.role === "vendor") {
+        setTimeout(() => router.push("/vendor/dashboard"), 1000);
+      } else {
+        setTimeout(() => router.push("/admin/dashboard"), 1000);
+      }
     } catch (error: unknown) {
       console.error("Login error:", error);
       setToast({

@@ -1,4 +1,5 @@
 import express from "express";
+import jwt from "jsonwebtoken";
 import Admin from "../models/Admin.js";
 import Product from "../models/Product.js";
 import User from "../models/User.js";
@@ -61,7 +62,7 @@ const normalizeProductPayload = (payload = {}) => {
 router.get("/profile", vendorAuthMiddleware, async (req, res) => {
   try {
     const vendor = await Admin.findById(req.vendorId).select(
-      "username email businessName businessDescription businessPhone businessLocation businessWebsite businessLogo status",
+      "username email businessName businessDescription businessPhone businessLocation businessWebsite businessLogo status vendorName mobileNumber createdAt updatedAt",
     );
 
     if (!vendor) {
@@ -98,7 +99,7 @@ router.put("/profile", vendorAuthMiddleware, async (req, res) => {
         updatedAt: new Date(),
       },
       { new: true },
-    );
+    ).select("-password");
 
     if (!vendor) {
       return res.status(404).json({ message: "Vendor not found" });
@@ -391,6 +392,121 @@ router.get("/stats", vendorAuthMiddleware, async (req, res) => {
     res
       .status(500)
       .json({ message: "Failed to fetch vendor stats", error: err.message });
+  }
+});
+
+// ✅ UPDATE VENDOR PASSWORD
+router.post(
+  "/update-password",
+  vendorAuthMiddleware,
+  async (req, res) => {
+    try {
+      const { currentPassword, newPassword, confirmPassword } = req.body;
+
+      if (!currentPassword || !newPassword || !confirmPassword) {
+        return res
+          .status(400)
+          .json({ message: "All password fields are required" });
+      }
+
+      if (newPassword !== confirmPassword) {
+        return res
+          .status(400)
+          .json({ message: "New passwords do not match" });
+      }
+
+      if (newPassword.length < 6) {
+        return res
+          .status(400)
+          .json({ message: "Password must be at least 6 characters" });
+      }
+
+      // Verify current password
+      const vendor = await Admin.findById(req.vendorId);
+      if (!vendor) {
+        return res.status(404).json({ message: "Vendor not found" });
+      }
+
+      const isPasswordValid = await vendor.verifyPassword(currentPassword);
+      if (!isPasswordValid) {
+        return res
+          .status(401)
+          .json({ message: "Current password is incorrect" });
+      }
+
+      // Update password
+      vendor.password = newPassword;
+      vendor.updatedAt = new Date();
+      await vendor.save();
+
+      res.json({ message: "Password updated successfully" });
+    } catch (err) {
+      res.status(500).json({
+        message: "Failed to update password",
+        error: err.message,
+      });
+    }
+  },
+);
+
+// ✅ RESET VENDOR PASSWORD (Admin only - for vendor account recovery)
+router.post("/reset-password/:vendorId", async (req, res) => {
+  try {
+    const { newPassword, adminToken } = req.body;
+    const { vendorId } = req.params;
+
+    if (!newPassword) {
+      return res
+        .status(400)
+        .json({ message: "New password is required" });
+    }
+
+    if (newPassword.length < 6) {
+      return res
+        .status(400)
+        .json({ message: "Password must be at least 6 characters" });
+    }
+
+    // Verify admin token
+    if (!adminToken) {
+      return res.status(401).json({ message: "Admin token required" });
+    }
+
+    try {
+      const decoded = jwt.verify(adminToken, process.env.JWT_SECRET);
+      if (decoded.role !== "admin") {
+        return res
+          .status(403)
+          .json({ message: "Only admins can reset vendor passwords" });
+      }
+    } catch (tokenErr) {
+      return res
+        .status(401)
+        .json({ message: "Invalid admin token" });
+    }
+
+    const vendor = await Admin.findById(vendorId);
+    if (!vendor) {
+      return res.status(404).json({ message: "Vendor not found" });
+    }
+
+    if (vendor.role !== "vendor") {
+      return res
+        .status(400)
+        .json({ message: "Can only reset password for vendors" });
+    }
+
+    // Update password
+    vendor.password = newPassword;
+    vendor.updatedAt = new Date();
+    await vendor.save();
+
+    res.json({ message: "Vendor password reset successfully" });
+  } catch (err) {
+    res.status(500).json({
+      message: "Failed to reset password",
+      error: err.message,
+    });
   }
 });
 

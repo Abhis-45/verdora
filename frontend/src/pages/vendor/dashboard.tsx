@@ -10,6 +10,7 @@ import {
   MagnifyingGlassIcon,
   HomeIcon,
   ArrowLeftOnRectangleIcon,
+  CogIcon,
 } from "@heroicons/react/24/outline";
 import RefreshButton from "@/components/shared/RefreshButton";
 
@@ -367,6 +368,12 @@ export default function VendorDashboard() {
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
+            <Link
+              href="/vendor/settings"
+              className="flex items-center gap-2 rounded-lg bg-blue-500 px-4 py-2 font-semibold text-white transition hover:bg-blue-600"
+            >
+              <CogIcon className="w-5 h-5" /> Settings
+            </Link>
             <button
               onClick={handleHomeClick}
               className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 font-semibold text-emerald-700 transition hover:bg-emerald-50"

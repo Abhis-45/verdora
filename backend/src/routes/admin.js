@@ -204,6 +204,8 @@ router.get("/products", adminAuthMiddleware, async (req, res) => {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit))
+      .populate("vendorId", "username email businessName")
+      .populate("createdBy", "username email")
       .lean();
 
     res.json({
@@ -240,7 +242,6 @@ router.get("/users", adminAuthMiddleware, async (req, res) => {
 
     const total = await User.countDocuments(query);
     const users = await User.find(query)
-      .select("name email mobile createdAt")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit))
@@ -280,10 +281,10 @@ router.get("/vendors", adminAuthMiddleware, async (req, res) => {
 
     const total = await Admin.countDocuments(query);
     const vendors = await Admin.find(query)
-      .select("username email businessName status createdAt")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit))
+      .select("-password")
       .lean();
 
     res.json({

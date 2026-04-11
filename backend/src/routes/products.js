@@ -499,8 +499,13 @@ router.patch("/:id", adminAuthMiddleware, async (req, res) => {
       return res.status(404).json({ message: "Product not found" });
     }
 
+    // Authorization check
     if (req.userRole === "vendor") {
-      if (!product.vendorId || product.vendorId.toString() !== req.userId) {
+      // For vendors: verify they own this product
+      const productVendorId = product.vendorId?.toString() || product.vendorId;
+      const requestVendorId = req.userId?.toString() || req.userId;
+      
+      if (!product.vendorId || productVendorId !== requestVendorId) {
         return res
           .status(403)
           .json({ message: "You can only update your own products" });
