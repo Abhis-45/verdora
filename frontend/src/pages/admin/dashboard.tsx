@@ -19,6 +19,7 @@ import {
   XMarkIcon,
 } from "@heroicons/react/24/outline";
 import VendorRequests from "@/components/admin/VendorRequests";
+import OrderStatusForm from "@/components/admin/OrderStatusForm";
 
 interface Product {
   _id: string;
@@ -31,13 +32,52 @@ interface Product {
   vendorName: string;
   description?: string;
   image?: string;
+  images?: string[];
   vendorId?: string;
+  plantSizes?: Array<{ id: string; label: string; price: number; mrp: number }>;
+  originAddress?: { address: string; city: string; state: string; pincode: string };
+  tags?: string[];
+  cloudinaryPublicId?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+interface OrderItem {
+  orderId: string;
+  itemId: string;
+  userId: string;
+  customer: string;
+  email: string;
+  mobile: string;
+  productTitle: string;
+  productImage: string;
+  quantity: number;
+  price: number;
+  mrp: number;
+  total: number;
+  vendorId: string;
+  vendorName: string;
+  status: string;
+  statusReason: string;
+  returnReason: string;
+  statusUpdatedAt: string;
+  orderDate: string;
+  address: string;
+  deliveryEstimate: string;
 }
 interface User {
   _id: string;
   name: string;
   email: string;
   mobile: string;
+  dob?: string;
+  gender?: "male" | "female" | "other";
+  addresses?: Array<{ label: string; address: string; city: string; state: string; pincode: string }>;
+  totalOrders?: number;
+  totalSpent?: number;
+  addressCount?: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 interface Vendor {
   _id: string;
@@ -45,10 +85,21 @@ interface Vendor {
   email: string;
   businessName: string;
   status: "active" | "inactive";
-  vendorName?: string;
-  mobileNumber?: string;
-  businessPhone?: string;
-  businessLocation?: string;
+  vendorName: string;
+  mobileNumber: string;
+  businessPhone: string;
+  businessLocation: string;
+  businessDescription?: string;
+  businessWebsite?: string;
+  businessLogo?: string;
+  totalProducts?: number;
+  totalOrders?: number;
+  totalRevenue?: number;
+  averageRating?: number;
+  approvedBy?: string;
+  approvedAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 interface Admin {
   _id: string;
@@ -71,7 +122,7 @@ interface AdminStats {
   totalAdmins: number;
   totalRevenue: number;
 }
-type Tab = "overview" | "products" | "users" | "vendors" | "admins" | "vendor-requests";
+type Tab = "overview" | "orders" | "products" | "users" | "vendors" | "admins" | "vendor-requests";
 type DataTab = Exclude<Tab, "overview">;
 type ManageItem = Product | User | Vendor | Admin;
 const adminPermissionKeys = [
@@ -91,7 +142,8 @@ type ModalType =
   | "createAdmin"
   | "editAdmin"
   | "createUser"
-  | "createVendor";
+  | "createVendor"
+  | "orderStatus";
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -113,6 +165,7 @@ export default function AdminDashboard() {
   const [users, setUsers] = useState<User[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [admins, setAdmins] = useState<Admin[]>([]);
+  const [orders, setOrders] = useState<OrderItem[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [activeModal, setActiveModal] = useState<ModalType>("none");
@@ -158,7 +211,7 @@ export default function AdminDashboard() {
         );
         if (res.ok) {
           const data = await res.json();
-          setProducts(data.products || []);
+          setProducts(Array.isArray(data) ? data : data.products || []);
         } else {
         }
       } catch {}
@@ -179,7 +232,7 @@ export default function AdminDashboard() {
       });
       if (res.ok) {
         const data = await res.json();
-        setUsers(data.users || []);
+        setUsers(Array.isArray(data) ? data : data.users || []);
       } else {
       }
     } catch {}
@@ -196,7 +249,7 @@ export default function AdminDashboard() {
         );
         if (res.ok) {
           const data = await res.json();
-          setVendors(data.vendors || []);
+          setVendors(Array.isArray(data) ? data : data.vendors || []);
         } else {
         }
       } catch {}
@@ -217,7 +270,7 @@ export default function AdminDashboard() {
         );
         if (res.ok) {
           const data = await res.json();
-          setAdmins(data.admins || []);
+          setAdmins(Array.isArray(data) ? data : data.admins || []);
         } else {
         }
       } catch {}
@@ -225,6 +278,24 @@ export default function AdminDashboard() {
     },
     [],
   );
+
+  const fetchOrders = useCallback(async (authToken: string) => {
+    setLoading(true);
+    try {
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+      const res = await fetch(`${BACKEND_URL}/api/admin/manage/orders`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setOrders(Array.isArray(data) ? data : data.orders || []);
+      }
+    } catch {}
+    setLoading(false);
+  }, []);
 
   useEffect(() => {
     const role = localStorage.getItem("role");
@@ -235,6 +306,7 @@ export default function AdminDashboard() {
 
     const loadManagementData = async () => {
       await fetchStats(token);
+      await fetchOrders(token);
       await fetchProducts(token);
       await fetchUsers(token);
       await fetchVendors(token);
@@ -345,7 +417,7 @@ export default function AdminDashboard() {
       <nav className="sticky top-20.5 z-30 border-b-2 border-emerald-200 bg-white shadow-md sm:top-19 lg:top-28">
         <div className="mx-auto flex max-w-7xl gap-0 overflow-x-auto px-4 sm:px-6 lg:px-8">
           {(
-            ["overview", "products", "users", "vendors", "admins", "vendor-requests"] as Tab[]
+            ["overview", "orders", "products", "users", "vendors", "admins", "vendor-requests"] as Tab[]
           ).map((t) => (
             <button
               key={t}
@@ -353,7 +425,8 @@ export default function AdminDashboard() {
                 setTab(t);
                 setSearch("");
                 setActiveModal("none");
-                if (t === "products") fetchProducts(token);
+                if (t === "orders") fetchOrders(token);
+                else if (t === "products") fetchProducts(token);
                 else if (t === "users") fetchUsers(token);
                 else if (t === "vendors") fetchVendors(token);
                 else if (t === "admins") fetchAdmins(token);
@@ -387,6 +460,66 @@ export default function AdminDashboard() {
               <StatCard title="🔐 Admins" value={stats.totalAdmins} />
               <StatCard title="💰 Revenue" value={stats.totalRevenue} />
             </div>
+          </div>
+        )}
+
+        {tab === "orders" && (
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <h2 className="text-2xl font-bold mb-4">📋 Orders Management</h2>
+            {loading ? (
+              <div className="text-center py-8">Loading orders...</div>
+            ) : orders.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">No orders found</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 border-b-2">
+                    <tr>
+                      <th className="px-4 py-3 text-left font-semibold">Customer</th>
+                      <th className="px-4 py-3 text-left font-semibold">Product</th>
+                      <th className="px-4 py-3 text-left font-semibold">Qty</th>
+                      <th className="px-4 py-3 text-left font-semibold">Price</th>
+                      <th className="px-4 py-3 text-left font-semibold">Vendor</th>
+                      <th className="px-4 py-3 text-left font-semibold">Status</th>
+                      <th className="px-4 py-3 text-left font-semibold">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orders.map((order) => (
+                      <tr key={`${order.orderId}-${order.itemId}`} className="border-b hover:bg-gray-50">
+                        <td className="px-4 py-3">{order.customer}</td>
+                        <td className="px-4 py-3">{order.productTitle}</td>
+                        <td className="px-4 py-3">{order.quantity}</td>
+                        <td className="px-4 py-3">₹{order.price}</td>
+                        <td className="px-4 py-3">{order.vendorName}</td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                            order.status === 'delivered' ? 'bg-green-100 text-green-800' :
+                            order.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                            order.status === 'shipped' ? 'bg-blue-100 text-blue-800' :
+                            order.status === 'returned' ? 'bg-orange-100 text-orange-800' :
+                            'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {order.status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <button
+                            onClick={() => {
+                              setSelectedItem(order as any);
+                              setActiveModal("orderStatus");
+                            }}
+                            className="text-blue-600 hover:text-blue-900 font-semibold"
+                          >
+                            Edit
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
 
@@ -562,6 +695,18 @@ export default function AdminDashboard() {
             onSuccess={() => {
               setActiveModal("none");
               fetchAdmins(token);
+            }}
+          />
+        </Modal>
+      )}
+      {activeModal === "orderStatus" && selectedItem && "orderId" in selectedItem && (
+        <Modal title="📦 Update Order Status" onClose={() => setActiveModal("none")}>
+          <OrderStatusForm
+            order={selectedItem as unknown as OrderItem}
+            token={token}
+            onSuccess={() => {
+              setActiveModal("none");
+              fetchOrders(token);
             }}
           />
         </Modal>
