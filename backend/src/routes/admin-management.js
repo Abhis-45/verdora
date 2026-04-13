@@ -10,6 +10,7 @@ import {
   CUSTOMER_CANCELLABLE_STATUSES,
   CUSTOMER_RETURNABLE_STATUSES,
 } from "../config/constants.js";
+import { deleteFromCloudinary } from "../services/cloudinaryService.js";
 
 const router = express.Router();
 
@@ -292,20 +293,122 @@ router.put("/products/:id", adminAuthMiddleware, async (req, res) => {
   }
 });
 
-// ✅ DELETE PRODUCT
+// ✅ DELETE PRODUCT - WITH CASCADE DELETE (images, reviews)
 router.delete("/products/:id", adminAuthMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
+    console.log("Delete request for product id:", id);
+    
+    let product = null;
 
-    const product = await Product.findById(id);
-    if (!product) {
-      return res.status(404).json({ message: "Product not found" });
+    // Strategy 1: Try MongoDB ObjectId directly
+    if (id.match(/^[0-9a-fA-F]{24}$/)) {
+      try {
+        product = await Product.findById(id);
+        if (product) {
+          console.log("✅ Found product by MongoDB ObjectId:", id);
+        }
+      } catch (err) {
+        console.error("Error querying by ObjectId:", err.message);
+      }
     }
 
-    await Product.deleteOne({ _id: product._id });
-    res.json({ message: "Product deleted" });
+    // Strategy 2: Try custom 'id' field if ObjectId search failed
+    if (!product) {
+      try {
+        product = await Product.findOne({ id: String(id) });
+        if (product) {
+          console.log("✅ Found product by custom id field:", id);
+        }
+      } catch (err) {
+        console.error("Error querying by custom id:", err.message);
+      }
+    }
+
+    if (!product) {
+      console.error("❌ Product not found with any search strategy for id:", id);
+      return res.status(404).json({ 
+        message: "Product not found", 
+        attempted: { mongoObjectId: id, customId: id } 
+      });
+    }
+
+    console.log("Found product:", { mongoId: product._id, customId: product.id, name: product.name });
+    const productId = product._id; // Store the actual MongoDB ID for deletion
+
+    // CASCADE: Delete all product images from Cloudinary (non-blocking)
+    let imagesDeleted = 0;
+    const deleteImages = async () => {
+      try {
+        if (product.cloudinaryPublicId) {
+          try {
+            await deleteFromCloudinary(product.cloudinaryPublicId);
+            imagesDeleted++;
+            console.log("✅ Deleted main image:", product.cloudinaryPublicId);
+          } catch (imgErr) {
+            console.warn("⚠️ Failed to delete main image:", imgErr.message);
+          }
+        }
+
+        if (product.images && Array.isArray(product.images)) {
+          for (const image of product.images) {
+            if (image.publicId) {
+              try {
+                await deleteFromCloudinary(image.publicId);
+                imagesDeleted++;
+                console.log("✅ Deleted additional image:", image.publicId);
+              } catch (imgErr) {
+                console.warn("⚠️ Failed to delete image:", imgErr.message);
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("⚠️ Image deletion loop error:", err.message);
+      }
+    };
+    
+    await deleteImages();
+    console.log(`✅ Total images deleted: ${imagesDeleted}`);
+
+    // CASCADE: Delete all reviews for this product
+    let reviewsDeleted = 0;
+    try {
+      const reviewResult = await Review.deleteMany({ productId: productId });
+      reviewsDeleted = reviewResult.deletedCount || 0;
+      console.log(`✅ Deleted ${reviewsDeleted} reviews for product`);
+    } catch (reviewErr) {
+      console.warn("⚠️ Failed to delete reviews:", reviewErr.message);
+    }
+
+    // DELETE THE PRODUCT ITSELF
+    console.log("Attempting to delete product with MongoDB _id:", productId);
+    const deletedProduct = await Product.findByIdAndDelete(productId, { new: false });
+    
+    if (!deletedProduct) {
+      console.error("❌ findByIdAndDelete returned null");
+      return res.status(500).json({ 
+        message: "Failed to delete product from database - database operation returned null" 
+      });
+    }
+
+    console.log("✅ Product deleted successfully:", { mongoId: deletedProduct._id, customId: deletedProduct.id, name: deletedProduct.name });
+
+    res.json({ 
+      message: "✅ Product deleted successfully", 
+      relatedDataDeleted: { images: imagesDeleted, reviews: reviewsDeleted },
+      deletedProduct: { 
+        _id: deletedProduct._id.toString(), 
+        id: deletedProduct.id, 
+        name: deletedProduct.name 
+      }
+    });
   } catch (err) {
-    res.status(500).json({ message: "Failed to delete product", error: err.message });
+    console.error("❌ FATAL DELETE ERROR:", err);
+    res.status(500).json({ 
+      message: "Failed to delete product", 
+      error: err.message 
+    });
   }
 });
 
@@ -389,14 +492,34 @@ router.put("/users/:id", adminAuthMiddleware, async (req, res) => {
   }
 });
 
-// ✅ DELETE USER
+// ✅ DELETE USER - WITH CASCADE DELETE (reviews)
 router.delete("/users/:id", adminAuthMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
 
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // CASCADE: Delete all reviews by this user (skip if fails)
+    let reviewsDeleted = 0;
+    try {
+      const reviewResult = await Review.deleteMany({ userId: user._id });
+      reviewsDeleted = reviewResult.deletedCount || 0;
+    } catch (reviewErr) {
+      console.warn("Warning: Failed to delete user reviews:", reviewErr.message);
+    }
+
+    // Delete the user
     await User.findByIdAndDelete(id);
-    res.json({ message: "User deleted" });
+    
+    res.json({ 
+      message: "✅ User deleted successfully", 
+      relatedDataDeleted: { reviews: reviewsDeleted }
+    });
   } catch (err) {
+    console.error("Delete user error:", err);
     res.status(500).json({ message: "Failed to delete user", error: err.message });
   }
 });
@@ -528,18 +651,80 @@ router.patch("/vendors/:id/status", adminAuthMiddleware, async (req, res) => {
   }
 });
 
-// ✅ DELETE VENDOR
+// ✅ DELETE VENDOR - WITH CASCADE DELETE (products, images, reviews)
 router.delete("/vendors/:id", adminAuthMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
 
-    const vendor = await Vendor.findByIdAndDelete(id);
+    const vendor = await Vendor.findById(id);
     if (!vendor) {
       return res.status(404).json({ message: "Vendor not found" });
     }
 
-    res.json({ message: "Vendor deleted" });
+    // CASCADE: Delete all vendor products and their images
+    let productsDeleted = 0;
+    let imagesDeleted = 0;
+    let reviewsDeleted = 0;
+
+    try {
+      const vendorProducts = await Product.find({ vendorId: vendor._id });
+
+      for (const product of vendorProducts) {
+        // Delete images from Cloudinary
+        if (product.cloudinaryPublicId) {
+          try {
+            await deleteFromCloudinary(product.cloudinaryPublicId);
+            imagesDeleted++;
+          } catch (imgErr) {
+            console.warn("Warning: Failed to delete image:", imgErr.message);
+          }
+        }
+
+        if (product.images && Array.isArray(product.images)) {
+          for (const image of product.images) {
+            if (image.publicId) {
+              try {
+                await deleteFromCloudinary(image.publicId);
+                imagesDeleted++;
+              } catch (imgErr) {
+                console.warn("Warning: Failed to delete image:", imgErr.message);
+              }
+            }
+          }
+        }
+
+        // Delete reviews for this product
+        try {
+          const reviewResult = await Review.deleteMany({ productId: product._id });
+          reviewsDeleted += reviewResult.deletedCount || 0;
+        } catch (reviewErr) {
+          console.warn("Warning: Failed to delete reviews:", reviewErr.message);
+        }
+      }
+
+      // Delete all products by this vendor
+      const productResult = await Product.deleteMany({ vendorId: vendor._id });
+      productsDeleted = productResult.deletedCount || 0;
+    } catch (prodErr) {
+      console.warn("Warning: Failed to cascade delete products:", prodErr.message);
+    }
+
+    // Delete the vendor
+    const deletedVendor = await Vendor.findByIdAndDelete(id);
+    if (!deletedVendor) {
+      return res.status(500).json({ message: "Failed to delete vendor from database" });
+    }
+
+    res.json({ 
+      message: "✅ Vendor deleted successfully", 
+      relatedDataDeleted: { 
+        products: productsDeleted, 
+        images: imagesDeleted, 
+        reviews: reviewsDeleted 
+      }
+    });
   } catch (err) {
+    console.error("Delete vendor error:", err);
     res.status(500).json({ message: "Failed to delete vendor", error: err.message });
   }
 });

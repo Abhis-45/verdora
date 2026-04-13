@@ -18,6 +18,7 @@ export default function Contact() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    phone: "",
     message: "",
     service: "",
     package: "",
@@ -102,7 +103,7 @@ ${prev.name || "Your Name"}`,
             <form
               onSubmit={async (e) => {
                 e.preventDefault();
-                if (!formData.name || !formData.email || !formData.message) {
+                if (!formData.name || !formData.email || !formData.phone || !formData.message) {
                   setToast({
                     message: "Please fill in all fields",
                     type: "error",
@@ -118,7 +119,11 @@ ${prev.name || "Your Name"}`,
                   const res = await fetch(`${BACKEND_URL}/api/contact`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(formData),
+                    body: JSON.stringify({
+                      ...formData,
+                      type: formData.service ? "service" : "general",
+                      servicePackage: formData.package,
+                    }),
                   });
                   if (res.ok) {
                     setToast({
@@ -130,6 +135,7 @@ ${prev.name || "Your Name"}`,
                     setFormData({
                       name: loggedInUser?.name || "",
                       email: loggedInUser?.email || "",
+                      phone: "",
                       message: "",
                       service: "",
                       package: "",
@@ -175,6 +181,22 @@ ${prev.name || "Your Name"}`,
                   value={formData.email}
                   onChange={(e) =>
                     setFormData({ ...formData, email: e.target.value })
+                  }
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                />
+              </div>
+
+              {/* Phone */}
+              <div>
+                <label className="block text-xs font-semibold text-green-700 mb-1">
+                  Phone
+                </label>
+                <input
+                  type="tel"
+                  placeholder="Your phone number"
+                  value={formData.phone}
+                  onChange={(e) =>
+                    setFormData({ ...formData, phone: e.target.value })
                   }
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
                 />

@@ -3,7 +3,9 @@ import jwt from "jsonwebtoken";
 import Product from "../models/Product.js";
 import User from "../models/User.js";
 import Admin from "../models/Admin.js";
+import Vendor from "../models/Vendor.js";
 import VendorRequest from "../models/VendorRequest.js";
+import Review from "../models/Review.js";
 import { ORDER_STATUSES } from "../config/constants.js";
 import {
   DEFAULT_ORIGIN_ADDRESS,
@@ -11,6 +13,7 @@ import {
   normalizeAddress,
   normalizePlantSizes,
 } from "../utils/delivery.js";
+import { deleteFromCloudinary } from "../services/cloudinaryService.js";
 
 const router = express.Router();
 
@@ -63,7 +66,7 @@ router.get("/stats", adminAuthMiddleware, async (req, res) => {
   try {
     const totalProducts = await Product.countDocuments();
     const totalUsers = await User.countDocuments();
-    const totalVendors = await Admin.countDocuments({ role: "vendor" });
+    const totalVendors = await Vendor.countDocuments();
     const totalAdmins = await Admin.countDocuments({ role: "admin" });
 
     // Get total revenue (sum of all product prices)
@@ -268,19 +271,19 @@ router.get("/vendors", adminAuthMiddleware, async (req, res) => {
     const { search, page = 1, limit = 10 } = req.query;
     const skip = (page - 1) * limit;
 
-    let query = { role: "vendor" };
+    let query = {};
     if (search) {
       query = {
-        ...query,
         $or: [
           { username: { $regex: search, $options: "i" } },
           { email: { $regex: search, $options: "i" } },
+          { businessName: { $regex: search, $options: "i" } },
         ],
       };
     }
 
-    const total = await Admin.countDocuments(query);
-    const vendors = await Admin.find(query)
+    const total = await Vendor.countDocuments(query);
+    const vendors = await Vendor.find(query)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit))
@@ -302,25 +305,105 @@ router.get("/vendors", adminAuthMiddleware, async (req, res) => {
   }
 });
 
-// ✅ DELETE PRODUCT
+// ✅ DELETE PRODUCT WITH CASCADE (Images + Reviews)
 router.delete("/products/:id", adminAuthMiddleware, async (req, res) => {
   try {
-    const product =
-      (await Product.findByIdAndDelete(req.params.id)) ||
-      (await Product.findOneAndDelete({ id: req.params.id }));
+    const { id } = req.params;
+    let product = null;
+    let error = null;
+
+    // Strategy 1: Try to find by custom 'id' field
+    try {
+      product = await Product.findOne({ id: String(id) });
+    } catch (err1) {
+      error = err1;
+      console.error("Error finding by custom id:", err1);
+    }
+
+    // Strategy 2: If not found, try MongoDB ObjectId
+    if (!product && !error && id.length === 24) {
+      try {
+        product = await Product.findById(id);
+      } catch (err2) {
+        error = err2;
+        console.error("Error finding by ObjectId:", err2);
+      }
+    }
+
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
 
-    res.json({ message: "Product deleted successfully", product });
+    // CASCADE: Delete all product images from Cloudinary (skip if fails)
+    let imagesDeleted = 0;
+    try {
+      if (product.cloudinaryPublicId) {
+        try {
+          await deleteFromCloudinary(product.cloudinaryPublicId);
+          imagesDeleted++;
+        } catch (imgErr) {
+          console.warn("Warning: Failed to delete main image:", imgErr.message);
+        }
+      }
+
+      // Delete all additional product images
+      if (product.images && Array.isArray(product.images) && product.images.length > 0) {
+        for (const image of product.images) {
+          if (image.publicId) {
+            try {
+              await deleteFromCloudinary(image.publicId);
+              imagesDeleted++;
+            } catch (imgErr) {
+              console.warn("Warning: Failed to delete image:", imgErr.message);
+            }
+          }
+        }
+      }
+    } catch (imgErr) {
+      console.warn("Warning: Image cleanup failed:", imgErr.message);
+    }
+
+    // CASCADE: Delete all reviews for this product (skip if fails)
+    let reviewsDeleted = 0;
+    try {
+      const reviewResult = await Review.deleteMany({ productId: product._id });
+      reviewsDeleted = reviewResult.deletedCount || 0;
+    } catch (reviewErr) {
+      console.warn("Warning: Failed to delete reviews:", reviewErr.message);
+    }
+
+    // Delete the product - MAIN deletion
+    let deletedProduct = null;
+    try {
+      deletedProduct = await Product.findOneAndDelete({ id: String(id) });
+    } catch (err) {
+      console.error("Fallback: trying findByIdAndDelete");
+      deletedProduct = await Product.findByIdAndDelete(product._id);
+    }
+
+    if (!deletedProduct) {
+      return res.status(500).json({ message: "Failed to delete product from database" });
+    }
+
+    res.json({ 
+      message: "✅ Product and all associated data deleted successfully", 
+      deletedCount: 1,
+      relatedDataDeleted: {
+        images: imagesDeleted,
+        reviews: reviewsDeleted
+      }
+    });
   } catch (err) {
-    res
-      .status(500)
-      .json({ message: "Failed to delete product", error: err.message });
+    console.error("Delete product fatal error:", err);
+    res.status(500).json({ 
+      message: "Failed to delete product", 
+      error: err.message,
+      hint: "Check server logs for details"
+    });
   }
 });
 
-// ✅ DELETE USER
+// ✅ DELETE USER WITH CASCADE (Orders + Reviews + Profile)
 router.delete("/users/:id", adminAuthMiddleware, async (req, res) => {
   try {
     const user = await User.findByIdAndDelete(req.params.id);
@@ -328,15 +411,31 @@ router.delete("/users/:id", adminAuthMiddleware, async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    res.json({ message: "User deleted successfully", user });
+    // CASCADE: Delete user's reviews
+    const reviewsDeleted = await Review.deleteMany({ userId: req.params.id });
+
+    // User's order data is embedded in the User document, so it's deleted with user.findByIdAndDelete
+    const ordersCount = user.orders?.length || 0;
+
+    res.json({ 
+      message: "✅ User and all associated data deleted successfully",
+      deletedCount: 1,
+      relatedDataDeleted: {
+        profile: "deleted",
+        orders: ordersCount,
+        reviews: reviewsDeleted.deletedCount || 0
+      }
+    });
   } catch (err) {
-    res
-      .status(500)
-      .json({ message: "Failed to delete user", error: err.message });
+    console.error("Delete user error:", err);
+    res.status(500).json({ 
+      message: "Failed to delete user", 
+      error: err.message 
+    });
   }
 });
 
-// ✅ DELETE VENDOR
+// ✅ DELETE VENDOR WITH CASCADE (Products + Images + Reviews + Business Details)
 router.delete("/vendors/:id", adminAuthMiddleware, async (req, res) => {
   try {
     const vendor = await Vendor.findByIdAndDelete(req.params.id);
@@ -344,14 +443,60 @@ router.delete("/vendors/:id", adminAuthMiddleware, async (req, res) => {
       return res.status(404).json({ message: "Vendor not found" });
     }
 
-    // Also delete vendor's products
+    // CASCADE: Get all vendor's products for image cleanup
+    const vendorProducts = await Product.find({ vendorId: req.params.id });
+
+    // Delete all images from Cloudinary for all vendor products
+    let imagesDeleted = 0;
+    for (const product of vendorProducts) {
+      if (product.cloudinaryPublicId) {
+        try {
+          await deleteFromCloudinary(product.cloudinaryPublicId);
+          imagesDeleted++;
+        } catch (imgErr) {
+          console.warn("Warning: Failed to delete image:", imgErr.message);
+        }
+      }
+      if (product.images && product.images.length > 0) {
+        for (const image of product.images) {
+          if (image.publicId) {
+            try {
+              await deleteFromCloudinary(image.publicId);
+              imagesDeleted++;
+            } catch (imgErr) {
+              console.warn("Warning: Failed to delete image:", imgErr.message);
+            }
+          }
+        }
+      }
+    }
+
+    // CASCADE: Delete all reviews for vendor's products
+    const vendorProductIds = vendorProducts.map((p) => p._id);
+    const reviewsDeleted = await Review.deleteMany({ productId: { $in: vendorProductIds } });
+
+    // CASCADE: Delete all vendor's products
     await Product.deleteMany({ vendorId: req.params.id });
 
-    res.json({ message: "Vendor and their products deleted successfully" });
+    res.json({ 
+      message: "✅ Vendor and all associated data deleted successfully",
+      deletedCount: {
+        vendor: 1,
+        products: vendorProducts.length,
+      },
+      relatedDataDeleted: {
+        businessDetails: "deleted",
+        products: vendorProducts.length,
+        images: imagesDeleted,
+        reviews: reviewsDeleted.deletedCount || 0
+      }
+    });
   } catch (err) {
-    res
-      .status(500)
-      .json({ message: "Failed to delete vendor", error: err.message });
+    console.error("Delete vendor error:", err);
+    res.status(500).json({ 
+      message: "Failed to delete vendor", 
+      error: err.message 
+    });
   }
 });
 
@@ -427,7 +572,7 @@ router.put("/products/:id", adminAuthMiddleware, async (req, res) => {
 // ✅ TOGGLE VENDOR STATUS
 router.patch("/vendors/:id/status", adminAuthMiddleware, async (req, res) => {
   try {
-    const vendor = await Admin.findById(req.params.id);
+    const vendor = await Vendor.findById(req.params.id);
     if (!vendor) {
       return res.status(404).json({ message: "Vendor not found" });
     }
@@ -435,7 +580,7 @@ router.patch("/vendors/:id/status", adminAuthMiddleware, async (req, res) => {
     vendor.status = vendor.status === "active" ? "inactive" : "active";
     await vendor.save();
 
-    res.json({ message: `Vendor ${vendor.status}`, vendor });
+    res.json({ message: `Vendor ${vendor.status}`, vendor: { ...vendor.toObject(), password: undefined } });
   } catch (err) {
     res
       .status(500)
@@ -561,7 +706,7 @@ router.put("/vendors/:id/details", adminAuthMiddleware, async (req, res) => {
       businessLocation,
       businessWebsite,
     } = req.body;
-    const vendor = await Admin.findByIdAndUpdate(
+    const vendor = await Vendor.findByIdAndUpdate(
       req.params.id,
       {
         businessName,
@@ -572,7 +717,7 @@ router.put("/vendors/:id/details", adminAuthMiddleware, async (req, res) => {
         updatedAt: new Date(),
       },
       { new: true },
-    );
+    ).select("-password");
 
     if (!vendor) {
       return res.status(404).json({ message: "Vendor not found" });
@@ -593,20 +738,23 @@ router.post("/vendors", adminAuthMiddleware, async (req, res) => {
       username,
       email,
       password,
+      vendorName,
+      mobileNumber,
       businessName,
       businessPhone,
       businessLocation,
+      businessWebsite,
     } = req.body;
 
-    if (!username || !email || !password) {
+    if (!username || !email || !password || !businessName) {
       return res.status(400).json({
-        message: "Required fields: username, email, password",
+        message: "Required fields: username, email, password, businessName",
       });
     }
 
     // Check if vendor already exists
-    const existingVendor = await Admin.findOne({
-      $or: [{ username }, { email }],
+    const existingVendor = await Vendor.findOne({
+      $or: [{ username: username.toLowerCase() }, { email: email.toLowerCase() }],
     });
     if (existingVendor) {
       return res
@@ -614,23 +762,19 @@ router.post("/vendors", adminAuthMiddleware, async (req, res) => {
         .json({ message: "Username or email already exists" });
     }
 
-    const vendor = new Admin({
-      username,
-      email,
+    const vendor = new Vendor({
+      username: username.trim(),
+      email: email.toLowerCase().trim(),
       password,
-      role: "vendor",
+      vendorName: vendorName?.trim() || "",
+      mobileNumber: mobileNumber?.trim() || "",
+      businessName: businessName.trim(),
+      businessPhone: businessPhone?.trim() || "",
+      businessLocation: businessLocation?.trim() || "",
+      businessWebsite: businessWebsite?.trim() || "",
       status: "active",
-      businessName: businessName || "",
-      businessPhone: businessPhone || "",
-      businessLocation: businessLocation || "",
-      permissions: {
-        canManageProducts: true,
-        canManageUsers: false,
-        canManageVendors: false,
-        canManageAdmins: false,
-        canViewReports: false,
-        canManageSettings: false,
-      },
+      approvedBy: req.adminId,
+      approvedAt: new Date(),
     });
 
     await vendor.save();
@@ -832,8 +976,8 @@ router.patch(
 // ✅ GET VENDOR DETAILS (For Vendor Dashboard)
 router.get("/vendors/:id/details", async (req, res) => {
   try {
-    const vendor = await Admin.findById(req.params.id).select(
-      "username email businessName businessDescription businessPhone businessLocation businessWebsite businessLogo",
+    const vendor = await Vendor.findById(req.params.id).select(
+      "username email vendorName mobileNumber businessName businessDescription businessPhone businessLocation businessWebsite businessLogo",
     );
     if (!vendor) {
       return res.status(404).json({ message: "Vendor not found" });
@@ -846,10 +990,12 @@ router.get("/vendors/:id/details", async (req, res) => {
   }
 });
 
-// ✅ GET VENDOR REQUESTS (Pending vendor registrations)
+// ✅ GET VENDOR REQUESTS (All vendor registrations with full data)
 router.get("/vendor-requests", adminAuthMiddleware, async (req, res) => {
   try {
-    const requests = await VendorRequest.find({ status: "pending" })
+    const requests = await VendorRequest.find()
+      .populate("approvedBy", "username email")
+      .populate("rejectedBy", "username email")
       .sort({ createdAt: -1 })
       .lean();
 
@@ -964,6 +1110,80 @@ router.post(
   }
 );
 
+// ✅ ACCEPT VENDOR REQUEST & CREATE VENDOR ACCOUNT
+router.post("/vendor-requests/:id/accept-with-vendor", adminAuthMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      username,
+      email,
+      password,
+      vendorName,
+      mobileNumber,
+      businessName,
+      businessPhone,
+      businessLocation,
+      businessWebsite,
+    } = req.body;
+
+    // Validate required fields
+    if (!username || !email || !password || !businessName) {
+      return res.status(400).json({ message: "Username, email, password, and business name are required" });
+    }
+
+    // Get vendor request
+    const vendorRequest = await VendorRequest.findById(id);
+    if (!vendorRequest) {
+      return res.status(404).json({ message: "Vendor request not found" });
+    }
+
+    if (vendorRequest.status !== "pending") {
+      return res.status(400).json({ message: "Only pending requests can be accepted" });
+    }
+
+    // Check if vendor already exists
+    const existingVendor = await Vendor.findOne({ $or: [{ email: email.toLowerCase() }, { username: username.toLowerCase() }] });
+    if (existingVendor) {
+      return res.status(400).json({ message: "A vendor with this email or username already exists" });
+    }
+
+    // Create vendor account
+    const vendor = new Vendor({
+      username: username.trim(),
+      email: email.toLowerCase().trim(),
+      password: password,
+      vendorName: vendorName.trim(),
+      mobileNumber: mobileNumber.trim(),
+      businessName: businessName.trim(),
+      businessPhone: businessPhone.trim(),
+      businessLocation: businessLocation.trim(),
+      businessWebsite: businessWebsite.trim(),
+      status: "active",
+      approvedBy: req.adminId,
+      approvedAt: new Date(),
+    });
+
+    await vendor.save();
+
+    // Update vendor request status
+    vendorRequest.status = "approved";
+    vendorRequest.approvedAt = new Date();
+    vendorRequest.approvedBy = req.adminId;
+    await vendorRequest.save();
+
+    res.status(201).json({
+      message: "Vendor request accepted and vendor account created successfully",
+      vendor: { ...vendor.toObject(), password: undefined },
+      vendorRequest,
+    });
+  } catch (err) {
+    res.status(500).json({
+      message: "Failed to accept vendor request and create vendor account",
+      error: err.message,
+    });
+  }
+});
+
 // ✅ CREATE VENDOR ACCOUNT (Admin creates vendor)
 router.post("/create-vendor", adminAuthMiddleware, async (req, res) => {
   const {
@@ -987,38 +1207,34 @@ router.post("/create-vendor", adminAuthMiddleware, async (req, res) => {
 
   try {
     // Check if vendor already exists
-    const existing = await Admin.findOne({ email: email.toLowerCase().trim() });
+    const existing = await Vendor.findOne({ $or: [{ email: email.toLowerCase().trim() }, { username: username.toLowerCase().trim() }] });
     if (existing) {
       return res
         .status(400)
-        .json({ message: "A vendor with this email already exists" });
+        .json({ message: "A vendor with this email or username already exists" });
     }
 
     // Create new vendor account
-    const vendor = new Admin({
+    const vendor = new Vendor({
       username: username.trim(),
       email: email.toLowerCase().trim(),
       password,
-      role: "vendor",
-      status: "active",
       vendorName: vendorName.trim(),
+      mobileNumber: "", // Can be added if needed
       businessName: businessName.trim(),
       businessPhone: businessPhone.trim(),
       businessLocation: businessLocation.trim(),
       businessWebsite: businessWebsite.trim(),
+      status: "active",
+      approvedBy: req.adminId,
+      approvedAt: new Date(),
     });
 
     await vendor.save();
 
     res.json({
       message: "Vendor account created successfully",
-      vendor: {
-        _id: vendor._id,
-        username: vendor.username,
-        email: vendor.email,
-        role: vendor.role,
-        businessName: vendor.businessName,
-      },
+      vendor: { ...vendor.toObject(), password: undefined },
     });
   } catch (err) {
     res
@@ -1027,6 +1243,25 @@ router.post("/create-vendor", adminAuthMiddleware, async (req, res) => {
         message: "Failed to create vendor account",
         error: err.message,
       });
+  }
+});
+
+// ✅ DELETE VENDOR REQUEST
+router.delete("/vendor-requests/:id", adminAuthMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const vendorRequest = await VendorRequest.findByIdAndDelete(id);
+    if (!vendorRequest) {
+      return res.status(404).json({ message: "Vendor request not found" });
+    }
+
+    res.json({ message: "Vendor request deleted successfully" });
+  } catch (err) {
+    res.status(500).json({
+      message: "Failed to delete vendor request",
+      error: err.message,
+    });
   }
 });
 

@@ -61,11 +61,11 @@ export default function AddProduct() {
   const [isEditMode, setIsEditMode] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem("adminToken");
-    const role = localStorage.getItem("role");
+    const token = localStorage.getItem("vendorToken");
+    const role = localStorage.getItem("vendorRole");
 
-    if (!token || (role !== "vendor" && role !== "admin")) {
-      router.push("/admin/login");
+    if (!token || role !== "vendor") {
+      router.push("/vendor/login");
       return;
     }
 
@@ -153,7 +153,7 @@ export default function AddProduct() {
 
   const fetchExistingProduct = async (id: string) => {
     try {
-      const token = localStorage.getItem("adminToken");
+      const token = localStorage.getItem("vendorToken");
       const BACKEND_URL =
         typeof window !== "undefined"
           ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
@@ -301,7 +301,7 @@ export default function AddProduct() {
         const formDataUpload = new FormData();
         formDataUpload.append("image", image.file);
 
-        const token = localStorage.getItem("adminToken");
+        const token = localStorage.getItem("vendorToken");
         const BACKEND_URL =
           typeof window !== "undefined"
             ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
@@ -376,7 +376,7 @@ export default function AddProduct() {
         }));
       }
 
-      const token = localStorage.getItem("adminToken");
+      const token = localStorage.getItem("vendorToken");
       const mainImage = uploadedUrls[mainImageIndex] || uploadedUrls[0];
 
       const BACKEND_URL =

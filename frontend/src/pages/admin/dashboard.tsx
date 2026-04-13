@@ -19,6 +19,7 @@ import {
   XMarkIcon,
 } from "@heroicons/react/24/outline";
 import VendorRequests from "@/components/admin/VendorRequests";
+import ServiceRequests from "@/components/admin/ServiceRequests";
 import OrderStatusForm from "@/components/admin/OrderStatusForm";
 
 interface Product {
@@ -33,7 +34,7 @@ interface Product {
   description?: string;
   image?: string;
   images?: string[];
-  vendorId?: string;
+  vendorId?: { username?: string; email?: string; businessName?: string };
   plantSizes?: Array<{ id: string; label: string; price: number; mrp: number }>;
   originAddress?: { address: string; city: string; state: string; pincode: string };
   tags?: string[];
@@ -122,7 +123,7 @@ interface AdminStats {
   totalAdmins: number;
   totalRevenue: number;
 }
-type Tab = "overview" | "orders" | "products" | "users" | "vendors" | "admins" | "vendor-requests";
+type Tab = "overview" | "orders" | "products" | "users" | "vendors" | "admins" | "vendor-requests" | "service-requests";
 type DataTab = Exclude<Tab, "overview">;
 type ManageItem = Product | User | Vendor | Admin;
 const adminPermissionKeys = [
@@ -148,12 +149,15 @@ type ModalType =
 export default function AdminDashboard() {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("overview");
-  const [adminName] = useState<string>(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("adminName") || "Admin";
+  const [adminName, setAdminName] = useState<string>("Admin");
+  
+  // Hydration fix: Update adminName from localStorage only on client after hydration
+  useEffect(() => {
+    const storedName = localStorage.getItem("adminName");
+    if (storedName) {
+      setAdminName(storedName);
     }
-    return "Admin";
-  });
+  }, []);
   const [stats, setStats] = useState<AdminStats>({
     totalProducts: 0,
     totalUsers: 0,
@@ -179,6 +183,8 @@ export default function AdminDashboard() {
     return "";
   });
   const [, setDeleteLoading] = useState(false);
+  const [vendorRequestData, setVendorRequestData] = useState<any>(null);
+  const [vendorRequestId, setVendorRequestId] = useState<string | null>(null);
 
   const fetchStats = useCallback(async (authToken: string) => {
     try {
@@ -351,14 +357,32 @@ export default function AdminDashboard() {
   };
 
   const handleDelete = async (id: string, type: string) => {
-    if (!confirm(`Delete this ${type}? This action cannot be undone.`)) return;
+    // Show detailed cascade delete warning
+    let confirmMsg = "";
+    if (type === "product") {
+      confirmMsg = "⚠️ DELETE PRODUCT\n\nThis will permanently delete:\n✗ Product data\n✗ All product images from cloud storage\n✗ All customer reviews for this product\n\nThis action CANNOT be undone!";
+    } else if (type === "user") {
+      confirmMsg = "⚠️ DELETE USER\n\nThis will permanently delete:\n✗ User profile & account\n✗ All user orders\n✗ All user reviews\n✗ User addresses\n\nThis action CANNOT be undone!";
+    } else if (type === "vendor") {
+      confirmMsg = "⚠️ DELETE VENDOR\n\nThis will permanently delete:\n✗ Vendor account & business details\n✗ ALL vendor products\n✗ ALL product images from cloud storage\n✗ ALL customer reviews for vendor products\n\nThis action CANNOT be undone!";
+    } else if (type === "admin") {
+      confirmMsg = "⚠️ DELETE ADMIN\n\nThis will permanently delete the admin account and all permissions.\n\nThis action CANNOT be undone!";
+    }
+
+    if (!confirm(confirmMsg)) return;
+    
     setDeleteLoading(true);
     try {
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+
       const endpoint = {
-        product: `/api/admin/manage/products/${id}`,
-        user: `/api/admin/manage/users/${id}`,
-        vendor: `/api/admin/manage/vendors/${id}`,
-        admin: `/api/admin/manage/admins/${id}`,
+        product: `${BACKEND_URL}/api/admin/manage/products/${id}`,
+        user: `${BACKEND_URL}/api/admin/manage/users/${id}`,
+        vendor: `${BACKEND_URL}/api/admin/manage/vendors/${id}`,
+        admin: `${BACKEND_URL}/api/admin/manage/admins/${id}`,
       }[type];
 
       if (!endpoint) {
@@ -373,19 +397,30 @@ export default function AdminDashboard() {
       });
 
       if (res.ok) {
+        const data = await res.json();
+        
         if (type === "product") {
-          setProducts(products.filter((p) => p.id !== id && p._id !== id));
+          setProducts(products.filter((p) => p.id !== id && p._id?.toString?.() !== id));
+          alert(`✅ Product deleted!\n\nCleaned up:\n• ${data.relatedDataDeleted?.images || 0} images\n• ${data.relatedDataDeleted?.reviews || 0} reviews`);
         } else if (type === "user") {
           setUsers(users.filter((u) => u._id !== id));
+          alert(`✅ User deleted!\n\nRemoved:\n• Profile & account\n• ${data.relatedDataDeleted?.orders || 0} orders\n• ${data.relatedDataDeleted?.reviews || 0} reviews`);
         } else if (type === "vendor") {
           setVendors(vendors.filter((v) => v._id !== id));
+          alert(`✅ Vendor deleted!\n\nRemoved:\n• ${data.deletedCount?.products || 0} products\n• ${data.relatedDataDeleted?.images || 0} images\n• ${data.relatedDataDeleted?.reviews || 0} reviews`);
         } else if (type === "admin") {
           setAdmins(admins.filter((a) => a._id !== id));
+          alert("✅ Admin account deleted successfully!");
         }
-        alert("✅ Deleted successfully!");
       } else {
-        const errMsg = await res.text();
-        alert(`❌ Delete failed: ${errMsg || res.statusText}`);
+        let errMsg = res.statusText;
+        try {
+          const errData = await res.json();
+          errMsg = errData.message || errData.error || res.statusText;
+        } catch (e) {
+          // Response is not JSON, use statusText
+        }
+        alert(`❌ Delete failed: ${errMsg}`);
       }
     } catch (err) {
       alert(`❌ Error: ${(err as Error).message}`);
@@ -427,7 +462,7 @@ export default function AdminDashboard() {
       <nav className="sticky top-20.5 z-30 border-b-2 border-emerald-200 bg-white shadow-md sm:top-19 lg:top-28">
         <div className="mx-auto flex max-w-7xl gap-0 overflow-x-auto px-4 sm:px-6 lg:px-8">
           {(
-            ["overview", "orders", "products", "users", "vendors", "admins", "vendor-requests"] as Tab[]
+            ["overview", "orders", "products", "users", "vendors", "admins", "vendor-requests", "service-requests"] as Tab[]
           ).map((t) => (
             <button
               key={t}
@@ -444,11 +479,13 @@ export default function AdminDashboard() {
               className={`whitespace-nowrap border-b-4 px-5 py-3 text-sm font-bold transition sm:px-6 sm:text-base ${tab === t ? "text-emerald-700 border-emerald-700 bg-emerald-50" : "text-gray-600 border-transparent hover:text-emerald-600"}`}
             >
               {t === "overview" && "📊 Overview"}
+              {t === "orders" && "📋 Orders"}
               {t === "products" && "📦 Products"}
               {t === "users" && "👥 Users"}
               {t === "vendors" && "🏪 Vendors"}
               {t === "admins" && "🔐 Admins"}
               {t === "vendor-requests" && "🎯 Vendor Requests"}
+              {t === "service-requests" && "📞 Service Requests"}
             </button>
           ))}
         </div>
@@ -573,6 +610,10 @@ export default function AdminDashboard() {
             search={search}
             setSearch={setSearch}
             onSearch={handleSearch}
+            onCreate={() => {
+              setSelectedItem(null);
+              setActiveModal("createVendor");
+            }}
             data={vendors}
             loading={loading}
             type="vendors"
@@ -608,6 +649,22 @@ export default function AdminDashboard() {
         {tab === "vendor-requests" && (
           <VendorRequests
             token={token}
+            backendUrl={
+              typeof window !== "undefined"
+                ? process.env.NEXT_PUBLIC_BACKEND_URL ||
+                  "https://verdora.onrender.com"
+                : "https://verdora.onrender.com"
+            }
+            onAccept={(id, requestData) => {
+              setVendorRequestId(id);
+              setVendorRequestData(requestData);
+              setActiveModal("createVendor");
+            }}
+          />
+        )}
+
+        {tab === "service-requests" && (
+          <ServiceRequests
             backendUrl={
               typeof window !== "undefined"
                 ? process.env.NEXT_PUBLIC_BACKEND_URL ||
@@ -688,11 +745,19 @@ export default function AdminDashboard() {
         </Modal>
       )}
       {activeModal === "createVendor" && (
-        <Modal title="➕ Create Vendor" onClose={() => setActiveModal("none")}>
+        <Modal title="➕ Create Vendor" onClose={() => {
+          setActiveModal("none");
+          setVendorRequestData(null);
+          setVendorRequestId(null);
+        }}>
           <CreateVendorForm
             token={token}
+            vendorRequestId={vendorRequestId || undefined}
+            prefilledData={vendorRequestData}
             onSuccess={() => {
               setActiveModal("none");
+              setVendorRequestData(null);
+              setVendorRequestId(null);
               fetchVendors(token);
             }}
           />
@@ -942,7 +1007,7 @@ function RenderTable<T extends ManageItem>({
 
   const columns =
     type === "products"
-      ? ["Product", "Category", "Price", "Vendor", "Actions"]
+      ? ["Product", "Category", "Price", "Vendor", "Business", "Actions"]
       : type === "users"
         ? ["Name", "Email", "Mobile", "Actions"]
         : type === "vendors"
@@ -957,6 +1022,7 @@ function RenderTable<T extends ManageItem>({
         product.category,
         `₹${product.price}`,
         product.vendorName,
+        product.vendorId?.businessName || "N/A",
       ];
     }
 
@@ -1140,6 +1206,7 @@ function EditProductForm({
     vendorName: product?.vendorName || "",
     description: product?.description || "",
     image: product?.image || "",
+    tags: product?.tags?.join(", ") || "",
   });
   const [loading, setLoading] = useState(false);
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -1159,13 +1226,21 @@ function EditProductForm({
 
       const endpoint = `/api/admin/manage/products/${product._id || product.id}`;
 
+      // Parse tags from comma-separated string
+      const submittedData = {
+        ...formData,
+        tags: formData.tags
+          ? formData.tags.split(",").map((tag: string) => tag.trim()).filter((tag: string) => tag)
+          : [],
+      };
+
       const res = await fetch(endpoint, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(submittedData),
       });
 
       if (res.ok) {
@@ -1261,6 +1336,14 @@ function EditProductForm({
         disabled={loading}
         className="w-full px-4 py-3 border-2 border-emerald-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 disabled:bg-gray-100"
       />
+      <input
+        type="text"
+        value={formData.tags}
+        onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
+        placeholder="Tags (comma-separated, e.g: indoor, flowering, easy-care)"
+        disabled={loading}
+        className="w-full px-4 py-3 border-2 border-emerald-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 disabled:bg-gray-100"
+      />
       <button
         type="submit"
         disabled={loading}
@@ -1285,6 +1368,8 @@ function EditUserForm({
     name: user?.name || "",
     email: user?.email || "",
     mobile: user?.mobile || "",
+    dob: user?.dob ? new Date(user.dob).toISOString().split('T')[0] : "",
+    gender: user?.gender || "",
   });
   const [loading, setLoading] = useState(false);
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -1351,6 +1436,25 @@ function EditUserForm({
         disabled={loading}
         className="w-full px-4 py-3 border-2 border-emerald-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 disabled:bg-gray-100"
       />
+      <input
+        type="date"
+        value={formData.dob}
+        onChange={(e) => setFormData({ ...formData, dob: e.target.value })}
+        placeholder="Date of Birth"
+        disabled={loading}
+        className="w-full px-4 py-3 border-2 border-emerald-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 disabled:bg-gray-100"
+      />
+      <select
+        value={formData.gender}
+        onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+        disabled={loading}
+        className="w-full px-4 py-3 border-2 border-emerald-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 disabled:bg-gray-100"
+      >
+        <option value="">Select Gender</option>
+        <option value="male">Male</option>
+        <option value="female">Female</option>
+        <option value="other">Other</option>
+      </select>
       <button
         type="submit"
         disabled={loading}
@@ -1381,6 +1485,7 @@ function EditVendorForm({
     businessPhone: vendor?.businessPhone || "",
     businessLocation: vendor?.businessLocation || "",
     businessWebsite: vendor?.businessWebsite || "",
+    businessLogo: vendor?.businessLogo || "",
     status: vendor?.status || "active",
   });
   const [loading, setLoading] = useState(false);
@@ -1497,6 +1602,15 @@ function EditVendorForm({
         value={formData.businessWebsite}
         onChange={(e) => setFormData({ ...formData, businessWebsite: e.target.value })}
         placeholder="Business Website (optional)"
+        disabled={loading}
+        className="w-full px-4 py-3 border-2 border-emerald-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 disabled:bg-gray-100 text-sm"
+      />
+
+      <input
+        type="url"
+        value={formData.businessLogo}
+        onChange={(e) => setFormData({ ...formData, businessLogo: e.target.value })}
+        placeholder="Business Logo URL (optional)"
         disabled={loading}
         className="w-full px-4 py-3 border-2 border-emerald-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 disabled:bg-gray-100 text-sm"
       />
@@ -1786,21 +1900,27 @@ function CreateUserForm({
 function CreateVendorForm({
   token,
   onSuccess,
+  vendorRequestId,
+  prefilledData,
 }: {
   token: string;
   onSuccess: () => void;
+  vendorRequestId?: string;
+  prefilledData?: any;
 }) {
   const [formData, setFormData] = useState({
-    username: "",
-    email: "",
+    username: prefilledData?.username || "",
+    email: prefilledData?.email || "",
     password: "",
-    vendorName: "",
-    mobileNumber: "",
-    businessName: "",
-    businessPhone: "",
-    businessLocation: "",
+    vendorName: prefilledData?.vendorName || "",
+    mobileNumber: prefilledData?.mobileNumber || prefilledData?.phone || "",
+    businessName: prefilledData?.businessName || prefilledData?.shopName || "",
+    businessPhone: prefilledData?.businessPhone || prefilledData?.phone || "",
+    businessLocation: prefilledData?.businessLocation || prefilledData?.address || "",
+    businessWebsite: prefilledData?.businessWebsite || "",
   });
   const [loading, setLoading] = useState(false);
+  
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
@@ -1815,7 +1935,12 @@ function CreateVendorForm({
         typeof window !== "undefined"
           ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
           : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
-      const res = await fetch(`${BACKEND_URL}/api/admin/manage/vendors`, {
+      
+      const endpoint = vendorRequestId 
+        ? `${BACKEND_URL}/api/admin/vendor-requests/${vendorRequestId}/accept-with-vendor`
+        : `${BACKEND_URL}/api/admin/manage/vendors`;
+      
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1825,7 +1950,7 @@ function CreateVendorForm({
       });
 
       if (res.ok) {
-        alert("✅ Vendor created successfully!");
+        alert(vendorRequestId ? "✅ Vendor request accepted and vendor created!" : "✅ Vendor created successfully!");
         onSuccess();
       } else {
         const errMsg = await res.text();
@@ -1836,16 +1961,23 @@ function CreateVendorForm({
     }
     setLoading(false);
   };
+  
   return (
     <form
       onSubmit={handleSubmit}
       className="space-y-3 max-h-96 overflow-y-auto"
     >
+      <div className="bg-emerald-50 p-3 rounded-lg border border-emerald-200">
+        <p className="text-xs text-emerald-700 font-semibold">
+          {vendorRequestId ? "Accepting vendor request & creating account" : "Creating new vendor account"}
+        </p>
+      </div>
+      
       <input
         type="text"
         value={formData.username}
         onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-        placeholder="Username"
+        placeholder="Username *"
         required
         disabled={loading}
         className="w-full px-4 py-3 border-2 border-emerald-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 disabled:bg-gray-100"
@@ -1854,7 +1986,7 @@ function CreateVendorForm({
         type="email"
         value={formData.email}
         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-        placeholder="Email"
+        placeholder="Email *"
         required
         disabled={loading}
         className="w-full px-4 py-3 border-2 border-emerald-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 disabled:bg-gray-100"
@@ -1863,7 +1995,7 @@ function CreateVendorForm({
         type="password"
         value={formData.password}
         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-        placeholder="Password"
+        placeholder="Password *"
         required
         disabled={loading}
         className="w-full px-4 py-3 border-2 border-emerald-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 disabled:bg-gray-100"
@@ -1894,7 +2026,8 @@ function CreateVendorForm({
         onChange={(e) =>
           setFormData({ ...formData, businessName: e.target.value })
         }
-        placeholder="Business Name"
+        placeholder="Business Name *"
+        required
         disabled={loading}
         className="w-full px-4 py-3 border-2 border-emerald-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 disabled:bg-gray-100"
       />
@@ -1918,12 +2051,22 @@ function CreateVendorForm({
         disabled={loading}
         className="w-full px-4 py-3 border-2 border-emerald-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 disabled:bg-gray-100"
       />
+      <input
+        type="url"
+        value={formData.businessWebsite}
+        onChange={(e) =>
+          setFormData({ ...formData, businessWebsite: e.target.value })
+        }
+        placeholder="Business Website (optional)"
+        disabled={loading}
+        className="w-full px-4 py-3 border-2 border-emerald-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 disabled:bg-gray-100"
+      />
       <button
         type="submit"
         disabled={loading}
         className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-400 text-white px-4 py-3 rounded-lg font-bold transition shadow-md"
       >
-        {loading ? "⏳ Creating..." : "✅ Create"}
+        {loading ? "⏳ Processing..." : vendorRequestId ? "✅ Accept & Create" : "✅ Create"}
       </button>
     </form>
   );

@@ -54,8 +54,8 @@ export default function EditProduct() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const token = localStorage.getItem("adminToken");
-    const role = localStorage.getItem("role");
+    const token = localStorage.getItem("vendorToken");
+    const role = localStorage.getItem("vendorRole");
 
     if (!token || role !== "vendor") {
       router.push("/vendor/login");
@@ -253,7 +253,7 @@ export default function EditProduct() {
     if (!confirm("Are you sure you want to delete this product?")) return;
 
     try {
-      const token = localStorage.getItem("adminToken");
+      const token = localStorage.getItem("vendorToken");
       const BACKEND_URL =
         typeof window !== "undefined"
           ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"

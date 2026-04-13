@@ -183,7 +183,7 @@ export default function Footer() {
               <ul className="space-y-2 text-sm">
                 <li>
                   <Link
-                    href="/vendor-signup"
+                    href="/vendor/vendor-signup"
                     className="text-gray-300 hover:text-white transition"
                   >
                     Become a Vendor
@@ -195,14 +195,6 @@ export default function Footer() {
                     className="text-gray-300 hover:text-white transition"
                   >
                     Vendor Login
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/admin/login"
-                    className="text-gray-300 hover:text-white transition"
-                  >
-                    Admin Login
                   </Link>
                 </li>
               </ul>
@@ -266,7 +258,7 @@ export default function Footer() {
               <ul className="space-y-2 text-sm">
                 <li>
                   <Link
-                    href="/vendor-signup"
+                    href="/vendor/vendor-signup"
                     className="text-gray-300 hover:text-white"
                   >
                     Become a Vendor
@@ -278,14 +270,6 @@ export default function Footer() {
                     className="text-gray-300 hover:text-white"
                   >
                     Vendor Login
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/admin/login"
-                    className="text-gray-300 hover:text-white"
-                  >
-                    Admin Login
                   </Link>
                 </li>
               </ul>
@@ -343,7 +327,7 @@ export default function Footer() {
                 </p>
                 <div className="flex justify-center gap-4 flex-wrap">
                   <Link
-                    href="/vendor-signup"
+                    href="/vendor/vendor-signup"
                     className="text-gray-300 hover:text-white text-sm"
                   >
                     Become a Vendor
@@ -353,12 +337,6 @@ export default function Footer() {
                     className="text-gray-300 hover:text-white text-sm"
                   >
                     Vendor
-                  </Link>
-                  <Link
-                    href="/admin/login"
-                    className="text-gray-300 hover:text-white text-sm"
-                  >
-                    Admin
                   </Link>
                 </div>
               </div>

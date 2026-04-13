@@ -40,14 +40,18 @@ export default function VendorLogin() {
       const data = await res.json();
 
       if (res.ok) {
-        // Verify the role is vendor
+        // Check if role is vendor (not admin)
         if (data.admin?.role === "vendor") {
-          localStorage.setItem("adminToken", data.token);
-          localStorage.setItem("role", data.admin.role);
-          localStorage.setItem("adminName", data.admin?.username || "Vendor");
+          localStorage.setItem("vendorToken", data.token);
+          localStorage.setItem("vendorRole", "vendor");
+          localStorage.setItem("vendorName", data.admin?.username || "Vendor");
+          localStorage.setItem("vendorId", data.admin?.id);
+          localStorage.setItem("vendorEmail", data.admin?.email);
           router.push("/vendor/dashboard");
+        } else if (data.admin?.role === "admin") {
+          setError("This is an admin account. Please use admin login.");
         } else {
-          setError("Account is not a vendor account. Please use admin login.");
+          setError("Invalid account type. Please use vendor account.");
         }
       } else {
         setError(data.message || "Login failed");
@@ -119,19 +123,10 @@ export default function VendorLogin() {
             <p className="mt-6 text-center text-sm">
               Don&apos;t have an account?{" "}
               <Link
-                href="/vendor/signup"
+                href="/vendor/vendor-signup"
                 className="text-green-600 hover:text-green-700 font-semibold"
               >
                 Sign Up as Vendor
-              </Link>
-            </p>
-
-            <p className="mt-4 text-center text-sm text-gray-600">
-              <Link
-                href="/admin/login"
-                className="text-blue-600 hover:text-blue-700 font-semibold"
-              >
-                Admin? Login here
               </Link>
             </p>
           </div>

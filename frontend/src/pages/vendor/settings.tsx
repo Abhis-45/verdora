@@ -52,11 +52,11 @@ export default function VendorSettings() {
   const [passwordMessage, setPasswordMessage] = useState("");
 
   useEffect(() => {
-    const token = localStorage.getItem("adminToken");
-    const role = localStorage.getItem("role");
+    const token = localStorage.getItem("vendorToken");
+    const role = localStorage.getItem("vendorRole");
 
     if (!token || role !== "vendor") {
-      router.push("/admin/login");
+      router.push("/vendor/login");
       return;
     }
 

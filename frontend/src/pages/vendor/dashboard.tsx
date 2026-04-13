@@ -111,10 +111,10 @@ export default function VendorDashboard() {
   );
 
   useEffect(() => {
-    const tok = localStorage.getItem("adminToken");
-    const role = localStorage.getItem("role");
+    const tok = localStorage.getItem("vendorToken");
+    const role = localStorage.getItem("vendorRole");
     if (!tok || role !== "vendor") {
-      router.push("/admin/login");
+      router.push("/vendor/login");
     } else {
       setToken(tok);
       fetchVendorProfile(tok);
@@ -246,9 +246,11 @@ export default function VendorDashboard() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("adminToken");
-    localStorage.removeItem("role");
-    localStorage.removeItem("adminName");
+    localStorage.removeItem("vendorToken");
+    localStorage.removeItem("vendorRole");
+    localStorage.removeItem("vendorName");
+    localStorage.removeItem("vendorId");
+    localStorage.removeItem("vendorEmail");
     router.push("/");
   };
 
