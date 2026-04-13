@@ -1,6 +1,7 @@
 import express from "express";
 import jwt from "jsonwebtoken";
 import Admin from "../models/Admin.js";
+import Vendor from "../models/Vendor.js";
 import Product from "../models/Product.js";
 import User from "../models/User.js";
 import { vendorAuthMiddleware } from "./adminAuth.js";
@@ -61,7 +62,7 @@ const normalizeProductPayload = (payload = {}) => {
 // ✅ GET VENDOR PROFILE
 router.get("/profile", vendorAuthMiddleware, async (req, res) => {
   try {
-    const vendor = await Admin.findById(req.vendorId).select(
+    const vendor = await Vendor.findById(req.vendorId).select(
       "username email businessName businessDescription businessPhone businessLocation businessWebsite businessLogo status vendorName mobileNumber createdAt updatedAt",
     );
 
@@ -88,7 +89,7 @@ router.put("/profile", vendorAuthMiddleware, async (req, res) => {
       businessWebsite,
     } = req.body;
 
-    const vendor = await Admin.findByIdAndUpdate(
+    const vendor = await Vendor.findByIdAndUpdate(
       req.vendorId,
       {
         businessName,

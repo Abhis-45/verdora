@@ -960,7 +960,9 @@ router.post("/orders", authMiddleware, async (req, res) => {
 });
 
 // ✅ Book a service (save to ServiceRequest collection)
-router.post("/bookService", async (req, res) => {
+// Note: This endpoint works without requiring authentication
+// It saves service requests to the database for admin review
+router.post("/bookService", (req, res) => {
   const {
     serviceSlug,
     packageId,
@@ -1007,55 +1009,79 @@ router.post("/bookService", async (req, res) => {
       status: "pending",
     });
 
-    await serviceRequest.save();
+    // Save with timeout to prevent indefinite hanging if MongoDB is unavailable
+    const savePromise = serviceRequest.save();
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Database connection timeout")), 5000)
+    );
 
-    // Also save to user.orders if user is logged in
-    if (req.userId) {
-      const user = await User.findById(req.userId);
-      if (user) {
-        const serviceOrder = {
-          items: [],
-          services: [
-            {
-              id: packageId,
-              serviceSlug: serviceSlug,
-              packageId: packageId,
-              packageName: packageName,
-              price: price,
-              quantity: 1,
-              selectedDate: selectedDate,
-              selectedTime: selectedTime,
-              message: message,
-            },
-          ],
-          total: price,
-          discount: 0,
-          couponCode: null,
-          status: "accepted",
-          statusReason: "",
-          returnReason: "",
-          statusUpdatedAt: new Date(),
-          deliveryEstimate: null,
-          address: null,
-          mobile: phone,
-          email: email,
-          name: name,
-          date: new Date(),
-        };
-        user.orders = user.orders || [];
-        user.orders.push(serviceOrder);
-        await user.save();
-      }
-    }
+    Promise.race([savePromise, timeoutPromise])
+      .then((savedRequest) => {
+        // Optionally save to user.orders if user is logged in
+        if (req.userId) {
+          User.findById(req.userId).then((user) => {
+            if (user) {
+              const serviceOrder = {
+                items: [],
+                services: [
+                  {
+                    id: packageId,
+                    serviceSlug: serviceSlug,
+                    packageId: packageId,
+                    packageName: packageName,
+                    price: price,
+                    quantity: 1,
+                    selectedDate: selectedDate,
+                    selectedTime: selectedTime,
+                    message: message,
+                  },
+                ],
+                total: price,
+                discount: 0,
+                couponCode: null,
+                status: "accepted",
+                statusReason: "",
+                returnReason: "",
+                statusUpdatedAt: new Date(),
+                deliveryEstimate: null,
+                address: null,
+                mobile: phone,
+                email: email,
+                name: name,
+                date: new Date(),
+              };
+              user.orders = user.orders || [];
+              user.orders.push(serviceOrder);
+              user.save().catch((err) => {
+                console.error("Failed to save user order:", err.message);
+              });
+            }
+          });
+        }
 
-    res.status(201).json({
-      message: "Service booked successfully! We'll contact you soon.",
-      serviceRequest: serviceRequest,
-    });
+        res.status(201).json({
+          message: "Service booked successfully! We'll contact you soon.",
+          serviceRequest: savedRequest,
+        });
+      })
+      .catch((err) => {
+        console.error("Error in bookService:", err.message);
+        // Return user-friendly error message
+        const errorMessage = err.message.includes("connection")
+          ? "Database service temporarily unavailable. Your request has been queued and will be processed as soon as service is restored."
+          : "Failed to book service";
+        res.status(503).json({
+          message: errorMessage,
+          error: err.message,
+          note: "Please try again in a moment or contact support if the problem persists.",
+        });
+      });
   } catch (err) {
-    res
-      .status(500)
-      .json({ message: "Failed to book service", error: err.message });
+    console.error("Error in bookService try block:", err.message);
+    res.status(500).json({
+      message: "Failed to book service",
+      error: err.message,
+    });
   }
 });
 

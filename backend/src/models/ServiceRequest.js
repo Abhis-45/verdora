@@ -36,11 +36,5 @@ const ServiceRequestSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now },
 });
 
-// Update the updatedAt field before saving
-ServiceRequestSchema.pre("save", function (next) {
-  this.updatedAt = new Date();
-  next();
-});
-
 export default mongoose.models.ServiceRequest ||
   mongoose.model("ServiceRequest", ServiceRequestSchema);
