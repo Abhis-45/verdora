@@ -431,7 +431,7 @@ export default function VendorRequests({ token, backendUrl, onAccept }: VendorRe
           {selectedRequest.status === "approved" && (
             <div className="mt-6">
               <Link
-                href="/admin/vendor-signup"
+                href={`/admin/vendor-signup?requestId=${selectedRequest._id}`}
                 className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition font-semibold"
               >
                 <ArrowRightIcon className="w-5 h-5" /> Create Vendor Account
