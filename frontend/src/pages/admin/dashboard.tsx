@@ -1920,13 +1920,40 @@ function CreateVendorForm({
     businessWebsite: prefilledData?.businessWebsite || "",
   });
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setError("");
     setLoading(true);
+    
     try {
-      if (!formData.username || !formData.email || !formData.password) {
-        alert("❌ Username, email, and password are required");
+      // Validation
+      if (!formData.username || !formData.email || !formData.password || !formData.businessName) {
+        setError("❌ Username, email, password, and business name are required");
+        setLoading(false);
+        return;
+      }
+
+      // Email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email)) {
+        setError("❌ Invalid email format");
+        setLoading(false);
+        return;
+      }
+
+      // Username validation (alphanumeric and underscore only)
+      const usernameRegex = /^[a-zA-Z0-9_]{3,}$/;
+      if (!usernameRegex.test(formData.username)) {
+        setError("❌ Username must be 3+ characters (alphanumeric and underscore only)");
+        setLoading(false);
+        return;
+      }
+
+      // Password strength check
+      if (formData.password.length < 6) {
+        setError("❌ Password must be at least 6 characters");
         setLoading(false);
         return;
       }
@@ -1949,17 +1976,20 @@ function CreateVendorForm({
         body: JSON.stringify(formData),
       });
 
+      const data = await res.json();
+
       if (res.ok) {
         alert(vendorRequestId ? "✅ Vendor request accepted and vendor created!" : "✅ Vendor created successfully!");
         onSuccess();
       } else {
-        const errMsg = await res.text();
-        alert(`❌ Creation failed: ${errMsg || res.statusText}`);
+        const errorMessage = data.message || data.error || res.statusText;
+        setError(`❌ ${errorMessage}`);
       }
     } catch (err) {
-      alert(`❌ Error: ${(err as Error).message}`);
+      setError(`❌ Error: ${(err as Error).message}`);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
   
   return (
@@ -1969,15 +1999,21 @@ function CreateVendorForm({
     >
       <div className="bg-emerald-50 p-3 rounded-lg border border-emerald-200">
         <p className="text-xs text-emerald-700 font-semibold">
-          {vendorRequestId ? "Accepting vendor request & creating account" : "Creating new vendor account"}
+          {vendorRequestId ? "✅ Accepting vendor request & creating account" : "📝 Creating new vendor account"}
         </p>
       </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+          <p className="text-sm text-red-700">{error}</p>
+        </div>
+      )}
       
       <input
         type="text"
         value={formData.username}
         onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-        placeholder="Username *"
+        placeholder="Username * (alphanumeric, 3+ chars)"
         required
         disabled={loading}
         className="w-full px-4 py-3 border-2 border-emerald-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 disabled:bg-gray-100"
@@ -1995,7 +2031,7 @@ function CreateVendorForm({
         type="password"
         value={formData.password}
         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-        placeholder="Password *"
+        placeholder="Password * (6+ chars)"
         required
         disabled={loading}
         className="w-full px-4 py-3 border-2 border-emerald-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 disabled:bg-gray-100"

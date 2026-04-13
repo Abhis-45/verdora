@@ -1131,6 +1131,23 @@ router.post("/vendor-requests/:id/accept-with-vendor", adminAuthMiddleware, asyn
       return res.status(400).json({ message: "Username, email, password, and business name are required" });
     }
 
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ message: "Invalid email format" });
+    }
+
+    // Validate username format (alphanumeric and underscore, 3+ chars)
+    const usernameRegex = /^[a-zA-Z0-9_]{3,}$/;
+    if (!usernameRegex.test(username)) {
+      return res.status(400).json({ message: "Username must be 3+ characters (alphanumeric and underscore only)" });
+    }
+
+    // Validate password length
+    if (password.length < 6) {
+      return res.status(400).json({ message: "Password must be at least 6 characters" });
+    }
+
     // Get vendor request
     const vendorRequest = await VendorRequest.findById(id);
     if (!vendorRequest) {
@@ -1138,13 +1155,22 @@ router.post("/vendor-requests/:id/accept-with-vendor", adminAuthMiddleware, asyn
     }
 
     if (vendorRequest.status !== "pending") {
-      return res.status(400).json({ message: "Only pending requests can be accepted" });
+      return res.status(400).json({ message: "Only pending requests can be accepted. Current status: " + vendorRequest.status });
     }
 
     // Check if vendor already exists
     const existingVendor = await Vendor.findOne({ $or: [{ email: email.toLowerCase() }, { username: username.toLowerCase() }] });
     if (existingVendor) {
-      return res.status(400).json({ message: "A vendor with this email or username already exists" });
+      if (existingVendor.email === email.toLowerCase()) {
+        return res.status(400).json({ message: "A vendor with this email already exists" });
+      }
+      return res.status(400).json({ message: "A vendor with this username already exists" });
+    }
+
+    // Check if email already in another vendor request
+    const otherRequest = await VendorRequest.findOne({ email: email.toLowerCase(), _id: { $ne: id } });
+    if (otherRequest) {
+      return res.status(400).json({ message: "This email is already in another vendor request" });
     }
 
     // Create vendor account
@@ -1152,24 +1178,26 @@ router.post("/vendor-requests/:id/accept-with-vendor", adminAuthMiddleware, asyn
       username: username.trim(),
       email: email.toLowerCase().trim(),
       password: password,
-      vendorName: vendorName.trim(),
-      mobileNumber: mobileNumber.trim(),
+      vendorName: vendorName?.trim() || "",
+      mobileNumber: mobileNumber?.trim() || "",
       businessName: businessName.trim(),
-      businessPhone: businessPhone.trim(),
-      businessLocation: businessLocation.trim(),
-      businessWebsite: businessWebsite.trim(),
+      businessPhone: businessPhone?.trim() || "",
+      businessLocation: businessLocation?.trim() || "",
+      businessWebsite: businessWebsite?.trim() || "",
       status: "active",
       approvedBy: req.adminId,
       approvedAt: new Date(),
     });
 
     await vendor.save();
+    console.log(`✅ Vendor created: ${vendor.username} (${vendor.email})`);
 
     // Update vendor request status
     vendorRequest.status = "approved";
     vendorRequest.approvedAt = new Date();
     vendorRequest.approvedBy = req.adminId;
     await vendorRequest.save();
+    console.log(`✅ Vendor request updated: ${id} -> approved`);
 
     res.status(201).json({
       message: "Vendor request accepted and vendor account created successfully",
@@ -1177,6 +1205,7 @@ router.post("/vendor-requests/:id/accept-with-vendor", adminAuthMiddleware, asyn
       vendorRequest,
     });
   } catch (err) {
+    console.error("Error accepting vendor request and creating vendor:", err);
     res.status(500).json({
       message: "Failed to accept vendor request and create vendor account",
       error: err.message,
