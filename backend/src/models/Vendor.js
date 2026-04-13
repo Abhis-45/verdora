@@ -16,12 +16,12 @@ const VendorSchema = new mongoose.Schema(
     status: { type: String, enum: ["active", "inactive"], default: "active" },
 
     // Business Details
-    vendorName: { type: String, required: true, trim: true },
-    mobileNumber: { type: String, required: true, trim: true },
-    businessName: { type: String, required: true, trim: true },
+    vendorName: { type: String, default: "" },
+    mobileNumber: { type: String, default: "" },
+    businessName: { type: String, default: "" },
     businessDescription: { type: String, default: "" },
-    businessPhone: { type: String, required: true, trim: true },
-    businessLocation: { type: String, required: true, trim: true },
+    businessPhone: { type: String, default: "" },
+    businessLocation: { type: String, default: "" },
     businessWebsite: { type: String, default: "" },
     businessLogo: { type: String, default: "" },
 

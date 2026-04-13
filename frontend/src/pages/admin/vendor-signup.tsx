@@ -139,7 +139,7 @@ export default function AdminVendorSignup() {
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Failed to create vendor account");
+        throw new Error(data.message || data.error || "Failed to create vendor account");
       }
 
       setSuccess("Vendor account created successfully!");
