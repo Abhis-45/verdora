@@ -6,6 +6,7 @@ import Admin from "../models/Admin.js";
 import Vendor from "../models/Vendor.js";
 import VendorRequest from "../models/VendorRequest.js";
 import Review from "../models/Review.js";
+import ServiceRequest from "../models/ServiceRequest.js";
 import { ORDER_STATUSES } from "../config/constants.js";
 import {
   DEFAULT_ORIGIN_ADDRESS,
@@ -1307,6 +1308,156 @@ router.delete("/vendor-requests/:id", adminAuthMiddleware, async (req, res) => {
   } catch (err) {
     res.status(500).json({
       message: "Failed to delete vendor request",
+      error: err.message,
+    });
+  }
+});
+
+// ✅ GET ALL SERVICE REQUESTS
+router.get("/service-requests", adminAuthMiddleware, async (req, res) => {
+  try {
+    const { status, page = 1, limit = 10 } = req.query;
+    const skip = (page - 1) * limit;
+
+    const query = {};
+    if (status) {
+      query.status = status;
+    }
+
+    const serviceRequests = await ServiceRequest.find(query)
+      .populate("assignedTo", "name email")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit))
+      .lean();
+
+    const total = await ServiceRequest.countDocuments(query);
+
+    res.json({
+      serviceRequests,
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        pages: Math.ceil(total / limit),
+      },
+    });
+  } catch (err) {
+    res.status(500).json({
+      message: "Failed to fetch service requests",
+      error: err.message,
+    });
+  }
+});
+
+// ✅ GET SINGLE SERVICE REQUEST
+router.get("/service-requests/:id", adminAuthMiddleware, async (req, res) => {
+  try {
+    const serviceRequest = await ServiceRequest.findById(req.params.id)
+      .populate("assignedTo", "name email")
+      .lean();
+
+    if (!serviceRequest) {
+      return res.status(404).json({ message: "Service request not found" });
+    }
+
+    res.json(serviceRequest);
+  } catch (err) {
+    res.status(500).json({
+      message: "Failed to fetch service request",
+      error: err.message,
+    });
+  }
+});
+
+// ✅ UPDATE SERVICE REQUEST STATUS & NOTES
+router.patch("/service-requests/:id", adminAuthMiddleware, async (req, res) => {
+  try {
+    const { status, adminNotes, assignedTo } = req.body;
+    const { id } = req.params;
+
+    const updateData = {};
+    if (status) {
+      updateData.status = status;
+      updateData.statusUpdatedAt = new Date();
+    }
+    if (adminNotes !== undefined) {
+      updateData.adminNotes = adminNotes;
+    }
+    if (assignedTo) {
+      updateData.assignedTo = assignedTo;
+    }
+
+    const serviceRequest = await ServiceRequest.findByIdAndUpdate(
+      id,
+      updateData,
+      { new: true }
+    )
+      .populate("assignedTo", "name email");
+
+    if (!serviceRequest) {
+      return res.status(404).json({ message: "Service request not found" });
+    }
+
+    res.json({
+      message: "Service request updated successfully",
+      serviceRequest,
+    });
+  } catch (err) {
+    res.status(500).json({
+      message: "Failed to update service request",
+      error: err.message,
+    });
+  }
+});
+
+// ✅ DELETE SERVICE REQUEST
+router.delete("/service-requests/:id", adminAuthMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const serviceRequest = await ServiceRequest.findByIdAndDelete(id);
+    if (!serviceRequest) {
+      return res.status(404).json({ message: "Service request not found" });
+    }
+
+    res.json({ message: "Service request deleted successfully" });
+  } catch (err) {
+    res.status(500).json({
+      message: "Failed to delete service request",
+      error: err.message,
+    });
+  }
+});
+
+// ✅ GET SERVICE REQUESTS STATS
+router.get("/stats/service-requests", adminAuthMiddleware, async (req, res) => {
+  try {
+    const total = await ServiceRequest.countDocuments();
+    const pending = await ServiceRequest.countDocuments({ status: "pending" });
+    const confirmed = await ServiceRequest.countDocuments({ status: "confirmed" });
+    const inProgress = await ServiceRequest.countDocuments({ status: "in-progress" });
+    const completed = await ServiceRequest.countDocuments({ status: "completed" });
+    const cancelled = await ServiceRequest.countDocuments({ status: "cancelled" });
+
+    // Get total revenue from services
+    const revenueData = await ServiceRequest.aggregate([
+      { $group: { _id: null, total: { $sum: "$price" } } },
+    ]);
+    const totalRevenue = revenueData[0]?.total || 0;
+
+    res.json({
+      total,
+      pending,
+      confirmed,
+      inProgress,
+      completed,
+      cancelled,
+      totalRevenue,
+    });
+  } catch (err) {
+    res.status(500).json({
+      message: "Failed to fetch service request stats",
       error: err.message,
     });
   }

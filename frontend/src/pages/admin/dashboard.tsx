@@ -665,6 +665,7 @@ export default function AdminDashboard() {
 
         {tab === "service-requests" && (
           <ServiceRequests
+            token={token}
             backendUrl={
               typeof window !== "undefined"
                 ? process.env.NEXT_PUBLIC_BACKEND_URL ||

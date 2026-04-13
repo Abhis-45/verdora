@@ -31,7 +31,7 @@ export default function VendorLogin() {
         typeof window !== "undefined"
           ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
           : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
-      const res = await fetch(`${BACKEND_URL}/api/admin/login`, {
+      const res = await fetch(`${BACKEND_URL}/api/vendor/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),

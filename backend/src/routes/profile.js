@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import User from "../models/User.js";
 import Admin from "../models/Admin.js";
 import Product from "../models/Product.js";
+import ServiceRequest from "../models/ServiceRequest.js";
 import upload from "../middleware/multerConfig.js";
 import { sendOtpSMS } from "../services/twilioService.js";
 import {
@@ -958,7 +959,7 @@ router.post("/orders", authMiddleware, async (req, res) => {
   }
 });
 
-// ✅ Book a service (save service booking to user.orders)
+// ✅ Book a service (save to ServiceRequest collection)
 router.post("/bookService", async (req, res) => {
   const {
     serviceSlug,
@@ -991,62 +992,65 @@ router.post("/bookService", async (req, res) => {
         .json({ message: "All service details are required" });
     }
 
-    // Create a service order
-    const serviceOrder = {
-      items: [],
-      services: [
-        {
-          id: packageId,
-          serviceSlug: serviceSlug,
-          packageId: packageId,
-          packageName: packageName,
-          price: price,
-          quantity: 1,
-          selectedDate: selectedDate,
-          selectedTime: selectedTime,
-          message: message,
-        },
-      ],
-      total: price,
-      discount: 0,
-      couponCode: null,
-      status: "accepted",
-      statusReason: "",
-      returnReason: "",
-      statusUpdatedAt: new Date(),
-      deliveryEstimate: null,
-      address: null, // Services may not need address
-      mobile: phone,
-      email: email,
-      name: name,
-      date: new Date(),
-    };
+    // Create a new service request in the ServiceRequest collection
+    const serviceRequest = new ServiceRequest({
+      serviceSlug,
+      packageId,
+      packageName,
+      price,
+      selectedDate,
+      selectedTime,
+      name,
+      email,
+      phone,
+      message: message || "",
+      status: "pending",
+    });
 
-    // If user is logged in, save to their orders; otherwise, create a temporary contact
+    await serviceRequest.save();
+
+    // Also save to user.orders if user is logged in
     if (req.userId) {
       const user = await User.findById(req.userId);
       if (user) {
+        const serviceOrder = {
+          items: [],
+          services: [
+            {
+              id: packageId,
+              serviceSlug: serviceSlug,
+              packageId: packageId,
+              packageName: packageName,
+              price: price,
+              quantity: 1,
+              selectedDate: selectedDate,
+              selectedTime: selectedTime,
+              message: message,
+            },
+          ],
+          total: price,
+          discount: 0,
+          couponCode: null,
+          status: "accepted",
+          statusReason: "",
+          returnReason: "",
+          statusUpdatedAt: new Date(),
+          deliveryEstimate: null,
+          address: null,
+          mobile: phone,
+          email: email,
+          name: name,
+          date: new Date(),
+        };
         user.orders = user.orders || [];
         user.orders.push(serviceOrder);
         await user.save();
-      }
-    } else {
-      // For guest users, save as contact entry for admin to see
-      const Contact = req.app.get("Contact");
-      if (Contact) {
-        await Contact.create({
-          name,
-          email,
-          phone,
-          type: "service",
-          message: `Service: ${packageName} (${serviceSlug}) - Date: ${selectedDate} at ${selectedTime}${message ? ` - Note: ${message}` : ""}`,
-        });
       }
     }
 
     res.status(201).json({
       message: "Service booked successfully! We'll contact you soon.",
-      order: serviceOrder,
+      serviceRequest: serviceRequest,
     });
   } catch (err) {
     res

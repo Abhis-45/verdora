@@ -4,6 +4,7 @@ import {
   MagnifyingGlassIcon,
   CheckIcon,
   XMarkIcon,
+  PencilIcon,
 } from "@heroicons/react/24/outline";
 
 interface ServiceRequest {
@@ -11,49 +12,68 @@ interface ServiceRequest {
   name: string;
   email: string;
   phone: string;
-  subject: string;
-  message: string;
-  service: string;
-  servicePackage: string;
-  submittedAt: string;
-  isResolved: boolean;
-  resolvedAt?: string;
-  notes?: string;
+  serviceSlug: string;
+  packageId: string;
+  packageName: string;
+  price: number;
+  selectedDate: string;
+  selectedTime: string;
+  message?: string;
+  status: "pending" | "confirmed" | "in-progress" | "completed" | "cancelled";
+  adminNotes?: string;
+  createdAt: string;
+  updatedAt: string;
+  assignedTo?: {
+    _id: string;
+    name: string;
+    email: string;
+  };
 }
 
 interface ServiceRequestsProps {
   backendUrl: string;
+  token: string;
 }
 
-export default function ServiceRequests({ backendUrl }: ServiceRequestsProps) {
+export default function ServiceRequests({ backendUrl, token }: ServiceRequestsProps) {
   const [requests, setRequests] = useState<ServiceRequest[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedRequest, setSelectedRequest] = useState<ServiceRequest | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [notes, setNotes] = useState("");
+  const [adminNotes, setAdminNotes] = useState("");
   const [updating, setUpdating] = useState(false);
+  const [newStatus, setNewStatus] = useState<string>("");
 
   useEffect(() => {
     fetchServiceRequests();
-  }, []);
+  }, [statusFilter]);
 
   const fetchServiceRequests = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${backendUrl}/api/contact/service-requests`);
+      const url =
+        statusFilter && statusFilter !== "all"
+          ? `${backendUrl}/api/admin/service-requests?status=${statusFilter}`
+          : `${backendUrl}/api/admin/service-requests`;
+
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       if (!response.ok) {
-        alert("Failed to fetch service requests");
+        console.error("Failed to fetch service requests");
         return;
       }
 
       const data = await response.json();
-      setRequests(Array.isArray(data) ? data : []);
+      setRequests(Array.isArray(data.serviceRequests) ? data.serviceRequests : []);
     } catch (err) {
       console.error("Error fetching service requests:", err);
-      alert("Error fetching service requests");
     } finally {
       setLoading(false);
     }
@@ -66,8 +86,11 @@ export default function ServiceRequests({ backendUrl }: ServiceRequestsProps) {
 
     setDeleting(true);
     try {
-      const response = await fetch(`${backendUrl}/api/contact/service-requests/${id}`, {
+      const response = await fetch(`${backendUrl}/api/admin/service-requests/${id}`, {
         method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       if (!response.ok) {
@@ -87,15 +110,24 @@ export default function ServiceRequests({ backendUrl }: ServiceRequestsProps) {
     }
   };
 
-  const handleMarkResolved = async (id: string) => {
+  const handleUpdateStatus = async (id: string) => {
+    if (!newStatus) {
+      alert("Please select a new status");
+      return;
+    }
+
     setUpdating(true);
     try {
-      const response = await fetch(`${backendUrl}/api/contact/service-requests/${id}`, {
+      const response = await fetch(`${backendUrl}/api/admin/service-requests/${id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ isResolved: true, notes }),
+        body: JSON.stringify({
+          status: newStatus,
+          adminNotes: adminNotes,
+        }),
       });
 
       if (!response.ok) {
@@ -103,8 +135,10 @@ export default function ServiceRequests({ backendUrl }: ServiceRequestsProps) {
         return;
       }
 
-      alert("✅ Service request marked as resolved");
-      setNotes("");
+      const updated = await response.json();
+      alert("✅ Service request updated successfully");
+      setAdminNotes("");
+      setNewStatus("");
       fetchServiceRequests();
       setShowDetails(false);
       setSelectedRequest(null);
@@ -120,11 +154,19 @@ export default function ServiceRequests({ backendUrl }: ServiceRequestsProps) {
     (req) =>
       req.name.toLowerCase().includes(search.toLowerCase()) ||
       req.email.toLowerCase().includes(search.toLowerCase()) ||
-      req.service.toLowerCase().includes(search.toLowerCase())
+      req.packageName.toLowerCase().includes(search.toLowerCase())
   );
 
-  const pendingRequests = filteredRequests.filter((r) => !r.isResolved);
-  const resolvedRequests = filteredRequests.filter((r) => r.isResolved);
+  const getStatusColor = (status: string) => {
+    const colors: Record<string, string> = {
+      pending: "bg-yellow-100 text-yellow-800",
+      confirmed: "bg-blue-100 text-blue-800",
+      "in-progress": "bg-purple-100 text-purple-800",
+      completed: "bg-green-100 text-green-800",
+      cancelled: "bg-red-100 text-red-800",
+    };
+    return colors[status] || "bg-gray-100 text-gray-800";
+  };
 
   if (showDetails && selectedRequest) {
     return (
@@ -133,7 +175,8 @@ export default function ServiceRequests({ backendUrl }: ServiceRequestsProps) {
           onClick={() => {
             setShowDetails(false);
             setSelectedRequest(null);
-            setNotes("");
+            setAdminNotes("");
+            setNewStatus("");
           }}
           className="mb-4 text-emerald-600 hover:text-emerald-700 font-semibold"
         >
@@ -160,99 +203,96 @@ export default function ServiceRequests({ backendUrl }: ServiceRequestsProps) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-600 mb-1">Status</label>
-              <span
-                className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${
-                  selectedRequest.isResolved
-                    ? "bg-green-100 text-green-800"
-                    : "bg-yellow-100 text-yellow-800"
-                }`}
-              >
-                {selectedRequest.isResolved ? "✅ Resolved" : "⏳ Pending"}
+              <label className="block text-sm font-medium text-gray-600 mb-1">Current Status</label>
+              <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${getStatusColor(selectedRequest.status)}`}>
+                {selectedRequest.status.toUpperCase()}
               </span>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-600 mb-1">Service</label>
-              <p className="text-lg text-gray-900">{selectedRequest.service || "General Inquiry"}</p>
+              <p className="text-lg text-gray-900">{selectedRequest.serviceSlug}</p>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-600 mb-1">Package</label>
-              <p className="text-lg text-gray-900">{selectedRequest.servicePackage || "N/A"}</p>
+              <p className="text-lg text-gray-900">{selectedRequest.packageName}</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-600 mb-1">Price</label>
+              <p className="text-lg text-gray-900">₹{selectedRequest.price}</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-600 mb-1">Requested Date</label>
+              <p className="text-lg text-gray-900">{selectedRequest.selectedDate}</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-600 mb-1">Requested Time</label>
+              <p className="text-lg text-gray-900">{selectedRequest.selectedTime}</p>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-600 mb-1">Submitted</label>
-              <p className="text-lg text-gray-900">
-                {new Date(selectedRequest.submittedAt).toLocaleDateString()}
-              </p>
+              <p className="text-lg text-gray-900">{new Date(selectedRequest.createdAt).toLocaleDateString()}</p>
             </div>
+          </div>
 
-            {selectedRequest.resolvedAt && (
-              <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Resolved</label>
-                <p className="text-lg text-gray-900">
-                  {new Date(selectedRequest.resolvedAt).toLocaleDateString()}
-                </p>
+          {selectedRequest.message && (
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-600 mb-2">Message</label>
+              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 max-h-48 overflow-y-auto">
+                <p className="text-sm text-gray-700 whitespace-pre-wrap">{selectedRequest.message}</p>
               </div>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-600 mb-2">Subject</label>
-            <p className="text-lg text-gray-900 mb-4">{selectedRequest.subject}</p>
-          </div>
-
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-600 mb-2">Message</label>
-            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 max-h-48 overflow-y-auto">
-              <p className="text-sm text-gray-700 whitespace-pre-wrap">{selectedRequest.message}</p>
             </div>
-          </div>
+          )}
 
-          {selectedRequest.notes && (
+          {selectedRequest.adminNotes && (
             <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <h3 className="font-semibold text-blue-800 mb-2">Admin Notes</h3>
-              <p className="text-blue-700">{selectedRequest.notes}</p>
+              <p className="text-blue-700">{selectedRequest.adminNotes}</p>
             </div>
           )}
 
-          {!selectedRequest.isResolved && (
-            <div className="mb-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-600 mb-2">Add Notes</label>
-                <textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
-                  placeholder="Add internal notes about this request..."
-                />
-              </div>
-
-              <div className="flex gap-3 flex-col sm:flex-row">
-                <button
-                  onClick={() => handleMarkResolved(selectedRequest._id)}
-                  disabled={updating}
-                  className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 text-white px-4 py-3 rounded-lg hover:bg-emerald-700 transition disabled:opacity-50 font-semibold"
-                >
-                  <CheckIcon className="w-5 h-5" /> Mark as Resolved
-                </button>
-
-                <button
-                  onClick={() => handleDelete(selectedRequest._id)}
-                  disabled={deleting}
-                  className="flex-1 flex items-center justify-center gap-2 bg-red-600 text-white px-4 py-3 rounded-lg hover:bg-red-700 transition disabled:opacity-50 font-semibold"
-                >
-                  <TrashIcon className="w-5 h-5" /> Delete
-                </button>
-              </div>
+          <div className="mb-6 space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-600 mb-2">Update Status</label>
+              <select
+                value={newStatus}
+                onChange={(e) => setNewStatus(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
+              >
+                <option value="">Select new status...</option>
+                <option value="pending">Pending</option>
+                <option value="confirmed">Confirmed</option>
+                <option value="in-progress">In Progress</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
             </div>
-          )}
 
-          {selectedRequest.isResolved && (
-            <div className="flex gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-600 mb-2">Admin Notes</label>
+              <textarea
+                value={adminNotes}
+                onChange={(e) => setAdminNotes(e.target.value)}
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                placeholder="Add internal notes about this request..."
+              />
+            </div>
+
+            <div className="flex gap-3 flex-col sm:flex-row">
+              <button
+                onClick={() => handleUpdateStatus(selectedRequest._id)}
+                disabled={updating || !newStatus}
+                className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 text-white px-4 py-3 rounded-lg hover:bg-emerald-700 transition disabled:opacity-50 font-semibold"
+              >
+                <CheckIcon className="w-5 h-5" /> Update Request
+              </button>
+
               <button
                 onClick={() => handleDelete(selectedRequest._id)}
                 disabled={deleting}
@@ -261,7 +301,7 @@ export default function ServiceRequests({ backendUrl }: ServiceRequestsProps) {
                 <TrashIcon className="w-5 h-5" /> Delete
               </button>
             </div>
-          )}
+          </div>
         </div>
       </div>
     );
@@ -269,27 +309,33 @@ export default function ServiceRequests({ backendUrl }: ServiceRequestsProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900">
-          📋 Service Requests
-        </h2>
-        <button
-          onClick={fetchServiceRequests}
-          className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition"
-        >
-          Refresh
-        </button>
-      </div>
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <h2 className="text-2xl font-bold text-gray-900">Service Requests</h2>
+        <div className="flex gap-3 flex-col sm:flex-row">
+          <div className="relative flex-1 sm:flex-none">
+            <input
+              type="text"
+              placeholder="Search by name, email, or package..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
+            />
+            <MagnifyingGlassIcon className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
+          </div>
 
-      <div className="relative">
-        <MagnifyingGlassIcon className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
-        <input
-          type="text"
-          placeholder="Search by name, email, or service..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
-        />
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
+          >
+            <option value="all">All Statuses</option>
+            <option value="pending">Pending</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="in-progress">In Progress</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
       </div>
 
       {loading ? (
@@ -297,83 +343,63 @@ export default function ServiceRequests({ backendUrl }: ServiceRequestsProps) {
           <p className="text-gray-500">Loading service requests...</p>
         </div>
       ) : filteredRequests.length === 0 ? (
-        <div className="text-center py-12 bg-gray-50 rounded-lg">
-          <p className="text-gray-500">
-            {search ? "No service requests found matching your search" : "No service requests yet"}
-          </p>
+        <div className="text-center py-12">
+          <p className="text-gray-500">No service requests found</p>
         </div>
       ) : (
-        <div className="space-y-4">
-          {/* Pending Requests */}
-          {pendingRequests.length > 0 && (
-            <div>
-              <h3 className="text-lg font-semibold text-yellow-700 mb-3">
-                ⏳ Pending ({pendingRequests.length})
-              </h3>
-              <div className="space-y-2">
-                {pendingRequests.map((req) => (
-                  <div
-                    key={req._id}
-                    onClick={() => {
-                      setSelectedRequest(req);
-                      setShowDetails(true);
-                      setNotes(req.notes || "");
-                    }}
-                    className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 cursor-pointer hover:shadow-md transition"
-                  >
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <h4 className="font-semibold text-gray-900">{req.name}</h4>
-                        <p className="text-sm text-gray-600">{req.email}</p>
-                        <p className="text-sm text-gray-600">
-                          Service: <strong>{req.service || "General"}</strong>
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">{req.subject}</p>
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase">Name</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase">Package</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase">Date & Time</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase">Price</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {filteredRequests.map((req) => (
+                  <tr key={req._id} className="hover:bg-gray-50 transition">
+                    <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                      <div>
+                        <p>{req.name}</p>
+                        <p className="text-gray-500 text-xs">{req.email}</p>
                       </div>
-                      <span className="text-xs text-yellow-700 bg-yellow-100 px-2 py-1 rounded whitespace-nowrap">
-                        {new Date(req.submittedAt).toLocaleDateString()}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Resolved Requests */}
-          {resolvedRequests.length > 0 && (
-            <div>
-              <h3 className="text-lg font-semibold text-green-700 mb-3">
-                ✅ Resolved ({resolvedRequests.length})
-              </h3>
-              <div className="space-y-2">
-                {resolvedRequests.map((req) => (
-                  <div
-                    key={req._id}
-                    onClick={() => {
-                      setSelectedRequest(req);
-                      setShowDetails(true);
-                      setNotes(req.notes || "");
-                    }}
-                    className="bg-green-50 border border-green-200 rounded-lg p-4 cursor-pointer hover:shadow-md transition"
-                  >
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <h4 className="font-semibold text-gray-900">{req.name}</h4>
-                        <p className="text-sm text-gray-600">{req.email}</p>
-                        <p className="text-sm text-gray-600">
-                          Service: <strong>{req.service || "General"}</strong>
-                        </p>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900">{req.packageName}</td>
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      <div>
+                        <p>{req.selectedDate}</p>
+                        <p className="text-gray-500 text-xs">{req.selectedTime}</p>
                       </div>
-                      <span className="text-xs text-green-700 bg-green-100 px-2 py-1 rounded whitespace-nowrap">
-                        {new Date(req.resolvedAt || req.submittedAt).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 text-sm font-semibold text-gray-900">₹{req.price}</td>
+                    <td className="px-6 py-4 text-sm">
+                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(req.status)}`}>
+                        {req.status}
                       </span>
-                    </div>
-                  </div>
+                    </td>
+                    <td className="px-6 py-4 text-sm space-x-2">
+                      <button
+                        onClick={() => {
+                          setSelectedRequest(req);
+                          setShowDetails(true);
+                          setAdminNotes(req.adminNotes || "");
+                          setNewStatus(req.status || "");
+                        }}
+                        className="text-emerald-600 hover:text-emerald-700 font-semibold"
+                      >
+                        <PencilIcon className="w-5 h-5" />
+                      </button>
+                    </td>
+                  </tr>
                 ))}
-              </div>
-            </div>
-          )}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>
