@@ -24,6 +24,7 @@ export interface UserProfile {
 }
 
 export interface OrderItem {
+  productName: string;
   _id?: string;
   id: string;
   title: string;

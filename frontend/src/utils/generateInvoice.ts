@@ -148,7 +148,7 @@ export const generateInvoicePDF = (order: Order) => {
   // Total
   doc.setFontSize(11);
   doc.setTextColor(34, 197, 94);
-  doc.setFont(undefined, "bold");
+  doc.setFont("helvetica", "bold");
   addText("TOTAL:", pageWidth - 65, yPosition);
   addText(`₹${(order.total || 0).toFixed(2)}`, pageWidth - 25, yPosition);
 
@@ -156,7 +156,7 @@ export const generateInvoicePDF = (order: Order) => {
   yPosition = pageHeight - 30;
   doc.setFontSize(8);
   doc.setTextColor(150, 150, 150);
-  doc.setFont(undefined, "normal");
+  doc.setFont("helvetica", "normal");
   addText("Thank you for your order!", 15, yPosition);
   addText(
     "For inquiries, contact: support@verdora.com",
