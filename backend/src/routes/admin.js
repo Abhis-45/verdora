@@ -1123,12 +1123,11 @@ router.post("/vendor-requests/:id/accept-with-vendor", adminAuthMiddleware, asyn
       businessName,
       businessPhone,
       businessLocation,
-      businessWebsite,
     } = req.body;
 
     // Validate required fields
-    if (!username || !email || !password || !businessName) {
-      return res.status(400).json({ message: "Username, email, password, and business name are required" });
+    if (!username || !email || !password) {
+      return res.status(400).json({ message: "Username, email, and password are required" });
     }
 
     // Validate email format
@@ -1180,10 +1179,9 @@ router.post("/vendor-requests/:id/accept-with-vendor", adminAuthMiddleware, asyn
       password: password,
       vendorName: vendorName?.trim() || "",
       mobileNumber: mobileNumber?.trim() || "",
-      businessName: businessName.trim(),
+      businessName: businessName?.trim() || "",
       businessPhone: businessPhone?.trim() || "",
       businessLocation: businessLocation?.trim() || "",
-      businessWebsite: businessWebsite?.trim() || "",
       status: "active",
       approvedBy: req.adminId,
       approvedAt: new Date(),

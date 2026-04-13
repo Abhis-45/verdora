@@ -23,7 +23,6 @@ export default function AdminVendorSignup() {
     businessName: "",
     businessPhone: "",
     businessLocation: "",
-    businessWebsite: "",
   });
 
   // Get backend URL
@@ -66,7 +65,7 @@ export default function AdminVendorSignup() {
           businessName: data.businessName || "",
           businessPhone: data.businessPhone || "",
           businessLocation: data.businessLocation || "",
-          businessWebsite: data.businessWebsite || "",
+
         }));
       } catch (err: any) {
         setError(err.message || "Failed to load vendor request");
@@ -355,22 +354,6 @@ export default function AdminVendorSignup() {
                     value={formData.businessLocation}
                     onChange={handleChange}
                     placeholder="City, State"
-                    disabled={submitting}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent disabled:bg-gray-100"
-                  />
-                </div>
-
-                {/* Business Website */}
-                <div className="sm:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Business Website
-                  </label>
-                  <input
-                    type="url"
-                    name="businessWebsite"
-                    value={formData.businessWebsite}
-                    onChange={handleChange}
-                    placeholder="https://example.com"
                     disabled={submitting}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent disabled:bg-gray-100"
                   />
