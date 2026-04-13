@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from "react";
-import Link from "next/link";
 import {
   CheckIcon,
   XMarkIcon,
   TrashIcon,
   MagnifyingGlassIcon,
-  ArrowRightIcon,
 } from "@heroicons/react/24/outline";
 
 interface VendorRequest {
@@ -418,6 +416,15 @@ export default function VendorRequests({ token, backendUrl, onAccept }: VendorRe
 
           {(selectedRequest.status === "approved" || selectedRequest.status === "rejected") && (
             <div className="mt-8 flex gap-3 flex-col sm:flex-row">
+              {selectedRequest.status === "approved" && (
+                <button
+                  onClick={() => onAccept && onAccept(selectedRequest._id, selectedRequest)}
+                  disabled={actionLoading || !onAccept}
+                  className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 text-white px-4 py-3 rounded-lg hover:bg-emerald-700 transition disabled:opacity-50 font-semibold"
+                >
+                  <CheckIcon className="w-5 h-5" /> Create Vendor Account
+                </button>
+              )}
               <button
                 onClick={() => handleDelete(selectedRequest._id)}
                 disabled={deleteLoading}
@@ -429,15 +436,10 @@ export default function VendorRequests({ token, backendUrl, onAccept }: VendorRe
           )}
 
           {selectedRequest.status === "approved" && (
-            <div className="mt-6">
-              <Link
-                href={`/admin/vendor-signup?requestId=${selectedRequest._id}`}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition font-semibold"
-              >
-                <ArrowRightIcon className="w-5 h-5" /> Create Vendor Account
-              </Link>
-              <p className="text-sm text-gray-500 mt-3">
-                Click the button above to proceed to create a vendor account for this approved request
+            <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+              <h3 className="font-semibold text-green-800 mb-2">✅ Request Approved</h3>
+              <p className="text-green-700 text-sm">
+                This vendor request has been approved. Click "Create Vendor Account" above to complete the vendor setup.
               </p>
             </div>
           )}

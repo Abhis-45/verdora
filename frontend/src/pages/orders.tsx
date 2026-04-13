@@ -17,6 +17,7 @@ import { buildCartKey } from "@/utils/productOptions";
 import { formatDeliveryDate } from "@/utils/delivery";
 import { uploadImages } from "@/utils/attachments";
 import AuthPopup from "@/components/auth/AuthPop";
+import { generateInvoicePDF } from "@/utils/generateInvoice";
 
 const ORDER_STATUS_STYLES: Record<string, string> = {
   accepted: "bg-amber-100 text-amber-700",
@@ -856,6 +857,14 @@ export default function OrdersPage() {
                   </div>
 
                   <div className="space-y-3">
+                    {selectedOrder.status === "delivered" && (
+                      <button
+                        onClick={() => generateInvoicePDF(selectedOrder)}
+                        className="w-full rounded-lg bg-blue-600 py-2 font-semibold text-white transition hover:bg-blue-700"
+                      >
+                        📥 Download Invoice PDF
+                      </button>
+                    )}
                     <button
                       onClick={() => buyAgain(selectedOrder)}
                       className="w-full rounded-lg bg-green-600 py-2 font-semibold text-white transition hover:bg-green-700"

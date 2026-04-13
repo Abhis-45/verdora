@@ -9,12 +9,14 @@
       {
         "id": "plant-basic",
         "name": "Basic Care",
-        "desc": "Weekly watering and pruning for small gardens."
+        "desc": "Weekly watering and pruning for small gardens.",
+        "price": 1500
       },
       {
         "id": "plant-premium",
         "name": "Premium Care",
-        "desc": "Comprehensive care including fertilization and pest control."
+        "desc": "Comprehensive care including fertilization and pest control.",
+        "price": 3000
       }
     ]
   },
@@ -28,17 +30,20 @@
       {
         "id": "decor-livingroom",
         "name": "Living Room Styling",
-        "desc": "Transform your living room with curated plants, accent pieces, and cozy layouts."
+        "desc": "Transform your living room with curated plants, accent pieces, and cozy layouts.",
+        "price": 5000
       },
       {
         "id": "decor-bedroom",
         "name": "Bedroom Decor",
-        "desc": "Create a calming, nature-inspired bedroom with elegant plant styling."
+        "desc": "Create a calming, nature-inspired bedroom with elegant plant styling.",
+        "price": 4000
       },
       {
         "id": "decor-balcony",
         "name": "Balcony & Outdoor Styling",
-        "desc": "Design refreshing balcony and patio spaces with greenery and decor accents."
+        "desc": "Design refreshing balcony and patio spaces with greenery and decor accents.",
+        "price": 3500
       }
     ]
   },
@@ -52,12 +57,14 @@
       {
         "id": "land-basic",
         "name": "Basic Landscaping",
-        "desc": "Simple layouts for small spaces."
+        "desc": "Simple layouts for small spaces.",
+        "price": 8000
       },
       {
         "id": "land-premium",
         "name": "Premium Landscaping",
-        "desc": "Full-scale design with premium plants and features."
+        "desc": "Full-scale design with premium plants and features.",
+        "price": 15000
       }
     ]
   }

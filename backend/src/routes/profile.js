@@ -959,7 +959,7 @@ router.post("/orders", authMiddleware, async (req, res) => {
 });
 
 // ✅ Book a service (save service booking to user.orders)
-router.post("/bookService", authMiddleware, async (req, res) => {
+router.post("/bookService", async (req, res) => {
   const {
     serviceSlug,
     packageId,
@@ -974,9 +974,6 @@ router.post("/bookService", authMiddleware, async (req, res) => {
   } = req.body;
 
   try {
-    const user = await User.findById(req.userId);
-    if (!user) return res.status(404).json({ message: "User not found" });
-
     // Validate required fields
     if (
       !serviceSlug ||
@@ -984,7 +981,10 @@ router.post("/bookService", authMiddleware, async (req, res) => {
       !packageName ||
       !price ||
       !selectedDate ||
-      !selectedTime
+      !selectedTime ||
+      !name ||
+      !email ||
+      !phone
     ) {
       return res
         .status(400)
@@ -1022,13 +1022,31 @@ router.post("/bookService", authMiddleware, async (req, res) => {
       date: new Date(),
     };
 
-    user.orders = user.orders || [];
-    user.orders.push(serviceOrder);
-    await user.save();
+    // If user is logged in, save to their orders; otherwise, create a temporary contact
+    if (req.userId) {
+      const user = await User.findById(req.userId);
+      if (user) {
+        user.orders = user.orders || [];
+        user.orders.push(serviceOrder);
+        await user.save();
+      }
+    } else {
+      // For guest users, save as contact entry for admin to see
+      const Contact = req.app.get("Contact");
+      if (Contact) {
+        await Contact.create({
+          name,
+          email,
+          phone,
+          type: "service",
+          message: `Service: ${packageName} (${serviceSlug}) - Date: ${selectedDate} at ${selectedTime}${message ? ` - Note: ${message}` : ""}`,
+        });
+      }
+    }
 
     res.status(201).json({
-      message: "Service booked successfully!",
-      order: decorateOrderForResponse(serviceOrder),
+      message: "Service booked successfully! We'll contact you soon.",
+      order: serviceOrder,
     });
   } catch (err) {
     res

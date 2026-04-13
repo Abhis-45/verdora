@@ -1168,9 +1168,10 @@ router.post("/vendor-requests/:id/accept-with-vendor", adminAuthMiddleware, asyn
       return res.status(404).json({ message: "Vendor request not found" });
     }
 
-    if (vendorRequest.status !== "pending") {
-      console.log("❌ Vendor request status is not pending:", vendorRequest.status);
-      return res.status(400).json({ message: "Only pending requests can be accepted. Current status: " + vendorRequest.status });
+    // Allow both pending and approved status
+    if (vendorRequest.status !== "pending" && vendorRequest.status !== "approved") {
+      console.log("❌ Vendor request status is not pending or approved:", vendorRequest.status);
+      return res.status(400).json({ message: "Only pending or approved requests can be accepted. Current status: " + vendorRequest.status });
     }
 
     // Check if vendor already exists
