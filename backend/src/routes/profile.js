@@ -6,7 +6,7 @@ import Admin from "../models/Admin.js";
 import Product from "../models/Product.js";
 import ServiceRequest from "../models/ServiceRequest.js";
 import upload from "../middleware/multerConfig.js";
-import { sendOtpSMS, sendOrderConfirmationSMS, sendOrderStatusUpdateSMS } from "../services/twilioService.js";
+import { sendOtpSMS, sendOrderConfirmationSMS, sendOrderStatusUpdateSMS, sendOrderCancelledSMS } from "../services/twilioService.js";
 import {
   sendOtpEmail,
   sendAccountDeletedEmail,
@@ -14,7 +14,6 @@ import {
   sendUserOrderConfirmationEmail,
   sendOrderStatusUpdateEmail,
   sendUserReturnRequestEmail,
-  sendOrderCancelledSMS,
 } from "../services/emailService.js";
 import { uploadToCloudinary } from "../services/cloudinaryService.js";
 import {
