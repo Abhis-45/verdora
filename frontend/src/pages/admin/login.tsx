@@ -1,16 +1,19 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-"use client";
-import { useState } from "react";
+import {
+  useState,
+} from "react";
 import { useRouter } from "next/router";
 import Head from "next/head";
 import Toast from "@/components/shared/Toast";
+import PasswordResetModal from "@/components/auth/PasswordResetModal";
 import Link from "next/link";
 import Layout from "@/components/common/layout";
+import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 
 export default function AdminLogin() {
   const router = useRouter();
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [isLoading, setIsLoading] = useState(false);
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [toast, setToast] = useState<{
     message: string;
     type: "success" | "error";
@@ -90,7 +93,15 @@ export default function AdminLogin() {
         <title>Admin Login | Verdora</title>
       </Head>
       <Layout>
-        <div className="min-h-screen bg-linear-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
+        <div className="min-h-screen bg-linear-to-br from-green-50 to-blue-50 flex items-center justify-center p-4 relative">
+          <button
+            onClick={() => router.back()}
+            className="absolute top-6 left-6 flex items-center gap-2 text-gray-600 hover:text-gray-800 transition"
+          >
+            <ArrowLeftIcon className="w-5 h-5" />
+            <span className="text-sm font-medium">Back</span>
+          </button>
+          
           {toast && (
             <Toast
               message={toast.message}
@@ -144,6 +155,13 @@ export default function AdminLogin() {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                   placeholder="••••••••"
                 />
+                <button
+                  type="button"
+                  onClick={() => setIsResetModalOpen(true)}
+                  className="text-sm text-green-600 hover:text-green-700 mt-2 font-medium"
+                >
+                  Forgot Password?
+                </button>
               </div>
 
               <button
@@ -167,6 +185,12 @@ export default function AdminLogin() {
           </div>
         </div>
       </Layout>
+
+      <PasswordResetModal
+        isOpen={isResetModalOpen}
+        onClose={() => setIsResetModalOpen(false)}
+        backendUrl={typeof window !== "undefined" ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com" : "https://verdora.onrender.com"}
+      />
     </>
   );
 }

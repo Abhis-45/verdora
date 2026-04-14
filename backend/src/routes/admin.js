@@ -15,6 +15,24 @@ import {
   normalizePlantSizes,
 } from "../utils/delivery.js";
 import { deleteFromCloudinary } from "../services/cloudinaryService.js";
+import {
+  sendUserOrderShippedEmail,
+  sendUserOrderDeliveredEmail,
+  sendUserOrderCancelledEmail,
+  sendUserRefundProcessedEmail,
+  sendVendorApprovedEmail,
+  sendVendorRejectedEmail,
+  sendVendorRegistrationSubmittedEmail,
+} from "../services/emailService.js";
+import {
+  sendOrderShippedSMS,
+  sendOrderDeliveredSMS,
+  sendOrderCancelledSMS,
+  sendRefundProcessedSMS,
+  sendVendorApprovedSMS,
+  sendVendorRejectedSMS,
+  sendVendorRegistrationReceivedSMS,
+} from "../services/twilioService.js";
 
 const router = express.Router();
 
@@ -169,6 +187,75 @@ router.patch(
       }));
 
       await user.save();
+
+      // ✅ SEND STATUS UPDATE NOTIFICATIONS TO USER
+      try {
+        const estimatedDelivery = order.deliveryEstimate?.estimatedDeliveryDate
+          ? new Date(order.deliveryEstimate.estimatedDeliveryDate).toLocaleDateString()
+          : "2-5 business days";
+
+        // Send email notification
+        if (user.email && status !== "accepted") {
+          let emailFn = null;
+          if (status === "shipped") {
+            emailFn = () => sendUserOrderShippedEmail(
+              user.email,
+              user.name || "Valued Customer",
+              String(order._id || ""),
+              "",
+              estimatedDelivery
+            );
+          } else if (status === "delivered") {
+            emailFn = () => sendUserOrderDeliveredEmail(
+              user.email,
+              user.name || "Valued Customer",
+              String(order._id || "")
+            );
+          } else if (status === "refunded") {
+            emailFn = () => sendUserRefundProcessedEmail(
+              user.email,
+              user.name || "Valued Customer",
+              String(order._id || ""),
+              order.total || 0
+            );
+          }
+
+          if (emailFn) {
+            await emailFn().catch((err) => 
+              console.error(`❌ Order ${status} email failed:`, err.message)
+            );
+          }
+        }
+
+        // Send SMS notification
+        if (user.mobile && status !== "accepted") {
+          const formattedMobile = user.mobile.startsWith("+")
+            ? user.mobile
+            : `+91${user.mobile}`;
+
+          if (status === "shipped") {
+            await sendOrderShippedSMS(
+              formattedMobile,
+              String(order._id || ""),
+              estimatedDelivery
+            ).catch((err) => console.error("❌ Order shipped SMS failed:", err.message));
+          } else if (status === "delivered") {
+            await sendOrderDeliveredSMS(
+              formattedMobile,
+              String(order._id || "")
+            ).catch((err) => console.error("❌ Order delivered SMS failed:", err.message));
+          } else if (status === "refunded") {
+            await sendRefundProcessedSMS(
+              formattedMobile,
+              String(order._id || ""),
+              order.total || 0
+            ).catch((err) => console.error("❌ Refund SMS failed:", err.message));
+          }
+        }
+      } catch (notificationErr) {
+        console.error("Order status notification failed:", notificationErr.message);
+        // Don't fail the request due to notification errors
+      }
 
       res.json({
         message: "Order status updated successfully",
@@ -1055,6 +1142,29 @@ router.post("/vendor-requests/:id/approve", adminAuthMiddleware, async (req, res
     vendorRequest.approvedBy = req.adminId;
     await vendorRequest.save();
 
+    // ✅ SEND APPROVAL NOTIFICATION
+    try {
+      if (vendorRequest.email) {
+        await sendVendorApprovedEmail(
+          vendorRequest.email,
+          vendorRequest.vendorName || "Valued Vendor",
+          vendorRequest.businessName || vendorRequest.shopName || "Business",
+          "https://verdora.com/vendor/login"
+        ).catch((err) => console.error("❌ Vendor approval email failed:", err.message));
+
+        const formattedPhone = vendorRequest.phone?.startsWith("+")
+          ? vendorRequest.phone
+          : `+91${vendorRequest.phone}`;
+        
+        await sendVendorApprovedSMS(
+          formattedPhone,
+          vendorRequest.vendorName || "Valued Vendor"
+        ).catch((err) => console.error("❌ Vendor approval SMS failed:", err.message));
+      }
+    } catch (notificationErr) {
+      console.error("Vendor approval notification failed:", notificationErr.message);
+    }
+
     res.json({
       message: "Vendor request approved",
       vendorRequest,
@@ -1095,6 +1205,29 @@ router.post(
       vendorRequest.rejectedBy = req.adminId;
       vendorRequest.rejectionReason = rejectionReason || "";
       await vendorRequest.save();
+
+      // ✅ SEND REJECTION NOTIFICATION
+      try {
+        if (vendorRequest.email) {
+          await sendVendorRejectedEmail(
+            vendorRequest.email,
+            vendorRequest.vendorName || "Valued Vendor",
+            vendorRequest.businessName || vendorRequest.shopName || "Business",
+            rejectionReason || "Your application does not meet our requirements at this time."
+          ).catch((err) => console.error("❌ Vendor rejection email failed:", err.message));
+
+          const formattedPhone = vendorRequest.phone?.startsWith("+")
+            ? vendorRequest.phone
+            : `+91${vendorRequest.phone}`;
+          
+          await sendVendorRejectedSMS(
+            formattedPhone,
+            vendorRequest.vendorName || "Valued Vendor"
+          ).catch((err) => console.error("❌ Vendor rejection SMS failed:", err.message));
+        }
+      } catch (notificationErr) {
+        console.error("Vendor rejection notification failed:", notificationErr.message);
+      }
 
       res.json({
         message: "Vendor request rejected",

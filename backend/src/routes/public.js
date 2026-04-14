@@ -2,6 +2,12 @@ import express from "express";
 import Subscriber from "../models/Subscriber.js";
 import Contact from "../models/Contact.js";
 import VendorRequest from "../models/VendorRequest.js";
+import {
+  sendVendorRegistrationSubmittedEmail,
+} from "../services/emailService.js";
+import {
+  sendVendorRegistrationReceivedSMS,
+} from "../services/twilioService.js";
 
 const router = express.Router();
 
@@ -78,6 +84,27 @@ router.post("/vendor-register", async (req, res) => {
     });
 
     await vendorRequest.save();
+
+    // ✅ SEND VENDOR REGISTRATION RECEIVED NOTIFICATION
+    try {
+      if (email) {
+        await sendVendorRegistrationSubmittedEmail(
+          email,
+          vendorName,
+          shopName
+        ).catch((err) => console.error("❌ Vendor registration email failed:", err.message));
+      }
+
+      const formattedPhone = phone.startsWith("+") ? phone : `+91${phone}`;
+      if (phone) {
+        await sendVendorRegistrationReceivedSMS(
+          formattedPhone,
+          vendorName
+        ).catch((err) => console.error("❌ Vendor registration SMS failed:", err.message));
+      }
+    } catch (notificationErr) {
+      console.error("Vendor registration notification failed:", notificationErr.message);
+    }
 
     res.json({
       message:

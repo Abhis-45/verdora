@@ -2,6 +2,8 @@ import express from "express";
 import jwt from "jsonwebtoken";
 import Admin from "../models/Admin.js";
 import Vendor from "../models/Vendor.js";
+import { sendOtpEmail } from "../services/emailService.js";
+import { sendOtpSMS } from "../services/twilioService.js";
 
 const router = express.Router();
 
@@ -504,5 +506,179 @@ export const vendorAuthMiddleware = (req, res, next) => {
     res.status(401).json({ message: "Invalid token" });
   }
 };
+
+// ✅ PASSWORD RESET - REQUEST OTP (Public - no token required)
+router.post("/forgot-password", async (req, res) => {
+  const { email, method = "email" } = req.body; // method: "email" or "sms"
+
+  if (!email) {
+    return res.status(400).json({ message: "Email is required" });
+  }
+
+  try {
+    // Check if email exists in Admin or Vendor
+    const admin = await Admin.findOne({ email });
+    const vendor = await Vendor.findOne({ email });
+
+    if (!admin && !vendor) {
+      return res.status(404).json({ message: "Email not found. Please check and try again." });
+    }
+
+    // Generate OTP (6 digits)
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // Valid for 10 minutes
+
+    // Store OTP temporarily (in production, use Redis instead)
+    const otpData = {
+      email,
+      otp,
+      expiresAt: otpExpiry,
+      userType: admin ? "admin" : "vendor",
+    };
+
+    // In production, store this in Redis or database
+    // For now, we'll store it in memory (won't persist across server restarts)
+    if (!global.otpStore) {
+      global.otpStore = {};
+    }
+    global.otpStore[email] = otpData;
+
+    // Send OTP via email or SMS
+    try {
+      if (method === "sms") {
+        // Send via SMS - requires phone number
+        const user = admin || vendor;
+        const phoneNumber = user.mobileNumber || user.phone;
+        if (phoneNumber && phoneNumber.startsWith("+")) {
+          await sendOtpSMS(phoneNumber, otp);
+          return res.json({
+            message: "OTP sent to your phone number",
+            method: "sms",
+            maskedPhone: phoneNumber.replace(/(?<=.{2}).(?=.{2})/g, "*"),
+          });
+        } else {
+          // Fall back to email if phone is not valid
+          await sendOtpEmail(email, otp);
+          return res.json({
+            message: "OTP sent to your email",
+            method: "email",
+            maskedEmail: email.replace(/(?<=.{2})(.*)(?=.{2})/, (m) => "*".repeat(m.length)),
+          });
+        }
+      } else {
+        // Send via email (default)
+        await sendOtpEmail(email, otp);
+        return res.json({
+          message: "OTP sent to your email",
+          method: "email",
+          maskedEmail: email.replace(/(?<=.{2})(.*)(?=.{2})/, (m) => "*".repeat(m.length)),
+        });
+      }
+    } catch (emailError) {
+      console.error("Failed to send OTP:", emailError);
+      return res.status(500).json({ message: "Failed to send OTP. Please try again." });
+    }
+  } catch (err) {
+    res.status(500).json({ message: "Failed to process request", error: err.message });
+  }
+});
+
+// ✅ PASSWORD RESET - VERIFY OTP
+router.post("/verify-otp", async (req, res) => {
+  const { email, otp } = req.body;
+
+  if (!email || !otp) {
+    return res.status(400).json({ message: "Email and OTP are required" });
+  }
+
+  try {
+    // Check if OTP exists and is valid
+    if (!global.otpStore || !global.otpStore[email]) {
+      return res.status(400).json({ message: "OTP expired or not found. Please request a new OTP." });
+    }
+
+    const otpData = global.otpStore[email];
+
+    // Check if OTP is expired
+    if (new Date() > otpData.expiresAt) {
+      delete global.otpStore[email];
+      return res.status(400).json({ message: "OTP has expired. Please request a new OTP." });
+    }
+
+    // Check if OTP matches
+    if (otpData.otp !== otp) {
+      return res.status(400).json({ message: "Invalid OTP. Please try again." });
+    }
+
+    // Generate temporary token for password reset (valid for 15 minutes)
+    const resetToken = jwt.sign(
+      { email, userType: otpData.userType, purpose: "password-reset" },
+      process.env.JWT_SECRET,
+      { expiresIn: "15m" }
+    );
+
+    // Delete OTP after verification
+    delete global.otpStore[email];
+
+    res.json({
+      message: "OTP verified successfully",
+      resetToken,
+      email,
+    });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to verify OTP", error: err.message });
+  }
+});
+
+// ✅ PASSWORD RESET - RESET PASSWORD
+router.post("/reset-password", async (req, res) => {
+  const { resetToken, newPassword, confirmPassword } = req.body;
+
+  if (!resetToken || !newPassword || !confirmPassword) {
+    return res.status(400).json({ message: "All fields are required" });
+  }
+
+  if (newPassword !== confirmPassword) {
+    return res.status(400).json({ message: "Passwords do not match" });
+  }
+
+  if (newPassword.length < 6) {
+    return res.status(400).json({ message: "Password must be at least 6 characters long" });
+  }
+
+  try {
+    // Verify reset token
+    const decoded = jwt.verify(resetToken, process.env.JWT_SECRET);
+
+    if (decoded.purpose !== "password-reset") {
+      return res.status(400).json({ message: "Invalid token" });
+    }
+
+    // Find user and update password
+    let user;
+    if (decoded.userType === "admin") {
+      user = await Admin.findOne({ email: decoded.email });
+    } else {
+      user = await Vendor.findOne({ email: decoded.email });
+    }
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Update password (will be hashed by pre-save hook)
+    user.password = newPassword;
+    await user.save();
+
+    res.json({
+      message: "Password reset successfully. You can now login with your new password.",
+    });
+  } catch (err) {
+    if (err.name === "TokenExpiredError") {
+      return res.status(400).json({ message: "Reset token has expired. Please request a new OTP." });
+    }
+    res.status(500).json({ message: "Failed to reset password", error: err.message });
+  }
+});
 
 export default router;

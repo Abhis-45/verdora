@@ -6,11 +6,15 @@ import Admin from "../models/Admin.js";
 import Product from "../models/Product.js";
 import ServiceRequest from "../models/ServiceRequest.js";
 import upload from "../middleware/multerConfig.js";
-import { sendOtpSMS } from "../services/twilioService.js";
+import { sendOtpSMS, sendOrderConfirmationSMS, sendOrderStatusUpdateSMS } from "../services/twilioService.js";
 import {
   sendOtpEmail,
   sendAccountDeletedEmail,
   sendVendorOrderNotificationEmail,
+  sendUserOrderConfirmationEmail,
+  sendOrderStatusUpdateEmail,
+  sendUserReturnRequestEmail,
+  sendOrderCancelledSMS,
 } from "../services/emailService.js";
 import { uploadToCloudinary } from "../services/cloudinaryService.js";
 import {
@@ -742,6 +746,22 @@ router.patch(
       await user.save();
 
       const updatedOrder = user.orders.id(req.params.orderId);
+
+      // ✅ SEND RETURN/REPLACEMENT REQUEST NOTIFICATION
+      try {
+        if (user.email) {
+          await sendUserReturnRequestEmail(
+            user.email,
+            user.name || "Valued Customer",
+            String(req.params.orderId),
+            String(item.title || "Product"),
+            action
+          ).catch((err) => console.error("❌ Return request email failed:", err.message));
+        }
+      } catch (notificationErr) {
+        console.error("Return request notification failed:", notificationErr.message);
+      }
+
       res.json({
         message:
           action === "returned"
@@ -938,6 +958,42 @@ router.post("/orders", authMiddleware, async (req, res) => {
       }
     } catch (emailErr) {
       console.error("Vendor notification email failed:", emailErr);
+    }
+
+    // ✅ SEND USER ORDER CONFIRMATION EMAIL & SMS
+    try {
+      const deliveryEstimateString = new Date(
+        deliveryEstimate.estimatedDeliveryDate,
+      ).toLocaleDateString("en-IN", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      });
+
+      if (user.email) {
+        await sendUserOrderConfirmationEmail(
+          user.email,
+          user.name || "Valued Customer",
+          String(user.orders[user.orders.length - 1]._id || ""),
+          normalizedItems,
+          order.address,
+          order.total,
+          deliveryEstimateString
+        ).catch((err) => console.error("❌ Order confirmation email failed:", err.message));
+      }
+
+      if (user.mobile) {
+        const formattedMobile = user.mobile.startsWith("+")
+          ? user.mobile
+          : `+91${user.mobile}`;
+        await sendOrderConfirmationSMS(
+          formattedMobile,
+          String(user.orders[user.orders.length - 1]._id || ""),
+          order.total
+        ).catch((err) => console.error("❌ Order confirmation SMS failed:", err.message));
+      }
+    } catch (userNotificationErr) {
+      console.error("User notification failed:", userNotificationErr.message);
     }
 
     res.json({

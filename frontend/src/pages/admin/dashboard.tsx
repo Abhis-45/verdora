@@ -18,7 +18,6 @@ import {
   ArrowLeftOnRectangleIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
-import VendorRequests from "@/components/admin/VendorRequests";
 import ServiceRequests from "@/components/admin/ServiceRequests";
 import OrderStatusForm from "@/components/admin/OrderStatusForm";
 
@@ -123,7 +122,7 @@ interface AdminStats {
   totalAdmins: number;
   totalRevenue: number;
 }
-type Tab = "overview" | "orders" | "products" | "users" | "vendors" | "admins" | "vendor-requests" | "service-requests";
+type Tab = "overview" | "orders" | "products" | "users" | "vendors" | "admins" | "service-requests";
 type DataTab = Exclude<Tab, "overview">;
 type ManageItem = Product | User | Vendor | Admin;
 const adminPermissionKeys = [
@@ -462,7 +461,7 @@ export default function AdminDashboard() {
       <nav className="sticky top-20.5 z-30 border-b-2 border-emerald-200 bg-white shadow-md sm:top-19 lg:top-28">
         <div className="mx-auto flex max-w-7xl gap-0 overflow-x-auto px-4 sm:px-6 lg:px-8">
           {(
-            ["overview", "orders", "products", "users", "vendors", "admins", "vendor-requests", "service-requests"] as Tab[]
+            ["overview", "orders", "products", "users", "vendors", "admins", "service-requests"] as Tab[]
           ).map((t) => (
             <button
               key={t}
@@ -484,7 +483,6 @@ export default function AdminDashboard() {
               {t === "users" && "👥 Users"}
               {t === "vendors" && "🏪 Vendors"}
               {t === "admins" && "🔐 Admins"}
-              {t === "vendor-requests" && "🎯 Vendor Requests"}
               {t === "service-requests" && "📞 Service Requests"}
             </button>
           ))}
@@ -643,23 +641,6 @@ export default function AdminDashboard() {
               setActiveModal("editAdmin");
             }}
             onDelete={(id: string) => handleDelete(id, "admin")}
-          />
-        )}
-
-        {tab === "vendor-requests" && (
-          <VendorRequests
-            token={token}
-            backendUrl={
-              typeof window !== "undefined"
-                ? process.env.NEXT_PUBLIC_BACKEND_URL ||
-                  "https://verdora.onrender.com"
-                : "https://verdora.onrender.com"
-            }
-            onAccept={(id, requestData) => {
-              setVendorRequestId(id);
-              setVendorRequestData(requestData);
-              setActiveModal("createVendor");
-            }}
           />
         )}
 

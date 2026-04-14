@@ -4,12 +4,15 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import Head from "next/head";
 import Layout from "../../components/common/layout";
+import PasswordResetModal from "@/components/auth/PasswordResetModal";
+import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 
 export default function VendorLogin() {
   const router = useRouter();
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -89,7 +92,15 @@ export default function VendorLogin() {
         <title>Vendor Login | Verdora</title>
       </Head>
       <Layout>
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8 relative">
+          <button
+            onClick={() => router.back()}
+            className="absolute top-6 left-6 flex items-center gap-2 text-gray-600 hover:text-gray-800 transition"
+          >
+            <ArrowLeftIcon className="w-5 h-5" />
+            <span className="text-sm font-medium">Back</span>
+          </button>
+          
           <div className="w-full max-w-md bg-white rounded-lg shadow-md p-8">
             <h1 className="text-3xl font-bold text-center text-green-700 mb-8">
               🌱 Vendor Login
@@ -146,6 +157,13 @@ export default function VendorLogin() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                   placeholder="Password"
                 />
+                <button
+                  type="button"
+                  onClick={() => setIsResetModalOpen(true)}
+                  className="text-sm text-green-600 hover:text-green-700 mt-2 font-medium"
+                >
+                  Forgot Password?
+                </button>
               </div>
 
               <button
@@ -169,6 +187,12 @@ export default function VendorLogin() {
           </div>
         </div>
       </Layout>
+
+      <PasswordResetModal
+        isOpen={isResetModalOpen}
+        onClose={() => setIsResetModalOpen(false)}
+        backendUrl={typeof window !== "undefined" ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com" : "https://verdora.onrender.com"}
+      />
     </>
   );
 }

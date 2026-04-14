@@ -2,9 +2,11 @@
 import React, { useState } from "react";
 import Head from "next/head";
 import Link from "next/link";
-import { HomeIcon } from "@heroicons/react/24/solid";
+import { useRouter } from "next/router";
+import { HomeIcon, ArrowLeftIcon } from "@heroicons/react/24/solid";
 
 export default function VendorSignup() {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     vendorName: "",
     businessName: "",
@@ -101,6 +103,12 @@ export default function VendorSignup() {
           <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
             <h1 className="text-2xl font-bold text-emerald-700">Verdora</h1>
             <div className="flex gap-2">
+              <button
+                onClick={() => router.back()}
+                className="inline-flex items-center gap-2 rounded-lg bg-gray-600 px-4 py-2 text-white hover:bg-gray-700 transition"
+              >
+                <ArrowLeftIcon className="w-5 h-5" /> Back
+              </button>
               <Link
                 href="/"
                 className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-white hover:bg-emerald-700 transition"

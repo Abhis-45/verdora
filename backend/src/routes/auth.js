@@ -2,8 +2,11 @@ import express from "express";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import User from "../models/User.js";
-import { sendOtpSMS } from "../services/twilioService.js";
-import { sendOtpEmail } from "../services/emailService.js";
+import { sendOtpSMS, sendWelcomeSMS } from "../services/twilioService.js";
+import { 
+  sendOtpEmail,
+  sendWelcomeEmail
+} from "../services/emailService.js";
 
 const router = express.Router();
 const otpStore = new Map(); // Format: { otp: string, expiresAt: timestamp }
@@ -88,17 +91,37 @@ router.post("/verify-otp", async (req, res) => {
     identifier.includes("@") ? { email: identifier } : { mobile: identifier },
   );
 
+  const isNewUser = !user;
+
   if (!user) {
     user = new User(
       identifier.includes("@") ? { email: identifier } : { mobile: identifier },
     );
     await user.save();
+
+    // 🎉 Send welcome notifications to new user
+    try {
+      if (identifier.includes("@")) {
+        // Send welcome email
+        await sendWelcomeEmail(identifier, user.name || "Guest").catch((err) => {
+          console.error("❌ Welcome email failed:", err.message);
+        });
+      } else {
+        // Send welcome SMS
+        await sendWelcomeSMS(`+${identifier.replace(/\D/g, '').slice(-10)}`, user.name || "Guest").catch((err) => {
+          console.error("❌ Welcome SMS failed:", err.message);
+        });
+      }
+    } catch (notificationErr) {
+      console.error("Notification error:", notificationErr.message);
+      // Don't fail the login even if notification fails
+    }
   }
 
   const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
     expiresIn: "1d",
   });
-  res.json({ message: "Login successful", token, user });
+  res.json({ message: "Login successful", token, user, isNewUser });
 });
 
 // ✅ Password Login/Register combined
@@ -122,6 +145,24 @@ router.post("/password", async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     user = new User({ email, mobile, password: hashedPassword });
     await user.save();
+
+    // 🎉 Send welcome notifications to new user
+    try {
+      if (email) {
+        // Send welcome email
+        await sendWelcomeEmail(email, user.name || "Guest").catch((err) => {
+          console.error("❌ Welcome email failed:", err.message);
+        });
+      } else if (mobile) {
+        // Send welcome SMS
+        await sendWelcomeSMS(`+${mobile.replace(/\D/g, '').slice(-10)}`, user.name || "Guest").catch((err) => {
+          console.error("❌ Welcome SMS failed:", err.message);
+        });
+      }
+    } catch (notificationErr) {
+      console.error("Notification error:", notificationErr.message);
+      // Don't fail the registration even if notification fails
+    }
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
       expiresIn: "1d",

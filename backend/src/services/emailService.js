@@ -145,3 +145,588 @@ export const sendVendorOrderNotificationEmail = async (
   });
 };
 
+// ✅ USER WELCOME EMAIL ON SIGNUP
+export const sendWelcomeEmail = async (email, userName) => {
+  return transporter.sendMail({
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: "Welcome to Verdora! 🌿 Your Gardening Journey Starts Here",
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #22c55e;">Welcome to Verdora, ${userName}! 🌿</h2>
+        <p>Thank you for joining Verdora - your trusted plant and gardening hub!</p>
+        
+        <div style="background: #f0fdf4; border-left: 4px solid #22c55e; padding: 15px; margin: 20px 0; border-radius: 4px;">
+          <h3 style="color: #166534; margin-top: 0;">What You Can Do Now:</h3>
+          <ul style="color: #334155; line-height: 1.8;">
+            <li>🛒 Browse and purchase from our collection of plants & gardening products</li>
+            <li>💚 Add items to your wishlist for later</li>
+            <li>🚚 Track your orders in real-time</li>
+            <li>📝 Write reviews and help other gardeners</li>
+            <li>📬 Subscribe to our newsletter for exclusive tips & offers</li>
+          </ul>
+        </div>
+
+        <p style="color: #475569;">We're committed to providing you with:</p>
+        <ul style="color: #475569; line-height: 1.8;">
+          <li>✓ Quality plants and products</li>
+          <li>✓ Fast and reliable delivery</li>
+          <li>✓ Expert gardening advice</li>
+          <li>✓ Excellent customer support</li>
+        </ul>
+
+        <div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 15px; margin: 20px 0; border-radius: 4px;">
+          <p style="margin: 0; color: #1e40af;">Need help? Contact us at <strong>support@verdora.com</strong></p>
+        </div>
+
+        <p style="margin-top: 30px; color: #64748b;">
+          Happy gardening!<br/>
+          <strong>The Verdora Team 🌱</strong>
+        </p>
+        <hr style="border: none; border-top: 1px solid #e2e8f0;">
+        <p style="color: #888; font-size: 12px;">© 2026 Verdora. All rights reserved.</p>
+      </div>
+    `,
+  });
+};
+
+// ✅ USER ORDER CONFIRMATION EMAIL
+export const sendUserOrderConfirmationEmail = async (
+  email,
+  userName,
+  orderId,
+  items,
+  address,
+  total,
+  deliveryEstimate
+) => {
+  const itemRows = items
+    .map(
+      (item) => `
+        <tr style="border-bottom:1px solid #e2e8f0;">
+          <td style="padding:10px;text-align:left;"><strong>${item.title}</strong></td>
+          <td style="padding:10px;text-align:center;">${item.quantity}</td>
+          <td style="padding:10px;text-align:right;">₹${item.price.toFixed(2)}</td>
+          <td style="padding:10px;text-align:right;">₹${(item.price * item.quantity).toFixed(2)}</td>
+        </tr>
+      `
+    )
+    .join("");
+
+  return transporter.sendMail({
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: `Order Confirmed! Order #${orderId.slice(-6)} | Verdora`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #22c55e;">Order Confirmed! ✓</h2>
+        <p>Hi ${userName},</p>
+        <p>Thank you for your order! We've received it and are getting it ready for shipment.</p>
+        
+        <div style="background: #f8fafc; padding: 15px; border-radius: 4px; margin: 20px 0;">
+          <p style="margin: 5px 0;"><strong>Order #:</strong> ${orderId}</p>
+          <p style="margin: 5px 0;"><strong>Order Date:</strong> ${new Date().toLocaleDateString()}</p>
+          <p style="margin: 5px 0;"><strong>Estimated Delivery:</strong> ${deliveryEstimate || "2-5 business days"}</p>
+        </div>
+
+        <h3 style="color: #334155;">Order Items:</h3>
+        <table style="width:100%;border-collapse:collapse;margin-top:10px;">
+          <thead>
+            <tr style="background:#f1f5f9;">
+              <th style="padding:10px;text-align:left;">Product</th>
+              <th style="padding:10px;text-align:center;">Qty</th>
+              <th style="padding:10px;text-align:right;">Price</th>
+              <th style="padding:10px;text-align:right;">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemRows}
+          </tbody>
+        </table>
+
+        <div style="text-align:right;margin-top:15px;padding-top:15px;border-top:1px solid #e2e8f0;">
+          <h3 style="color: #22c55e; margin: 5px 0;">₹${total.toFixed(2)}</h3>
+        </div>
+
+        <h3 style="color: #334155; margin-top: 20px;">Delivery Address:</h3>
+        <p style="background: #f8fafc; padding: 10px; border-radius: 4px; color: #475569;">
+          ${address?.address || "N/A"}<br/>
+          ${address?.city || ""}, ${address?.state || ""} - ${address?.pincode || ""}
+        </p>
+
+        <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 4px;">
+          <p style="margin: 0; color: #92400e;"><strong>📦 What's Next?</strong></p>
+          <p style="margin-top: 10px; color: #92400e; font-size: 14px;">
+            We'll send you a shipping confirmation with a tracking link as soon as your order ships. You can also track your order in the "My Orders" section of your account.
+          </p>
+        </div>
+
+        <p style="color: #64748b; margin-top: 20px;">
+          If you have any questions, please don't hesitate to contact us at <strong>support@verdora.com</strong>
+        </p>
+
+        <hr style="border: none; border-top: 1px solid #e2e8f0;">
+        <p style="color: #888; font-size: 12px;">© 2026 Verdora. All rights reserved.</p>
+      </div>
+    `,
+  });
+};
+
+// ✅ USER ORDER SHIPPED NOTIFICATION
+export const sendUserOrderShippedEmail = async (
+  email,
+  userName,
+  orderId,
+  trackingLink,
+  estimatedDelivery
+) => {
+  return transporter.sendMail({
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: `🚚 Your Order #${orderId.slice(-6)} Has Shipped! | Verdora`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #22c55e;">Your Order is On the Way! 🚚</h2>
+        <p>Hi ${userName},</p>
+        <p>Great news! Your order has been shipped and is on its way to you.</p>
+        
+        <div style="background: #f0fdf4; border-left: 4px solid #22c55e; padding: 15px; margin: 20px 0; border-radius: 4px;">
+          <p style="margin: 5px 0;"><strong>Order #:</strong> ${orderId}</p>
+          <p style="margin: 5px 0;"><strong>Status:</strong> 📦 Shipped</p>
+          <p style="margin: 5px 0;"><strong>Estimated Delivery:</strong> ${estimatedDelivery || "2-5 business days"}</p>
+        </div>
+
+        ${trackingLink ? `
+          <div style="text-align: center; margin: 20px 0;">
+            <a href="${trackingLink}" style="display: inline-block; background: #22c55e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">
+              🔗 Track Your Shipment
+            </a>
+          </div>
+        ` : ""}
+
+        <div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 15px; margin: 20px 0; border-radius: 4px;">
+          <h4 style="margin: 0; color: #1e40af;">💡 Tips:</h4>
+          <ul style="margin: 10px 0; padding-left: 20px; color: #1e40af; font-size: 14px;">
+            <li>Check for delivery updates regularly</li>
+            <li>Keep someone available to receive the package</li>
+            <li>Inspect the package upon receipt</li>
+          </ul>
+        </div>
+
+        <p style="color: #64748b;">
+          Have questions? Contact us at <strong>support@verdora.com</strong>
+        </p>
+
+        <hr style="border: none; border-top: 1px solid #e2e8f0;">
+        <p style="color: #888; font-size: 12px;">© 2026 Verdora. All rights reserved.</p>
+      </div>
+    `,
+  });
+};
+
+// ✅ USER ORDER DELIVERED NOTIFICATION
+export const sendUserOrderDeliveredEmail = async (
+  email,
+  userName,
+  orderId
+) => {
+  return transporter.sendMail({
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: `✓ Order #${orderId.slice(-6)} Delivered! | Verdora`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #22c55e;">Your Order Has Been Delivered! ✓</h2>
+        <p>Hi ${userName},</p>
+        <p>Your order has been successfully delivered. We hope you enjoy your plants and products!</p>
+        
+        <div style="background: #f0fdf4; border-left: 4px solid #22c55e; padding: 15px; margin: 20px 0; border-radius: 4px;">
+          <p style="margin: 5px 0;"><strong>Order #:</strong> ${orderId}</p>
+          <p style="margin: 5px 0;"><strong>Status:</strong> ✓ Delivered</p>
+          <p style="margin: 5px 0;"><strong>Delivered on:</strong> ${new Date().toLocaleDateString()}</p>
+        </div>
+
+        <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 4px;">
+          <h4 style="margin: 0; color: #92400e;">📝 Share Your Feedback</h4>
+          <p style="margin-top: 10px; color: #92400e; font-size: 14px;">
+            We'd love to hear what you think! Please write a review and ratings for the products you received. Your feedback helps us improve and helps other gardeners make better choices.
+          </p>
+        </div>
+
+        <p style="margin-top: 10px; color: #64748b;">
+          <strong>Have any issues?</strong> You can request a return or replacement within 7 days of delivery from your "My Orders" section.
+        </p>
+
+        <p style="color: #64748b; margin-top: 20px;">
+          Thank you for shopping with Verdora! <br/>
+          Questions? Contact us at <strong>support@verdora.com</strong>
+        </p>
+
+        <hr style="border: none; border-top: 1px solid #e2e8f0;">
+        <p style="color: #888; font-size: 12px;">© 2026 Verdora. All rights reserved.</p>
+      </div>
+    `,
+  });
+};
+
+// ✅ USER ORDER CANCELLED NOTIFICATION
+export const sendUserOrderCancelledEmail = async (
+  email,
+  userName,
+  orderId,
+  reason
+) => {
+  return transporter.sendMail({
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: `Order #${orderId.slice(-6)} Cancelled | Verdora`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #dc2626;">Order Cancelled</h2>
+        <p>Hi ${userName},</p>
+        <p>Your order has been cancelled as requested.</p>
+        
+        <div style="background: #fef2f2; border-left: 4px solid #dc2626; padding: 15px; margin: 20px 0; border-radius: 4px;">
+          <p style="margin: 5px 0;"><strong>Order #:</strong> ${orderId}</p>
+          <p style="margin: 5px 0;"><strong>Status:</strong> Cancelled</p>
+          <p style="margin: 5px 0;"><strong>Reason:</strong> ${reason || "Cancelled by user"}</p>
+        </div>
+
+        <p style="color: #475569;">
+          Your refund will be processed within 5-7 business days. Please check your bank account for the refund.
+        </p>
+
+        <p style="color: #64748b; margin-top: 20px;">
+          If you have any questions, please contact us at <strong>support@verdora.com</strong>
+        </p>
+
+        <hr style="border: none; border-top: 1px solid #e2e8f0;">
+        <p style="color: #888; font-size: 12px;">© 2026 Verdora. All rights reserved.</p>
+      </div>
+    `,
+  });
+};
+
+// ✅ USER RETURN REQUEST ACKNOWLEDGEMENT
+export const sendUserReturnRequestEmail = async (
+  email,
+  userName,
+  orderId,
+  itemTitle,
+  returnType
+) => {
+  return transporter.sendMail({
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: `${returnType === 'returned' ? '↩️ Return' : '🔄 Replacement'} Request Received | Order #${orderId.slice(-6)}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #f59e0b;">${returnType === 'returned' ? '↩️ Return' : '🔄 Replacement'} Request Received</h2>
+        <p>Hi ${userName},</p>
+        <p>Thank you for submitting your ${returnType === 'returned' ? 'return' : 'replacement'} request. We're processing it now.</p>
+        
+        <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 4px;">
+          <p style="margin: 5px 0;"><strong>Order #:</strong> ${orderId}</p>
+          <p style="margin: 5px 0;"><strong>Product:</strong> ${itemTitle}</p>
+          <p style="margin: 5px 0;"><strong>Request Type:</strong> ${returnType === 'returned' ? '↩️ Return' : '🔄 Replacement'}</p>
+          <p style="margin: 5px 0;"><strong>Status:</strong> Under Review</p>
+        </div>
+
+        <div style="background: #f0f9ff; border: 1px solid #bfdbfe; padding: 15px; margin: 20px 0; border-radius: 4px;">
+          <h4 style="margin: 0; color: #1e40af;">📋 What Happens Next:</h4>
+          <ol style="margin: 10px 0; padding-left: 20px; color: #1e40af; font-size: 14px;">
+            <li>Our team will review your request</li>
+            <li>You'll receive ${returnType === 'returned' ? 'a return shipping label' : 'instructions'}</li>
+            <li>The vendor will inspect the item upon receipt</li>
+            <li>You'll be notified of the decision</li>
+          </ol>
+        </div>
+
+        <p style="color: #64748b;">
+          Questions? <strong>support@verdora.com</strong>
+        </p>
+
+        <hr style="border: none; border-top: 1px solid #e2e8f0;">
+        <p style="color: #888; font-size: 12px;">© 2026 Verdora. All rights reserved.</p>
+      </div>
+    `,
+  });
+};
+
+// ✅ USER REFUND PROCESSED
+export const sendUserRefundProcessedEmail = async (
+  email,
+  userName,
+  orderId,
+  refundAmount
+) => {
+  return transporter.sendMail({
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: `💰 Refund Processed | Order #${orderId.slice(-6)} | Verdora`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #22c55e;">Refund Processed ✓</h2>
+        <p>Hi ${userName},</p>
+        <p>Great news! Your refund has been processed and will appear in your account within 5-7 business days.</p>
+        
+        <div style="background: #f0fdf4; border-left: 4px solid #22c55e; padding: 15px; margin: 20px 0; border-radius: 4px;">
+          <p style="margin: 5px 0;"><strong>Order #:</strong> ${orderId}</p>
+          <p style="margin: 5px 0;"><strong>Refund Amount:</strong> <span style="font-size: 18px; font-weight: bold;">₹${refundAmount.toFixed(2)}</span></p>
+          <p style="margin: 5px 0;"><strong>Processing Time:</strong> 5-7 business days</p>
+        </div>
+
+        <p style="color: #475569;">
+          The refund will be credited to your original payment method. Please allow some time for your bank to reflect the credit.
+        </p>
+
+        <p style="color: #64748b; margin-top: 20px;">
+          Thank you for shopping with Verdora! We hope to see you again.<br/>
+          Contact: <strong>support@verdora.com</strong>
+        </p>
+
+        <hr style="border: none; border-top: 1px solid #e2e8f0;">
+        <p style="color: #888; font-size: 12px;">© 2026 Verdora. All rights reserved.</p>
+      </div>
+    `,
+  });
+};
+
+// ✅ VENDOR REGISTRATION REQUEST RECEIVED (to vendor applicant)
+export const sendVendorRegistrationSubmittedEmail = async (
+  email,
+  vendorName,
+  businessName
+) => {
+  return transporter.sendMail({
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: "Vendor Registration Application Received | Verdora",
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #22c55e;">Application Received! 🎉</h2>
+        <p>Hi ${vendorName},</p>
+        <p>Thank you for your interest in becoming a Verdora vendor! We've received your application and our team is reviewing it.</p>
+        
+        <div style="background: #f0fdf4; border-left: 4px solid #22c55e; padding: 15px; margin: 20px 0; border-radius: 4px;">
+          <p style="margin: 5px 0;"><strong>Business Name:</strong> ${businessName}</p>
+          <p style="margin: 5px 0;"><strong>Status:</strong> 📋 Under Review</p>
+          <p style="margin: 5px 0;"><strong>Application Date:</strong> ${new Date().toLocaleDateString()}</p>
+        </div>
+
+        <div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 15px; margin: 20px 0; border-radius: 4px;">
+          <h4 style="margin: 0; color: #1e40af;">⏱️ What Happens Next:</h4>
+          <ul style="margin: 10px 0; padding-left: 20px; color: #1e40af; font-size: 14px;">
+            <li>Our team will verify your business details</li>
+            <li>You'll receive an email approval (typically within 3-5 business days)</li>
+            <li>Once approved, you can log in to your vendor dashboard</li>
+            <li>Start uploading your products and processing orders!</li>
+          </ul>
+        </div>
+
+        <p style="color: #64748b;">
+          In the meantime, if you have any questions, feel free to contact us at <strong>support@verdora.com</strong>
+        </p>
+
+        <hr style="border: none; border-top: 1px solid #e2e8f0;">
+        <p style="color: #888; font-size: 12px;">© 2026 Verdora. All rights reserved.</p>
+      </div>
+    `,
+  });
+};
+
+// ✅ VENDOR REGISTRATION APPROVED (admin accepts vendor request)
+export const sendVendorApprovedEmail = async (
+  email,
+  vendorName,
+  businessName,
+  loginUrl
+) => {
+  return transporter.sendMail({
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: "✓ Your Vendor Application Approved! | Verdora",
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #22c55e;">Congratulations! Your Application is Approved! ✓</h2>
+        <p>Hi ${vendorName},</p>
+        <p>Great news! Your vendor application has been approved by our admin team. Welcome to Verdora!</p>
+        
+        <div style="background: #f0fdf4; border-left: 4px solid #22c55e; padding: 15px; margin: 20px 0; border-radius: 4px;">
+          <p style="margin: 5px 0;"><strong>Business Name:</strong> ${businessName}</p>
+          <p style="margin: 5px 0;"><strong>Status:</strong> ✓ Active</p>
+          <p style="margin: 5px 0;"><strong>Approved Date:</strong> ${new Date().toLocaleDateString()}</p>
+        </div>
+
+        <div style="text-align: center; margin: 20px 0;">
+          <a href="${loginUrl || 'https://verdora.com/vendor/login'}" style="display: inline-block; background: #22c55e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">
+            🔑 Login to Your Vendor Dashboard
+          </a>
+        </div>
+
+        <div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 15px; margin: 20px 0; border-radius: 4px;">
+          <h4 style="margin: 0; color: #1e40af;">🚀 Next Steps:</h4>
+          <ol style="margin: 10px 0; padding-left: 20px; color: #1e40af; font-size: 14px;">
+            <li>Log in to your vendor dashboard</li>
+            <li>Complete your business profile</li>
+            <li>Upload your products</li>
+            <li>Start receiving orders!</li>
+          </ol>
+        </div>
+
+        <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 4px;">
+          <h4 style="margin: 0; color: #92400e;">💡 Resources:</h4>
+          <ul style="margin: 10px 0; padding-left: 20px; color: #92400e; font-size: 14px;">
+            <li>Vendor Guidelines & Best Practices</li>
+            <li>Product Upload Tutorial</li>
+            <li>Order Management Guide</li>
+          </ul>
+        </div>
+
+        <p style="color: #64748b;">
+          Have questions? Our vendor support team is here to help: <strong>vendors@verdora.com</strong>
+        </p>
+
+        <hr style="border: none; border-top: 1px solid #e2e8f0;">
+        <p style="color: #888; font-size: 12px;">© 2026 Verdora. All rights reserved.</p>
+      </div>
+    `,
+  });
+};
+
+// ✅ VENDOR REGISTRATION REJECTED
+export const sendVendorRejectedEmail = async (
+  email,
+  vendorName,
+  businessName,
+  rejectionReason
+) => {
+  return transporter.sendMail({
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: "Vendor Application - More Information Needed | Verdora",
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #dc2626;">Application Status Update</h2>
+        <p>Hi ${vendorName},</p>
+        <p>Thank you for applying to become a Verdora vendor. After careful review, we have decided not to approve your application at this time.</p>
+        
+        <div style="background: #fef2f2; border-left: 4px solid #dc2626; padding: 15px; margin: 20px 0; border-radius: 4px;">
+          <p style="margin: 5px 0;"><strong>Business Name:</strong> ${businessName}</p>
+          <p style="margin: 5px 0;"><strong>Status:</strong> Not Approved</p>
+          ${rejectionReason ? `<p style="margin: 5px 0;"><strong>Reason:</strong> ${rejectionReason}</p>` : ''}
+        </div>
+
+        <div style="background: #fef3c7; border: 1px solid #fcd34d; padding: 15px; margin: 20px 0; border-radius: 4px;">
+          <h4 style="margin: 0; color: #92400e;">📝 Next Steps:</h4>
+          <ul style="margin: 10px 0; padding-left: 20px; color: #92400e; font-size: 14px;">
+            <li>Review and improve your business details</li>
+            <li>Address any concerns mentioned above</li>
+            <li>You can reapply after 30 days</li>
+          </ul>
+        </div>
+
+        <p style="color: #64748b;">
+          If you have any questions or would like more feedback, please contact us at <strong>vendors@verdora.com</strong>
+        </p>
+
+        <p style="color: #64748b; margin-top: 20px;">
+          We appreciate your interest in Verdora and hope to work with you in the future!
+        </p>
+
+        <hr style="border: none; border-top: 1px solid #e2e8f0;">
+        <p style="color: #888; font-size: 12px;">© 2026 Verdora. All rights reserved.</p>
+      </div>
+    `,
+  });
+};
+
+// ✅ VENDOR ACCOUNT DEACTIVATED (status changed to inactive)
+export const sendVendorDeactivatedEmail = async (
+  email,
+  vendorName,
+  reason
+) => {
+  return transporter.sendMail({
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: "Vendor Account Deactivated | Verdora",
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #dc2626;">Account Deactivated</h2>
+        <p>Hi ${vendorName},</p>
+        <p>Your vendor account on Verdora has been deactivated.</p>
+        
+        <div style="background: #fef2f2; border-left: 4px solid #dc2626; padding: 15px; margin: 20px 0; border-radius: 4px;">
+          <p style="margin: 5px 0;"><strong>Account Status:</strong> Deactivated</p>
+          ${reason ? `<p style="margin: 5px 0;"><strong>Reason:</strong> ${reason}</p>` : ''}
+        </div>
+
+        <p style="color: #475569;">
+          You will no longer be able to log in to your vendor dashboard or process new orders. Any pending orders will be handled by our support team.
+        </p>
+
+        <p style="color: #64748b; margin-top: 20px;">
+          If this was a mistake or you would like to discuss this further, please contact us at <strong>vendors@verdora.com</strong>
+        </p>
+
+        <hr style="border: none; border-top: 1px solid #e2e8f0;">
+        <p style="color: #888; font-size: 12px;">© 2026 Verdora. All rights reserved.</p>
+      </div>
+    `,
+  });
+};
+
+// ✅ ORDER ITEM STATUS UPDATE (general purpose for any status change)
+export const sendOrderStatusUpdateEmail = async (
+  email,
+  userName,
+  orderId,
+  itemTitle,
+  newStatus,
+  reason
+) => {
+  const statusConfig = {
+    'shipped': { icon: '🚚', message: 'Your order is on the way!' },
+    'delivered': { icon: '✓', message: 'Your order has been delivered!' },
+    'returned': { icon: '↩️', message: 'Return request is being processed.' },
+    'replaced': { icon: '🔄', message: 'Replacement is being processed.' },
+    'refunded': { icon: '💰', message: 'Your refund has been processed.' },
+    'cancelled': { icon: '❌', message: 'Your order has been cancelled.' }
+  };
+
+  const config = statusConfig[newStatus] || { icon: '📦', message: 'Order status updated.' };
+
+  return transporter.sendMail({
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: `${config.icon} Order Update | #${orderId.slice(-6)} | Verdora`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #22c55e;">${config.icon} Order Update</h2>
+        <p>Hi ${userName},</p>
+        <p>${config.message}</p>
+        
+        <div style="background: #f8fafc; padding: 15px; border-radius: 4px; margin: 20px 0;">
+          <p style="margin: 5px 0;"><strong>Order #:</strong> ${orderId}</p>
+          <p style="margin: 5px 0;"><strong>Product:</strong> ${itemTitle}</p>
+          <p style="margin: 5px 0;"><strong>New Status:</strong> ${newStatus.charAt(0).toUpperCase() + newStatus.slice(1)}</p>
+          <p style="margin: 5px 0;"><strong>Updated:</strong> ${new Date().toLocaleString()}</p>
+          ${reason ? `<p style="margin: 5px 0;"><strong>Details:</strong> ${reason}</p>` : ''}
+        </div>
+
+        <p style="color: #64748b;">
+          View your complete order history in your Verdora account.
+        </p>
+
+        <p style="color: #64748b; margin-top: 20px;">
+          Questions? Contact us at <strong>support@verdora.com</strong>
+        </p>
+
+        <hr style="border: none; border-top: 1px solid #e2e8f0;">
+        <p style="color: #888; font-size: 12px;">© 2026 Verdora. All rights reserved.</p>
+      </div>
+    `,
+  });
+};
+
