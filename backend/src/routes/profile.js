@@ -1065,7 +1065,6 @@ router.post("/bookService", (req, res) => {
         });
       })
       .catch((err) => {
-        console.error("Error in bookService:", err.message);
         // Return user-friendly error message
         const errorMessage = err.message.includes("connection")
           ? "Database service temporarily unavailable. Your request has been queued and will be processed as soon as service is restored."
@@ -1077,7 +1076,6 @@ router.post("/bookService", (req, res) => {
         });
       });
   } catch (err) {
-    console.error("Error in bookService try block:", err.message);
     res.status(500).json({
       message: "Failed to book service",
       error: err.message,

@@ -54,7 +54,23 @@ export default function VendorLogin() {
           setError("Invalid account type. Please use vendor account.");
         }
       } else {
-        setError(data.message || "Login failed");
+        // Handle different error statuses
+        if (res.status === 403) {
+          // Pending or inactive vendor
+          if (data.status === "pending") {
+            setError(
+              `Your account is pending admin approval. 📧 Check your email at ${data.email} for approval status. Contact support@verdora.com if you have any questions.`
+            );
+          } else if (data.status === "inactive") {
+            setError(
+              `Your account has been deactivated. Please contact support@verdora.com for more information.`
+            );
+          } else {
+            setError(data.message || "Your account cannot access this service.");
+          }
+        } else {
+          setError(data.message || "Login failed");
+        }
       }
     } catch (err) {
       setError("Login failed. Please try again.");
@@ -63,6 +79,9 @@ export default function VendorLogin() {
       setLoading(false);
     }
   };
+
+  const isPendingError = error.includes("pending admin approval");
+  const isInactiveError = error.includes("been deactivated");
 
   return (
     <>
@@ -77,8 +96,26 @@ export default function VendorLogin() {
             </h1>
 
             {error && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
-                {error}
+              <div
+                className={`mb-4 p-4 border rounded ${
+                  isPendingError
+                    ? "bg-blue-50 border-blue-200"
+                    : isInactiveError
+                    ? "bg-orange-50 border-orange-200"
+                    : "bg-red-50 border-red-200"
+                }`}
+              >
+                <p
+                  className={`text-sm whitespace-pre-wrap ${
+                    isPendingError
+                      ? "text-blue-700"
+                      : isInactiveError
+                      ? "text-orange-700"
+                      : "text-red-700"
+                  }`}
+                >
+                  {error}
+                </p>
               </div>
             )}
 

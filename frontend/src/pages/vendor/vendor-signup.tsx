@@ -7,10 +7,15 @@ import { HomeIcon } from "@heroicons/react/24/solid";
 export default function VendorSignup() {
   const [formData, setFormData] = useState({
     vendorName: "",
-    shopName: "",
+    username: "",
+    businessName: "",
     email: "",
-    phone: "",
-    address: "",
+    password: "",
+    mobileNumber: "",
+    businessPhone: "",
+    businessLocation: "",
+    businessDescription: "",
+    businessWebsite: "",
   });
 
   const [loading, setLoading] = useState(false);
@@ -40,7 +45,7 @@ export default function VendorSignup() {
           : "https://verdora.onrender.com";
 
       const response = await fetch(
-        `${BACKEND_URL}/api/vendor-register`,
+        `${BACKEND_URL}/api/admin/vendor/register`,
         {
           method: "POST",
           headers: {
@@ -60,16 +65,21 @@ export default function VendorSignup() {
       setSuccess(true);
       setFormData({
         vendorName: "",
-        shopName: "",
+        username: "",
+        businessName: "",
         email: "",
-        phone: "",
-        address: "",
+        password: "",
+        mobileNumber: "",
+        businessPhone: "",
+        businessLocation: "",
+        businessDescription: "",
+        businessWebsite: "",
       });
 
-      // Auto redirect after 3 seconds
+      // Auto redirect after 5 seconds
       setTimeout(() => {
         window.location.href = "/";
-      }, 3000);
+      }, 5000);
     } catch (err) {
       setError(`Error: ${err}`);
     } finally {
@@ -119,11 +129,11 @@ export default function VendorSignup() {
               {/* Form Content */}
               <div className="p-6 sm:p-8">
                 {success ? (
-                  <div className="rounded-lg bg-green-50 border border-green-200 p-6 text-center">
+                  <div className="rounded-lg bg-blue-50 border border-blue-200 p-6 text-center">
                     <div className="mb-4 flex justify-center">
-                      <div className="rounded-full bg-green-100 p-3">
+                      <div className="rounded-full bg-blue-100 p-3">
                         <svg
-                          className="h-12 w-12 text-green-600"
+                          className="h-12 w-12 text-blue-600"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -132,20 +142,35 @@ export default function VendorSignup() {
                             strokeLinecap="round"
                             strokeLinejoin="round"
                             strokeWidth={2}
-                            d="M5 13l4 4L19 7"
+                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                           />
                         </svg>
                       </div>
                     </div>
-                    <h3 className="text-xl font-semibold text-green-900 mb-2">
-                      Thank You!
+                    <h3 className="text-xl font-semibold text-blue-900 mb-2">
+                      Application Submitted!
                     </h3>
-                    <p className="text-green-700 mb-4">
-                      We will contact you shortly to complete your vendor
-                      registration.
+                    <p className="text-blue-700 mb-3">
+                      Your vendor account has been created and is now <strong>pending admin approval</strong>.
                     </p>
-                    <p className="text-sm text-green-600">
-                      Redirecting to home page...
+                    <div className="bg-white rounded border border-blue-300 p-4 mb-4 text-left">
+                      <p className="text-sm text-gray-700 mb-2">
+                        <strong>Next Steps:</strong>
+                      </p>
+                      <ul className="text-sm text-gray-700 list-disc list-inside space-y-1">
+                        <li>Admin will review your application</li>
+                        <li>You will receive an approval email once verified</li>
+                        <li>After approval, you can log in to the dashboard</li>
+                      </ul>
+                    </div>
+                    <p className="text-sm text-blue-600 mb-2">
+                      Check your email: <strong>{formData.email}</strong>
+                    </p>
+                    <p className="text-sm text-blue-600 mb-3">
+                      If you have questions, please contact: <strong>support@verdora.com</strong>
+                    </p>
+                    <p className="text-xs text-blue-500">
+                      Redirecting to home page in 5 seconds...
                     </p>
                   </div>
                 ) : (
@@ -173,12 +198,27 @@ export default function VendorSignup() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Shop/Business Name *
+                        Username *
                       </label>
                       <input
                         type="text"
-                        name="shopName"
-                        value={formData.shopName}
+                        name="username"
+                        value={formData.username}
+                        onChange={handleChange}
+                        required
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                        placeholder="Create a username for login"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Business Name *
+                      </label>
+                      <input
+                        type="text"
+                        name="businessName"
+                        value={formData.businessName}
                         onChange={handleChange}
                         required
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
@@ -203,12 +243,27 @@ export default function VendorSignup() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Password *
+                      </label>
+                      <input
+                        type="password"
+                        name="password"
+                        value={formData.password}
+                        onChange={handleChange}
+                        required
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                        placeholder="Create a secure password"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
                         Phone Number *
                       </label>
                       <input
                         type="tel"
-                        name="phone"
-                        value={formData.phone}
+                        name="mobileNumber"
+                        value={formData.mobileNumber}
                         onChange={handleChange}
                         required
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
@@ -218,16 +273,58 @@ export default function VendorSignup() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Business Phone (Optional)
+                      </label>
+                      <input
+                        type="tel"
+                        name="businessPhone"
+                        value={formData.businessPhone}
+                        onChange={handleChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                        placeholder="Optional: Enter your business phone number"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
                         Business Address *
                       </label>
                       <textarea
-                        name="address"
-                        value={formData.address}
+                        name="businessLocation"
+                        value={formData.businessLocation}
                         onChange={handleChange}
                         required
                         rows={3}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
                         placeholder="Enter your business address"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Business Description (Optional)
+                      </label>
+                      <textarea
+                        name="businessDescription"
+                        value={formData.businessDescription}
+                        onChange={handleChange}
+                        rows={3}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                        placeholder="Describe your business, products, and services"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Website (Optional)
+                      </label>
+                      <input
+                        type="url"
+                        name="businessWebsite"
+                        value={formData.businessWebsite}
+                        onChange={handleChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                        placeholder="https://yourbusiness.com"
                       />
                     </div>
 

@@ -13,7 +13,7 @@ const VendorSchema = new mongoose.Schema(
       trim: true,
     },
     password: { type: String, required: true },
-    status: { type: String, enum: ["active", "inactive"], default: "active" },
+    status: { type: String, enum: ["pending", "active", "inactive"], default: "pending" },
 
     // Business Details
     vendorName: { type: String, default: "" },
@@ -39,6 +39,7 @@ const VendorSchema = new mongoose.Schema(
       default: null,
     },
     approvedAt: { type: Date, default: null },
+    rejectionReason: { type: String, default: "" },
 
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
