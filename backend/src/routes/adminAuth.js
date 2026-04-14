@@ -44,10 +44,10 @@ router.post("/login", async (req, res) => {
         return res.status(401).json({ message: "Invalid email or password" });
       }
       
-      // Check vendor status
+      // Check vendor status - MUST be active to login
       if (vendor.status === "pending") {
         return res.status(403).json({ 
-          message: "Your account is pending admin approval. Please check your email for approval status. Contact support team if you have any questions.",
+          message: "Your account is pending admin approval. Please wait for approval email. Contact support@verdora.com if you have questions.",
           status: "pending",
           email: vendor.email 
         });
@@ -55,12 +55,13 @@ router.post("/login", async (req, res) => {
       
       if (vendor.status === "inactive") {
         return res.status(403).json({ 
-          message: "Your account has been deactivated. Please contact the support team for more information.",
+          message: "Your account has been deactivated. Please contact support@verdora.com for more information.",
           status: "inactive",
           email: vendor.email 
         });
       }
       
+      // Only active vendors can login
       const token = jwt.sign(
         { id: vendor._id, email: vendor.email, role: "vendor", vendorName: vendor.vendorName },
         process.env.JWT_SECRET,
@@ -86,25 +87,26 @@ router.post("/login", async (req, res) => {
 
 // ✅ Vendor Self-Registration (Public - no token required) - Creates pending account
 router.post("/vendor/register", async (req, res) => {
-  const { vendorName, mobileNumber, username, email, password, businessName, businessPhone, businessLocation, businessDescription, businessWebsite } = req.body;
+  const { vendorName, mobileNumber, email, password, businessName, businessPhone, businessLocation, businessDescription, businessWebsite } = req.body;
 
-  if (!vendorName || !mobileNumber || !username || !email || !password || !businessName) {
-    return res.status(400).json({ message: "All required fields must be provided" });
+  if (!vendorName || !mobileNumber || !email || !password || !businessName) {
+    return res.status(400).json({ message: "All required fields must be provided (vendorName, mobileNumber, email, password, businessName)" });
   }
 
   try {
-    // Check both Admin and Vendor for duplicates
-    const existingAdmin = await Admin.findOne({ $or: [{ email }, { username }] });
-    const existingVendor = await Vendor.findOne({ $or: [{ email }, { username }] });
+    // Check both Admin and Vendor for duplicate emails
+    const existingAdmin = await Admin.findOne({ email });
+    const existingVendor = await Vendor.findOne({ email });
     
     if (existingAdmin || existingVendor) {
-      return res.status(400).json({ message: "Email or username already exists" });
+      return res.status(400).json({ message: "Email already exists. Please use a different email address." });
     }
 
+    // Create vendor with email as username
     const vendor = new Vendor({
       vendorName,
       mobileNumber,
-      username,
+      username: email, // Use email as username
       email,
       password,
       businessName,
@@ -112,19 +114,18 @@ router.post("/vendor/register", async (req, res) => {
       businessLocation: businessLocation || "",
       businessDescription: businessDescription || "",
       businessWebsite: businessWebsite || "",
-      status: "pending",
+      status: "pending", // Start with pending status
     });
 
     await vendor.save();
 
     res.status(201).json({
-      message: "Vendor registered successfully. Your account is pending admin approval. You will receive an email once approved.",
+      message: "Vendor account created successfully. Your account is pending admin approval.",
       status: "pending",
       vendor: {
         id: vendor._id,
         vendorName: vendor.vendorName,
         mobileNumber: vendor.mobileNumber,
-        username: vendor.username,
         email: vendor.email,
         businessName: vendor.businessName,
         status: "pending",
@@ -183,6 +184,34 @@ router.post("/register", async (req, res) => {
     res
       .status(500)
       .json({ message: "Registration failed", error: err.message });
+  }
+});
+
+// ✅ GET PENDING VENDOR REQUESTS (Admin Only) - Alias endpoint
+router.get("/vendor-requests", async (req, res) => {
+  const adminToken = req.headers.authorization?.split(" ")[1];
+  
+  if (!adminToken) {
+    return res.status(401).json({ message: "Admin token required" });
+  }
+
+  try {
+    const decoded = jwt.verify(adminToken, process.env.JWT_SECRET);
+    if (decoded.role !== "admin") {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+
+    const pendingVendors = await Vendor.find({ status: "pending" }).select(
+      "-password"
+    ).sort({ createdAt: -1 });
+
+    res.json({
+      message: "Pending vendor requests",
+      count: pendingVendors.length,
+      vendors: pendingVendors,
+    });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to fetch vendor requests", error: err.message });
   }
 });
 
@@ -246,6 +275,97 @@ router.get("/vendors/all", async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ message: "Failed to fetch vendors", error: err.message });
+  }
+});
+
+// ✅ APPROVE VENDOR REQUEST (Admin Only)
+router.post("/vendor-requests/:vendorId/approve", async (req, res) => {
+  const adminToken = req.headers.authorization?.split(" ")[1];
+  const { vendorId } = req.params;
+  
+  if (!adminToken) {
+    return res.status(401).json({ message: "Admin token required" });
+  }
+
+  try {
+    const decoded = jwt.verify(adminToken, process.env.JWT_SECRET);
+    if (decoded.role !== "admin") {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+
+    const admin = await Admin.findById(decoded.id);
+    if (!admin) {
+      return res.status(403).json({ message: "Admin not found" });
+    }
+
+    const vendor = await Vendor.findById(vendorId);
+    if (!vendor) {
+      return res.status(404).json({ message: "Vendor not found" });
+    }
+
+    vendor.status = "active";
+    vendor.approvedBy = admin._id;
+    vendor.approvedAt = new Date();
+    vendor.updatedAt = new Date();
+    await vendor.save();
+
+    res.json({
+      message: "Vendor approved successfully",
+      vendor: {
+        id: vendor._id,
+        email: vendor.email,
+        businessName: vendor.businessName,
+        status: vendor.status,
+        approvedAt: vendor.approvedAt,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to approve vendor", error: err.message });
+  }
+});
+
+// ✅ REJECT VENDOR REQUEST (Admin Only)
+router.post("/vendor-requests/:vendorId/reject", async (req, res) => {
+  const adminToken = req.headers.authorization?.split(" ")[1];
+  const { vendorId } = req.params;
+  const { reason } = req.body;
+  
+  if (!adminToken) {
+    return res.status(401).json({ message: "Admin token required" });
+  }
+
+  try {
+    const decoded = jwt.verify(adminToken, process.env.JWT_SECRET);
+    if (decoded.role !== "admin") {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+
+    const admin = await Admin.findById(decoded.id);
+    if (!admin) {
+      return res.status(403).json({ message: "Admin not found" });
+    }
+
+    const vendor = await Vendor.findById(vendorId);
+    if (!vendor) {
+      return res.status(404).json({ message: "Vendor not found" });
+    }
+
+    vendor.status = "inactive";
+    vendor.rejectionReason = reason || "Account rejected by admin";
+    vendor.updatedAt = new Date();
+    await vendor.save();
+
+    res.json({
+      message: "Vendor request rejected successfully",
+      vendor: {
+        id: vendor._id,
+        email: vendor.email,
+        businessName: vendor.businessName,
+        status: vendor.status,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to reject vendor", error: err.message });
   }
 });
 
