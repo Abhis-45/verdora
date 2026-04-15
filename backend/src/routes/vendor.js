@@ -148,7 +148,7 @@ router.get("/products", vendorAuthMiddleware, async (req, res) => {
       .skip(Number(skip))
       .limit(Number(limit))
       .sort({ createdAt: -1 })
-      .timeout(30000);
+      .maxTimeMS(30000);
 
     console.log("Fetched products count:", products.length);
 
@@ -255,7 +255,7 @@ router.get("/orders", vendorAuthMiddleware, async (req, res) => {
     // First, get all vendor products
     const vendorProducts = await Product.find({ vendorId: vendorId })
       .select("_id id name image vendorName")
-      .timeout(30000);
+      .maxTimeMS(30000);
 
     console.log("Found vendor products:", vendorProducts.length);
 
@@ -272,7 +272,7 @@ router.get("/orders", vendorAuthMiddleware, async (req, res) => {
     // Then get all users with orders
     const users = await User.find({ "orders.items.0": { $exists: true } })
       .select("name email mobile orders")
-      .timeout(45000);
+      .maxTimeMS(45000);
 
     console.log("Found users with orders:", users.length);
 
