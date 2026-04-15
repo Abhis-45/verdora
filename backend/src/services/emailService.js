@@ -74,6 +74,7 @@ export const sendOtpEmail = async (email, otp) => {
       <p style="color: #888; font-size: 12px;">© 2026 Verdora. All rights reserved.</p>
     `,
   });
+};
 
 // ✅ Send subscription confirmation email
 export const sendSubscriptionEmail = async (email) => {
