@@ -11,6 +11,19 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+// ✅ Verify transporter on startup
+export const verifyEmailTransporter = async () => {
+  try {
+    await transporter.verify();
+    console.log("✅ Email transporter verified successfully");
+    return true;
+  } catch (err) {
+    console.error("❌ Email transporter verification failed:", err.message);
+    console.error("⚠️  Check EMAIL_USER and EMAIL_PASS in .env file");
+    return false;
+  }
+};
+
 // ✅ Send OTP for verification
 export const sendOtpEmail = async (email, otp) => {
   return transporter.sendMail({
@@ -48,6 +61,44 @@ export const sendSubscriptionEmail = async (email) => {
       <p>Happy gardening!</p>
       <hr>
       <p style="color: #888; font-size: 12px;">© 2026 Verdora. All rights reserved.</p>
+    `,
+  });
+};
+
+// ✅ Send contact form confirmation email
+export const sendContactEmail = async (email, name) => {
+  return transporter.sendMail({
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: "We received your message - Verdora",
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #22c55e;">Message Received! ✓</h2>
+        <p>Hi ${name || "there"},</p>
+        <p>Thank you for reaching out to Verdora. We have received your message and our team will get back to you shortly.</p>
+        
+        <div style="background: #f0fdf4; border-left: 4px solid #22c55e; padding: 15px; margin: 20px 0; border-radius: 4px;">
+          <p style="margin: 0; color: #166534;"><strong>Response Timeline:</strong> We typically respond within 24-48 hours during business days.</p>
+        </div>
+
+        <p style="color: #475569;">In the meantime, if you have any urgent questions, feel free to:</p>
+        <ul style="color: #475569; line-height: 1.8;">
+          <li>📧 Email us directly at <strong>support@verdora.com</strong></li>
+          <li>📞 Call our support team</li>
+          <li>💬 Check out our FAQ section on the website</li>
+        </ul>
+
+        <div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 15px; margin: 20px 0; border-radius: 4px;">
+          <p style="margin: 0; color: #1e40af;">We appreciate your interest in Verdora!</p>
+        </div>
+
+        <p style="color: #64748b; margin-top: 20px;">
+          Best regards,<br/>
+          <strong>The Verdora Team 🌱</strong>
+        </p>
+        <hr style="border: none; border-top: 1px solid #e2e8f0;">
+        <p style="color: #888; font-size: 12px;">© 2026 Verdora. All rights reserved.</p>
+      </div>
     `,
   });
 };
@@ -354,7 +405,7 @@ export const sendUserOrderDeliveredEmail = async (
         </div>
 
         <p style="margin-top: 10px; color: #64748b;">
-          <strong>Have any issues?</strong> You can request a return or replacement within 7 days of delivery from your "My Orders" section.
+          <strong>Have any issues?</strong> You can request a return or replacement within 3 days of delivery from your "My Orders" section.
         </p>
 
         <p style="color: #64748b; margin-top: 20px;">

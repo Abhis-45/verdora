@@ -4,6 +4,8 @@ import Contact from "../models/Contact.js";
 import VendorRequest from "../models/VendorRequest.js";
 import {
   sendVendorRegistrationSubmittedEmail,
+  sendSubscriptionEmail,
+  sendContactEmail,
 } from "../services/emailService.js";
 import {
   sendVendorRegistrationReceivedSMS,
@@ -25,6 +27,17 @@ router.post("/subscribe", async (req, res) => {
     }
     const sub = new Subscriber({ email });
     await sub.save();
+
+    // ✅ Send subscription confirmation email
+    try {
+      await sendSubscriptionEmail(email).catch((err) => {
+        console.error("❌ Subscription email failed:", err.message);
+      });
+    } catch (emailErr) {
+      console.error("Email sending error:", emailErr.message);
+      // Don't fail the subscription if email fails
+    }
+
     res.json({ message: "Subscribed successfully" });
   } catch (err) {
     res
@@ -44,6 +57,17 @@ router.post("/contact", async (req, res) => {
   try {
     const contact = new Contact({ name, email, message });
     await contact.save();
+
+    // ✅ Send contact confirmation email to user
+    try {
+      await sendContactEmail(email, name).catch((err) => {
+        console.error("❌ Contact confirmation email failed:", err.message);
+      });
+    } catch (emailErr) {
+      console.error("Email sending error:", emailErr.message);
+      // Don't fail if email fails to send
+    }
+
     res.json({ message: "Message received. We'll get back to you soon." });
   } catch (err) {
     res

@@ -14,6 +14,7 @@ import vendorRoutes from "./routes/vendor.js";
 import vendorManagementRoutes from "./routes/vendor-management.js";
 import pincodeRoutes from "./routes/pincode.js";
 import { connectToMongo } from "./utils/connectToMongo.js";
+import { verifyEmailTransporter } from "./services/emailService.js";
 
 dotenv.config();
 const app = express();
@@ -71,6 +72,19 @@ const port = process.env.PORT || 5000;
 const server = app.listen(port, "0.0.0.0", () => {
   console.log(`✅ Server running on port ${port}`);
 });
+
+// Verify email transporter
+verifyEmailTransporter()
+  .then((isValid) => {
+    if (isValid) {
+      console.log("✅ Email service ready");
+    } else {
+      console.warn("⚠️  Email service may not be working - check credentials");
+    }
+  })
+  .catch((err) => {
+    console.error("❌ Email service check failed:", err.message);
+  });
 
 // Connect to MongoDB
 connectToMongo()

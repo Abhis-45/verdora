@@ -278,6 +278,38 @@ export default function OrdersPage() {
     }
   };
 
+  const handleCancelOrder = async (orderId: string) => {
+    if (!window.confirm("Are you sure you want to cancel this order? This action cannot be undone.")) {
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    try {
+      const response = await fetch(`/api/profile/orders/${orderId}/cancel`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to cancel order");
+      }
+
+      alert("Order cancelled successfully");
+      await loadOrders();
+      setSelectedOrder(null);
+    } catch (error) {
+      alert(
+        error instanceof Error ? error.message : "Failed to cancel order",
+      );
+    }
+  };
+
   const orderProgress = useMemo(() => {
     if (!selectedOrder) return 0;
     const status = selectedOrder.status?.toLowerCase();
@@ -343,7 +375,7 @@ export default function OrdersPage() {
               <h1 className="text-3xl font-bold text-green-900">My Orders</h1>
               <p className="mt-1 text-sm text-gray-600">
                 Track delivery, write reviews after delivery, and request a
-                return or replacement within 7 days.
+                return or replacement within 3 days.
               </p>
             </div>
             <RefreshButton onClick={loadOrders} />
@@ -857,6 +889,14 @@ export default function OrdersPage() {
                   </div>
 
                   <div className="space-y-3">
+                    {selectedOrder.status === "accepted" && (
+                      <button
+                        onClick={() => handleCancelOrder(selectedOrder._id)}
+                        className="w-full rounded-lg bg-red-600 py-2 font-semibold text-white transition hover:bg-red-700"
+                      >
+                        ❌ Cancel Order
+                      </button>
+                    )}
                     {selectedOrder.status === "delivered" && (
                       <button
                         onClick={() => generateInvoicePDF(selectedOrder)}

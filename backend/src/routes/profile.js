@@ -39,9 +39,10 @@ const ORDER_STATUSES = [
   "returned",
   "replaced",
   "refunded",
+  "cancelled",
 ];
 const CUSTOMER_RETURN_STATUSES = ["returned", "replaced"];
-const RETURN_WINDOW_DAYS = 7;
+const RETURN_WINDOW_DAYS = 3;
 
 const getSafeDate = (value, fallback = new Date()) => {
   const parsed = value ? new Date(value) : null;
@@ -1177,5 +1178,77 @@ router.patch("/test-order-delivered", authMiddleware, async (req, res) => {
       .json({ message: "Failed to update test order", error: err.message });
   }
 });
+
+// ✅ Cancel order (only if status is "accepted" - before shipping)
+router.patch(
+  "/orders/:orderId/cancel",
+  authMiddleware,
+  async (req, res) => {
+    try {
+      const user = await User.findById(req.userId);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      const order = user.orders?.find(
+        (o) => String(o._id) === String(req.params.orderId)
+      );
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+
+      // Only allow cancellation if order status is "accepted"
+      if (order.status !== "accepted") {
+        return res.status(400).json({
+          message: `Cannot cancel order with status "${order.status}". Orders can only be cancelled before they are shipped.`,
+        });
+      }
+
+      // Cancel all items in the order
+      order.items = (order.items || []).map((item) => ({
+        ...item,
+        status: "cancelled",
+        statusUpdatedAt: new Date(),
+        statusReason: "Cancelled by customer",
+      }));
+
+      order.status = "cancelled";
+      order.statusUpdatedAt = new Date();
+      order.statusReason = "Cancelled by customer";
+
+      await user.save();
+
+      // ✅ SEND ORDER CANCELLED NOTIFICATION
+      try {
+        if (user.email) {
+          await sendAccountDeletedEmail(user.email).catch((err) =>
+            console.error("❌ Order cancelled email failed:", err.message)
+          );
+        }
+
+        if (user.mobile) {
+          const formattedPhone = user.mobile.startsWith("+")
+            ? user.mobile
+            : `+91${user.mobile}`;
+          await sendOrderCancelledSMS(formattedPhone, String(order._id)).catch(
+            (err) => console.error("❌ Order cancelled SMS failed:", err.message)
+          );
+        }
+      } catch (notificationErr) {
+        console.error(
+          "Order cancellation notification failed:",
+          notificationErr.message
+        );
+      }
+
+      res.json({
+        message: "Order cancelled successfully",
+        order: decorateOrderForResponse(order),
+      });
+    } catch (err) {
+      res
+        .status(500)
+        .json({ message: "Failed to cancel order", error: err.message });
+    }
+  }
+);
 
 export default router;

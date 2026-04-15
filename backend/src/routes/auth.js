@@ -5,12 +5,41 @@ import User from "../models/User.js";
 import { sendOtpSMS, sendWelcomeSMS } from "../services/twilioService.js";
 import { 
   sendOtpEmail,
-  sendWelcomeEmail
+  sendWelcomeEmail,
+  verifyEmailTransporter
 } from "../services/emailService.js";
 
 const router = express.Router();
 const otpStore = new Map(); // Format: { otp: string, expiresAt: timestamp }
 const OTP_EXPIRY_MINUTES = 10;
+
+// ✅ Diagnostic endpoint to check email service
+router.get("/email-status", async (req, res) => {
+  try {
+    const isValid = await verifyEmailTransporter();
+    const emailUser = process.env.EMAIL_USER || "NOT SET";
+    const emailPass = process.env.EMAIL_PASS ? "****SET****" : "NOT SET";
+    
+    res.json({
+      status: isValid ? "✅ Working" : "❌ Failed",
+      email: emailUser,
+      emailPassConfigured: !!process.env.EMAIL_PASS,
+      details: {
+        emailUser,
+        emailPassStatus: emailPass,
+        message: isValid 
+          ? "Email service is ready to send OTPs"
+          : "Email service is not configured properly. Check EMAIL_USER and EMAIL_PASS in .env"
+      }
+    });
+  } catch (err) {
+    res.status(500).json({
+      status: "❌ Error",
+      error: err.message,
+      message: "Failed to check email status"
+    });
+  }
+});
 
 // ✅ Send OTP
 router.post("/send-otp", async (req, res) => {
@@ -29,6 +58,7 @@ router.post("/send-otp", async (req, res) => {
         console.log(`✅ Email OTP sent successfully to ${identifier}`);
       } catch (emailErr) {
         console.error(`❌ Email send failed for ${identifier}:`, emailErr.message);
+        console.error("Stack:", emailErr.stack);
         throw new Error(`Failed to send OTP to email: ${emailErr.message}`);
       }
     } else {
