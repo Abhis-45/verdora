@@ -23,6 +23,8 @@ import {
   sendVendorApprovedEmail,
   sendVendorRejectedEmail,
   sendVendorRegistrationSubmittedEmail,
+  sendVendorReadyToShipEmail,
+  sendVendorOrderShippedEmail,
 } from "../services/emailService.js";
 import {
   sendOrderShippedSMS,
@@ -255,6 +257,64 @@ router.patch(
       } catch (notificationErr) {
         console.error("Order status notification failed:", notificationErr.message);
         // Don't fail the request due to notification errors
+      }
+
+      // ✅ SEND VENDOR NOTIFICATIONS (For "ready_to_ship" status, notify relevant vendors)
+      if (status === "shipped" || status === "ready_to_ship") {
+        try {
+          const uniqueVendorIds = Array.from(
+            new Set(
+              order.items
+                .map((item) => String(item.vendorId || "").trim())
+                .filter(Boolean),
+            ),
+          );
+
+          if (uniqueVendorIds.length > 0) {
+            const vendors = await Admin.find({
+              _id: { $in: uniqueVendorIds },
+              role: "vendor",
+            }).select("email businessName vendorName").lean();
+
+            await Promise.allSettled(
+              vendors.map((vendor) => {
+                const vendorItems = order.items.filter(
+                  (item) => String(item.vendorId || "").trim() === String(vendor._id),
+                );
+
+                if (!vendor.email || !vendorItems.length) {
+                  return Promise.resolve();
+                }
+
+                const emailFn = status === "shipped" 
+                  ? () => sendVendorOrderShippedEmail(
+                      vendor.email,
+                      vendor.businessName || vendor.vendorName || "Vendor",
+                      String(order._id),
+                      user.name || "Customer",
+                      vendorItems
+                    )
+                  : () => sendVendorReadyToShipEmail(
+                      vendor.email,
+                      vendor.businessName || vendor.vendorName || "Vendor",
+                      String(order._id),
+                      user.name || "Customer",
+                      vendorItems,
+                      order.date
+                    );
+
+                return emailFn().catch((err) => 
+                  console.error(
+                    `❌ Vendor notification for ${status} failed:`,
+                    err.message
+                  )
+                );
+              }),
+            );
+          }
+        } catch (vendorEmailErr) {
+          console.error("Vendor email notification failed:", vendorEmailErr.message);
+        }
       }
 
       res.json({

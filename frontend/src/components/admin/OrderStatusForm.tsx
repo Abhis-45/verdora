@@ -42,6 +42,7 @@ export default function OrderStatusForm({
   const statusOptions: { value: string; label: string; color: string }[] = [
     { value: "pending", label: "Pending", color: "bg-yellow-100" },
     { value: "accepted", label: "Accepted", color: "bg-blue-100" },
+    { value: "ready_to_ship", label: "Ready to Ship", color: "bg-amber-100" },
     { value: "cancelled", label: "Cancelled", color: "bg-red-100" },
     { value: "shipped", label: "Shipped", color: "bg-blue-200" },
     { value: "delivered", label: "Delivered", color: "bg-green-100" },
@@ -54,7 +55,8 @@ export default function OrderStatusForm({
   const getValidNextStatuses = (currentStatus: string) => {
     const statusTransitions: { [key: string]: string[] } = {
       pending: ["accepted", "cancelled"],
-      accepted: ["shipped", "cancelled"],
+      accepted: ["ready_to_ship", "cancelled"],
+      ready_to_ship: ["shipped", "cancelled"],
       shipped: ["delivered"],
       delivered: ["returned", "replaced", "refunded"],
       cancelled: [],

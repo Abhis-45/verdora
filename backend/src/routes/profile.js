@@ -14,6 +14,7 @@ import {
   sendUserOrderConfirmationEmail,
   sendOrderStatusUpdateEmail,
   sendUserReturnRequestEmail,
+  sendUserOrderCancelledEmail,
 } from "../services/emailService.js";
 import { uploadToCloudinary } from "../services/cloudinaryService.js";
 import {
@@ -1221,7 +1222,11 @@ router.patch(
       // ✅ SEND ORDER CANCELLED NOTIFICATION
       try {
         if (user.email) {
-          await sendAccountDeletedEmail(user.email).catch((err) =>
+          await sendUserOrderCancelledEmail(
+            user.email,
+            user.name || "Valued Customer",
+            String(order._id || "")
+          ).catch((err) =>
             console.error("❌ Order cancelled email failed:", err.message)
           );
         }

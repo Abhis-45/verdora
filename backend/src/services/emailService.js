@@ -816,3 +816,89 @@ export const sendOrderStatusUpdateEmail = async (
   });
 };
 
+// ✅ VENDOR NOTIFICATION - ORDER READY TO SHIP
+export const sendVendorReadyToShipEmail = async (
+  vendorEmail,
+  vendorName,
+  orderId,
+  customerName,
+  vendorItems,
+  orderDate
+) => {
+  const itemsList = vendorItems
+    .map((item) => `<li>${item.title || item.name} (Qty: ${item.quantity})</li>`)
+    .join("");
+
+  return sendEmailWithRetry({
+    from: process.env.EMAIL_USER,
+    to: vendorEmail,
+    subject: `📦 Prepare for Shipment - Order #${String(orderId).slice(-6)} | Verdora`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #22c55e;">📦 Order Ready to Ship</h2>
+        <p>Hi ${vendorName},</p>
+        <p>A new order has been accepted and is ready for shipment!</p>
+        
+        <div style="background: #f0fdf4; border-left: 4px solid #22c55e; padding: 15px; margin: 20px 0; border-radius: 4px;">
+          <p style="margin: 5px 0;"><strong>Order #:</strong> ${String(orderId).slice(-6)}</p>
+          <p style="margin: 5px 0;"><strong>Customer:</strong> ${customerName}</p>
+          <p style="margin: 5px 0;"><strong>Order Date:</strong> ${new Date(orderDate).toLocaleDateString()}</p>
+          <p style="margin: 5px 0;"><strong>Items:</strong></p>
+          <ul style="margin: 10px 0; padding-left: 20px;">
+            ${itemsList}
+          </ul>
+        </div>
+
+        <p style="color: #475569;">Please prepare these items for shipment and update the status once dispatched.</p>
+        <p style="color: #64748b;">
+          Questions about this order? <a href="https://verdora.com/vendor/orders" style="color: #22c55e; text-decoration: none;">View in dashboard</a>
+        </p>
+        <hr style="border: none; border-top: 1px solid #e2e8f0;">
+        <p style="color: #888; font-size: 12px;">© 2026 Verdora. All rights reserved.</p>
+      </div>
+    `,
+  });
+};
+
+// ✅ VENDOR NOTIFICATION - ORDER SHIPPED
+export const sendVendorOrderShippedEmail = async (
+  vendorEmail,
+  vendorName,
+  orderId,
+  customerName,
+  vendorItems
+) => {
+  const itemsList = vendorItems
+    .map((item) => `<li>${item.title || item.name} (Qty: ${item.quantity})</li>`)
+    .join("");
+
+  return sendEmailWithRetry({
+    from: process.env.EMAIL_USER,
+    to: vendorEmail,
+    subject: `🚚 Order Shipped - Order #${String(orderId).slice(-6)} | Verdora`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #3b82f6;">🚚 Order Shipped</h2>
+        <p>Hi ${vendorName},</p>
+        <p>Your items in this order have been shipped!</p>
+        
+        <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 15px; margin: 20px 0; border-radius: 4px;">
+          <p style="margin: 5px 0;"><strong>Order #:</strong> ${String(orderId).slice(-6)}</p>
+          <p style="margin: 5px 0;"><strong>Customer:</strong> ${customerName}</p>
+          <p style="margin: 5px 0;"><strong>Items Shipped:</strong></p>
+          <ul style="margin: 10px 0; padding-left: 20px;">
+            ${itemsList}
+          </ul>
+        </div>
+
+        <p style="color: #475569;">Thank you for your partnership with Verdora!</p>
+        <p style="color: #64748b;">
+          <strong>Need help?</strong> Contact support at <strong>support@verdora.com</strong>
+        </p>
+        <hr style="border: none; border-top: 1px solid #e2e8f0;">
+        <p style="color: #888; font-size: 12px;">© 2026 Verdora. All rights reserved.</p>
+      </div>
+    `,
+  });
+};
+

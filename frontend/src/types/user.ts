@@ -37,6 +37,8 @@ export interface OrderItem {
   status?: string;
   statusReason?: string;
   returnReason?: string;
+  trackingId?: string;
+  deliveryOTP?: string;
   statusUpdatedAt?: string;
   reviewSubmitted?: boolean;
   reviewId?: string | null;

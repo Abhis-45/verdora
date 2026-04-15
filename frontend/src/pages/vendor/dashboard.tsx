@@ -637,6 +637,9 @@ export default function VendorDashboard() {
                   <thead className="bg-emerald-100">
                     <tr>
                       <th className="px-6 py-3 text-left text-emerald-700 font-semibold">
+                        Image
+                      </th>
+                      <th className="px-6 py-3 text-left text-emerald-700 font-semibold">
                         Product
                       </th>
                       <th className="px-6 py-3 text-left text-emerald-700 font-semibold">
@@ -659,6 +662,21 @@ export default function VendorDashboard() {
                         key={product.id}
                         className="border-t border-emerald-100 hover:bg-emerald-50"
                       >
+                        <td className="px-6 py-3">
+                          <div className="h-12 w-12 rounded-lg overflow-hidden bg-gray-100">
+                            {product.image ? (
+                              <img
+                                src={product.image}
+                                alt={product.name}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center text-xs text-gray-400">
+                                No image
+                              </div>
+                            )}
+                          </div>
+                        </td>
                         <td className="px-6 py-3">
                           <div className="flex flex-col gap-1">
                             <span>{product.name}</span>
@@ -747,10 +765,18 @@ export default function VendorDashboard() {
                       <p className="text-sm font-bold text-emerald-800">
                         Order #{order.id.slice(-6)}
                       </p>
-                      <p className="mt-1 text-sm text-gray-700">
-                        {order.customer} · {order.email || order.mobile}
-                      </p>
-                      <p className="mt-1 text-xs text-gray-500">
+                      <div className="mt-2 rounded-lg bg-white p-3">
+                        <p className="text-sm font-semibold text-gray-900">
+                          {order.customer}
+                        </p>
+                        <p className="mt-1 text-xs text-gray-600">
+                          📧 {order.email || "N/A"}
+                        </p>
+                        <p className="mt-1 text-xs text-gray-600">
+                          📞 {order.mobile || "N/A"}
+                        </p>
+                      </div>
+                      <p className="mt-2 text-xs text-gray-500">
                         {new Date(order.date).toLocaleDateString("en-IN", {
                           day: "numeric",
                           month: "short",
@@ -759,18 +785,26 @@ export default function VendorDashboard() {
                       </p>
                     </div>
                     <div className="text-left sm:text-right">
-                      <p className="text-sm font-semibold text-gray-900">
-                        {order.itemsCount} item
-                        {order.itemsCount !== 1 ? "s" : ""}
-                      </p>
-                      <p className="mt-1 text-sm text-emerald-700">
-                        Rs. {Number(order.vendorSubtotal || 0).toFixed(2)}
-                      </p>
-                      {order.address?.city && (
-                        <p className="mt-1 text-xs text-gray-500">
-                          Deliver to {order.address.city}, {order.address.state}
+                      <div className="rounded-lg bg-white p-3">
+                        <p className="text-xs font-semibold text-gray-600 mb-2">
+                          📍 Shipping Address
                         </p>
-                      )}
+                        <p className="text-sm font-semibold text-gray-900">
+                          {order.address?.address || "N/A"}
+                        </p>
+                        <p className="mt-1 text-xs text-gray-600">
+                          {order.address?.city || "N/A"}, {order.address?.state || "N/A"}
+                        </p>
+                        <p className="text-xs text-gray-600">
+                          {order.address?.pincode || "N/A"}
+                        </p>
+                      </div>
+                      <p className="mt-2 text-sm font-semibold text-gray-900">
+                        {order.itemsCount} item{order.itemsCount !== 1 ? "s" : ""}
+                      </p>
+                      <p className="text-sm text-emerald-700 font-bold">
+                        Total: Rs. {Number(order.vendorSubtotal || 0).toFixed(2)}
+                      </p>
                     </div>
                   </div>
 
