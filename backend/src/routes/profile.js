@@ -109,6 +109,8 @@ const decorateOrderForResponse = (order = {}) => {
       status: normalizedStatus,
       statusReason: item?.statusReason || "",
       returnReason: item?.returnReason || "",
+      trackingId: item?.trackingId || "",
+      deliveryOTP: item?.deliveryOTP || "",
       statusUpdatedAt: statusUpdatedAt.toISOString(),
       reviewSubmitted: Boolean(item?.reviewSubmitted),
       reviewId: item?.reviewId || null,

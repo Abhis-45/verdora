@@ -96,6 +96,9 @@ const userSchema = new mongoose.Schema(
             statusReason: { type: String, default: "" },
             returnReason: { type: String, default: "" },
             statusUpdatedAt: { type: Date, default: Date.now },
+            trackingId: { type: String, default: "" },
+            deliveryOTP: { type: String, default: "" },
+            deliveryOTPExpiry: { type: Date, default: null },
             reviewSubmitted: { type: Boolean, default: false },
             reviewId: {
               type: mongoose.Schema.Types.ObjectId,

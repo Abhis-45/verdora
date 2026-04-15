@@ -301,6 +301,8 @@ router.get("/orders", vendorAuthMiddleware, async (req, res) => {
                 vendorName: item.vendorName || product?.vendorName || "",
                 status: normalizedStatus,
                 statusReason: item.statusReason || "",
+                trackingId: item.trackingId || "",
+                deliveryOTP: item.deliveryOTP || "",
                 statusUpdatedAt:
                   item.statusUpdatedAt || order.statusUpdatedAt || order.date,
               };
@@ -353,7 +355,7 @@ router.patch(
   vendorAuthMiddleware,
   async (req, res) => {
     try {
-      const { status, statusReason } = req.body;
+      const { status, statusReason, trackingId } = req.body;
 
       if (!VENDOR_MANAGEABLE_STATUSES.includes(status)) {
         return res.status(400).json({ message: "Invalid vendor order status" });
@@ -394,6 +396,18 @@ router.patch(
       item.statusReason = String(statusReason || "").trim();
       item.statusUpdatedAt = new Date();
 
+      // Add tracking ID if status is shipped
+      if (status === "shipped" && trackingId) {
+        item.trackingId = String(trackingId).trim();
+      }
+
+      // Generate OTP if status is being moved to delivered
+      if (status === "delivered") {
+        const deliveryOTP = Math.floor(100000 + Math.random() * 900000).toString();
+        item.deliveryOTP = deliveryOTP;
+        item.deliveryOTPExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // OTP valid for 24 hours
+      }
+
       order.status = getOrderStatusFromItems(order.items, order.status);
       order.statusReason = String(statusReason || "").trim();
       order.statusUpdatedAt = new Date();
@@ -408,6 +422,63 @@ router.patch(
     } catch (err) {
       res.status(500).json({
         message: "Failed to update vendor order item",
+        error: err.message,
+      });
+    }
+  },
+);
+
+// ✅ VERIFY DELIVERY OTP
+router.post(
+  "/orders/:orderId/items/:itemId/verify-otp",
+  async (req, res) => {
+    try {
+      const { otp } = req.body;
+
+      if (!otp) {
+        return res.status(400).json({ message: "OTP is required" });
+      }
+
+      const user = await User.findOne({ "orders._id": req.params.orderId });
+      if (!user) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+
+      const order = user.orders.id(req.params.orderId);
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+
+      const item = order.items.id(req.params.itemId);
+      if (!item) {
+        return res.status(404).json({ message: "Order item not found" });
+      }
+
+      // Check if OTP is valid
+      if (String(item.deliveryOTP) !== String(otp)) {
+        return res.status(400).json({ message: "Invalid OTP" });
+      }
+
+      // Check if OTP has expired
+      if (item.deliveryOTPExpiry && new Date() > new Date(item.deliveryOTPExpiry)) {
+        return res.status(400).json({ message: "OTP has expired" });
+      }
+
+      // Mark item as delivered
+      item.status = "delivered";
+      item.deliveryOTP = ""; // Clear OTP after verification
+      item.deliveryOTPExpiry = null;
+      item.statusUpdatedAt = new Date();
+
+      await user.save();
+
+      res.json({
+        message: "Delivery confirmed successfully",
+        item,
+      });
+    } catch (err) {
+      res.status(500).json({
+        message: "Failed to verify OTP",
         error: err.message,
       });
     }

@@ -66,6 +66,8 @@ interface VendorOrderItem {
   price: number;
   status: string;
   statusReason?: string;
+  trackingId?: string;
+  deliveryOTP?: string;
   returnRequestImages?: { url: string; publicId?: string }[];
   selectedSize?: {
     label?: string;
@@ -109,6 +111,14 @@ export default function VendorDashboard() {
   const [updatingOrderItemId, setUpdatingOrderItemId] = useState<string | null>(
     null,
   );
+  const [showTrackingModal, setShowTrackingModal] = useState(false);
+  const [currentOrderContext, setCurrentOrderContext] = useState<{
+    orderId: string;
+    itemId: string;
+    trackingId: string;
+  } | null>(null);
+  const [showDeliveryOTPModal, setShowDeliveryOTPModal] = useState(false);
+  const [deliveryOTP, setDeliveryOTP] = useState("");
 
   useEffect(() => {
     const tok = localStorage.getItem("vendorToken");
@@ -291,6 +301,30 @@ export default function VendorDashboard() {
   ) => {
     if (!token) return;
 
+    // Show tracking ID modal for shipped status
+    if (status === "shipped") {
+      setCurrentOrderContext({ orderId, itemId, trackingId: "" });
+      setShowTrackingModal(true);
+      return;
+    }
+
+    // Show delivery OTP modal for delivered status
+    if (status === "delivered") {
+      setCurrentOrderContext({ orderId, itemId, trackingId: "" });
+      setShowDeliveryOTPModal(true);
+      return;
+    }
+
+    // For other statuses, update directly
+    await updateItemStatus(orderId, itemId, status, "");
+  };
+
+  const updateItemStatus = async (
+    orderId: string,
+    itemId: string,
+    status: string,
+    trackingId: string = "",
+  ) => {
     setUpdatingOrderItemId(itemId);
     try {
       const BACKEND_URL =
@@ -305,7 +339,7 @@ export default function VendorDashboard() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ status }),
+          body: JSON.stringify({ status, trackingId }),
         },
       );
 
@@ -322,7 +356,13 @@ export default function VendorDashboard() {
             : {
                 ...order,
                 items: order.items.map((item) =>
-                  item.itemId === itemId ? { ...item, status } : item,
+                  item.itemId === itemId
+                    ? {
+                        ...item,
+                        status,
+                        trackingId: trackingId || item.trackingId || "",
+                      }
+                    : item,
                 ),
                 status: data.orderStatus || status,
               },
@@ -330,6 +370,7 @@ export default function VendorDashboard() {
       );
     } catch (err) {
       console.error("Update vendor order status error:", err);
+      alert("Failed to update order status. Please try again.");
     } finally {
       setUpdatingOrderItemId(null);
     }
@@ -758,18 +799,33 @@ export default function VendorDashboard() {
                               <p className="font-semibold text-gray-900">
                                 {item.title}
                               </p>
-                              <p className="mt-1 text-xs text-gray-500">
-                                Qty {item.quantity}
-                                {item.selectedSize?.label
-                                  ? ` · Size ${item.selectedSize.label}`
-                                  : ""}
+                              <p className="mt-1 text-sm font-semibold text-gray-600">
+                                Qty: {item.quantity}
                               </p>
-                              <p className="mt-1 text-sm font-semibold text-emerald-700">
-                                Rs. {Number(item.price || 0).toFixed(2)}
+                              <p className="mt-1 text-sm text-gray-600">
+                                Price: Rs. {Number(item.price || 0).toFixed(2)}
                               </p>
+                              <p className="mt-1 text-sm font-bold text-emerald-700">
+                                Subtotal: Rs. {(Number(item.price || 0) * Number(item.quantity || 0)).toFixed(2)}
+                              </p>
+                              {item.selectedSize?.label && (
+                                <p className="mt-1 text-xs text-gray-500">
+                                  Size: {item.selectedSize.label}
+                                </p>
+                              )}
                               {item.statusReason && (
                                 <p className="mt-1 text-xs text-gray-500">
                                   {item.statusReason}
+                                </p>
+                              )}
+                              {item.trackingId && (
+                                <p className="mt-1 text-xs text-blue-600 font-semibold">
+                                  Tracking ID: {item.trackingId}
+                                </p>
+                              )}
+                              {item.deliveryOTP && item.status === "delivered" && (
+                                <p className="mt-1 text-xs text-green-600 font-semibold">
+                                  Delivery OTP: {item.deliveryOTP}
                                 </p>
                               )}
                               {item.returnRequestImages &&
@@ -906,6 +962,106 @@ export default function VendorDashboard() {
                 Close
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Tracking ID Modal */}
+      {showTrackingModal && currentOrderContext && (
+        <div className="app-modal-shell">
+          <div className="app-modal-card w-full max-w-md rounded-lg bg-white p-5 shadow-2xl sm:p-8">
+            <h2 className="text-2xl font-bold text-emerald-700 mb-6">
+              📦 Enter Tracking ID
+            </h2>
+            <p className="text-gray-600 mb-4">
+              Please provide the tracking ID for the shipment so the customer can track their order.
+            </p>
+            <input
+              type="text"
+              value={currentOrderContext.trackingId}
+              onChange={(e) =>
+                setCurrentOrderContext({
+                  ...currentOrderContext,
+                  trackingId: e.target.value,
+                })
+              }
+              placeholder="e.g., TRK123456789"
+              className="w-full px-3 py-2 border border-emerald-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-emerald-600"
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  if (currentOrderContext.trackingId.trim()) {
+                    updateItemStatus(
+                      currentOrderContext.orderId,
+                      currentOrderContext.itemId,
+                      "shipped",
+                      currentOrderContext.trackingId,
+                    );
+                    setShowTrackingModal(false);
+                    setCurrentOrderContext(null);
+                  } else {
+                    alert("Please enter a tracking ID");
+                  }
+                }}
+                className="flex-1 bg-emerald-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-emerald-700 transition"
+              >
+                Confirm Shipping
+              </button>
+              <button
+                onClick={() => {
+                  setShowTrackingModal(false);
+                  setCurrentOrderContext(null);
+                }}
+                className="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delivery OTP Modal */}
+      {showDeliveryOTPModal && currentOrderContext && (
+        <div className="app-modal-shell">
+          <div className="app-modal-card w-full max-w-md rounded-lg bg-white p-5 shadow-2xl sm:p-8">
+            <h2 className="text-2xl font-bold text-emerald-700 mb-6">
+              ✅ Confirm Delivery
+            </h2>
+            <p className="text-gray-600 mb-4">
+              An OTP will be generated and sent to the customer. They will need to provide this OTP upon receiving the item to confirm delivery.
+            </p>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+              <p className="text-sm text-blue-800">
+                <strong>Note:</strong> The customer will receive the OTP via SMS/Email. They must verify it to mark the delivery as complete.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  updateItemStatus(
+                    currentOrderContext.orderId,
+                    currentOrderContext.itemId,
+                    "delivered",
+                  );
+                  setShowDeliveryOTPModal(false);
+                  setCurrentOrderContext(null);
+                }}
+                className="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-700 transition"
+              >
+                Generate OTP & Mark Delivered
+              </button>
+              <button
+                onClick={() => {
+                  setShowDeliveryOTPModal(false);
+                  setCurrentOrderContext(null);
+                }}
+                className="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}

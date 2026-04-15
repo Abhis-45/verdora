@@ -761,6 +761,26 @@ export default function OrdersPage() {
                                     {item.statusReason}
                                   </p>
                                 )}
+                                {item.trackingId && item.status === "shipped" && (
+                                  <div className="mt-2 rounded-lg bg-blue-50 p-3 border border-blue-200">
+                                    <p className="text-sm font-semibold text-blue-900">
+                                      📦 Tracking ID: <span className="font-mono text-blue-700">{item.trackingId}</span>
+                                    </p>
+                                    <p className="mt-1 text-xs text-blue-700">
+                                      Your order is on the way! Use this tracking ID to monitor your shipment.
+                                    </p>
+                                  </div>
+                                )}
+                                {item.deliveryOTP && item.status === "delivered" && (
+                                  <div className="mt-2 rounded-lg bg-green-50 p-3 border border-green-200">
+                                    <p className="text-sm font-semibold text-green-900">
+                                      ✅ Delivery OTP: <span className="font-mono text-green-700 text-lg">{item.deliveryOTP}</span>
+                                    </p>
+                                    <p className="mt-1 text-xs text-green-700">
+                                      Verify this OTP upon receiving to confirm delivery.
+                                    </p>
+                                  </div>
+                                )}
                                 {item.returnReason && (
                                   <p className="mt-1 text-xs text-gray-500">
                                     Reason: {item.returnReason}
