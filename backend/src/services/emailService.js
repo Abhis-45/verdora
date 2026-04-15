@@ -3,30 +3,64 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
+// ✅ Primary: Gmail with port 587 and STARTTLS (works better on hosting)
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  host: "smtp.gmail.com",
+  port: 587,
+  secure: false, // Use STARTTLS instead of SSL
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS, // App Password for Gmail
+    pass: process.env.EMAIL_PASS,
   },
+  tls: {
+    rejectUnauthorized: false // For hosting compatibility
+  }
 });
 
 // ✅ Verify transporter on startup
 export const verifyEmailTransporter = async () => {
   try {
     await transporter.verify();
-    console.log("✅ Email transporter verified successfully");
+    console.log("✅ Email transporter verified successfully (Port 587 STARTTLS)");
     return true;
   } catch (err) {
     console.error("❌ Email transporter verification failed:", err.message);
-    console.error("⚠️  Check EMAIL_USER and EMAIL_PASS in .env file");
+    console.error("⚠️  Solutions:");
+    console.error("   1. Check EMAIL_USER and EMAIL_PASS in .env");
+    console.error("   2. Enable 'Less Secure App Access' for Gmail: https://myaccount.google.com/lesssecureapps");
+    console.error("   3. Or use an App Password: https://support.google.com/accounts/answer/185833");
+    console.error("   4. Alternative: Use SendGrid (recommended for production)");
     return false;
   }
 };
 
-// ✅ Send OTP for verification
+// ✅ Generic email send helper with retry logic
+const sendEmailWithRetry = async (mailOptions, maxRetries = 3) => {
+  let lastError;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const result = await transporter.sendMail(mailOptions);
+      console.log(`✅ Email sent successfully to ${mailOptions.to} (Attempt ${attempt})`);
+      return result;
+    } catch (err) {
+      lastError = err;
+      console.error(`❌ Attempt ${attempt} failed for ${mailOptions.to}:`, err.message);
+      
+      if (attempt < maxRetries) {
+        const delay = 1000 * attempt;
+        console.log(`⏳ Retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+
+  throw new Error(`Failed after ${maxRetries} attempts: ${lastError?.message}`);
+};
+
+// ✅ Send OTP for verification with retry logic
 export const sendOtpEmail = async (email, otp) => {
-  return transporter.sendMail({
+  return sendEmailWithRetry({
     from: process.env.EMAIL_USER,
     to: email,
     subject: "Your Verdora OTP",
@@ -40,11 +74,10 @@ export const sendOtpEmail = async (email, otp) => {
       <p style="color: #888; font-size: 12px;">© 2026 Verdora. All rights reserved.</p>
     `,
   });
-};
 
 // ✅ Send subscription confirmation email
 export const sendSubscriptionEmail = async (email) => {
-  return transporter.sendMail({
+  return sendEmailWithRetry({
     from: process.env.EMAIL_USER,
     to: email,
     subject: "Welcome to Verdora Newsletter!",
@@ -67,7 +100,7 @@ export const sendSubscriptionEmail = async (email) => {
 
 // ✅ Send contact form confirmation email
 export const sendContactEmail = async (email, name) => {
-  return transporter.sendMail({
+  return sendEmailWithRetry({
     from: process.env.EMAIL_USER,
     to: email,
     subject: "We received your message - Verdora",
@@ -105,7 +138,7 @@ export const sendContactEmail = async (email, name) => {
 
 // ✅ Send profile update notification
 export const sendProfileUpdateEmail = async (email, field) => {
-  return transporter.sendMail({
+  return sendEmailWithRetry({
     from: process.env.EMAIL_USER,
     to: email,
     subject: "Verdora - Profile Update Confirmation",
@@ -121,7 +154,7 @@ export const sendProfileUpdateEmail = async (email, field) => {
 
 // ✅ Send account deletion notification
 export const sendAccountDeletedEmail = async (email) => {
-  return transporter.sendMail({
+  return sendEmailWithRetry({
     from: process.env.EMAIL_USER,
     to: email,
     subject: "Verdora - Account Deleted",
@@ -197,8 +230,9 @@ export const sendVendorOrderNotificationEmail = async (
 };
 
 // ✅ USER WELCOME EMAIL ON SIGNUP
+// ✅ USER WELCOME EMAIL ON SIGNUP
 export const sendWelcomeEmail = async (email, userName) => {
-  return transporter.sendMail({
+  return sendEmailWithRetry({
     from: process.env.EMAIL_USER,
     to: email,
     subject: "Welcome to Verdora! 🌿 Your Gardening Journey Starts Here",
@@ -264,7 +298,7 @@ export const sendUserOrderConfirmationEmail = async (
     )
     .join("");
 
-  return transporter.sendMail({
+  return sendEmailWithRetry({
     from: process.env.EMAIL_USER,
     to: email,
     subject: `Order Confirmed! Order #${orderId.slice(-6)} | Verdora`,
