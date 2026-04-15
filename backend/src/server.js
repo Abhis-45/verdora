@@ -11,7 +11,6 @@ import productsRoutes from "./routes/products.js";
 import reviewsRoutes from "./routes/reviews.js";
 import contactRoutes from "./routes/contact.js";
 import vendorRoutes from "./routes/vendor.js";
-import vendorManagementRoutes from "./routes/vendor-management.js";
 import pincodeRoutes from "./routes/pincode.js";
 import { connectToMongo } from "./utils/connectToMongo.js";
 import { verifyEmailTransporter } from "./services/emailService.js";
@@ -48,14 +47,12 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
-// Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api", publicRoutes);
 app.use("/api/admin", adminAuthRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/admin/manage", adminManagementRoutes);
-app.use("/api/vendor", vendorManagementRoutes);
 app.use("/api/vendor", vendorRoutes);
 app.use("/api/products", productsRoutes);
 app.use("/api/reviews", reviewsRoutes);

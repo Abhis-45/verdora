@@ -26,11 +26,13 @@ export async function connectToMongo(options = {}) {
     
     // MongoDB connection options
     const defaultOptions = {
-      serverSelectionTimeoutMS: 15000,
-      socketTimeoutMS: 45000,
-      maxPoolSize: 10,
-      minPoolSize: 2,
+      serverSelectionTimeoutMS: 30000,
+      socketTimeoutMS: 60000,
+      maxPoolSize: 20,
+      minPoolSize: 5,
       retryWrites: true,
+      maxIdleTimeMS: 60000,
+      connectTimeoutMS: 30000,
     };
 
     const finalOptions = { ...defaultOptions, ...options };

@@ -150,15 +150,26 @@ export default function VendorDashboard() {
         typeof window !== "undefined"
           ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
           : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 20000);
+      
       const res = await fetch(`${BACKEND_URL}/api/vendor/products?search=${searchTerm}`, {
         headers: { Authorization: `Bearer ${authToken}` },
+        signal: controller.signal,
       });
-      if (res.ok) {
-        const data = await res.json();
-        setProducts(data.products || []);
+      clearTimeout(timeoutId);
+      
+      const data = await res.json();
+      if (!res.ok) {
+        console.error("Products API error:", res.status, data);
+        setProducts([]);
+        return;
       }
+      
+      setProducts(Array.isArray(data.products) ? data.products : []);
     } catch (err) {
       console.error("Fetch vendor products error:", err);
+      setProducts([]);
     }
     setLoading(false);
   };
@@ -186,15 +197,26 @@ export default function VendorDashboard() {
         typeof window !== "undefined"
           ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
           : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      
       const res = await fetch(`${BACKEND_URL}/api/vendor/orders`, {
         headers: { Authorization: `Bearer ${authToken}` },
+        signal: controller.signal,
       });
-      if (res.ok) {
-        const data = await res.json();
-        setVendorOrders(Array.isArray(data.orders) ? data.orders : []);
+      clearTimeout(timeoutId);
+      
+      const data = await res.json();
+      if (!res.ok) {
+        console.error("Orders API error:", res.status, data);
+        setVendorOrders([]);
+        return;
       }
+      
+      setVendorOrders(Array.isArray(data.orders) ? data.orders : []);
     } catch (err) {
       console.error("Fetch vendor orders error:", err);
+      setVendorOrders([]);
     }
   };
 
@@ -271,8 +293,12 @@ export default function VendorDashboard() {
 
     setUpdatingOrderItemId(itemId);
     try {
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
       const res = await fetch(
-        `/api/vendor/orders/${orderId}/items/${itemId}/status`,
+        `${BACKEND_URL}/api/vendor/orders/${orderId}/items/${itemId}/status`,
         {
           method: "PATCH",
           headers: {

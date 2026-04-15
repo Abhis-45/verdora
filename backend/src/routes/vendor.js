@@ -1,5 +1,6 @@
 import express from "express";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 import Admin from "../models/Admin.js";
 import Vendor from "../models/Vendor.js";
 import Product from "../models/Product.js";
@@ -120,8 +121,16 @@ router.get("/products", vendorAuthMiddleware, async (req, res) => {
     const { search = "", page = 1, limit = 10 } = req.query;
     const skip = (page - 1) * limit;
 
+    // Ensure vendorId is converted to ObjectId if it's a valid mongo ID
+    let vendorId = req.vendorId;
+    if (mongoose.Types.ObjectId.isValid(vendorId)) {
+      vendorId = new mongoose.Types.ObjectId(vendorId);
+    }
+
+    console.log("Products query - vendorId:", vendorId, "type:", typeof vendorId);
+
     const query = {
-      vendorId: req.vendorId,
+      vendorId: vendorId,
       ...(search && {
         $or: [
           { name: { $regex: search, $options: "i" } },
@@ -130,12 +139,18 @@ router.get("/products", vendorAuthMiddleware, async (req, res) => {
       }),
     };
 
+    // First try to get a count to ensure connection works
+    const total = await Product.countDocuments(query);
+    console.log("Products count:", total);
+
+    // Then fetch products with simpler query
     const products = await Product.find(query)
       .skip(Number(skip))
       .limit(Number(limit))
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .timeout(30000);
 
-    const total = await Product.countDocuments(query);
+    console.log("Fetched products count:", products.length);
 
     res.json({
       products,
@@ -146,6 +161,11 @@ router.get("/products", vendorAuthMiddleware, async (req, res) => {
       },
     });
   } catch (err) {
+    console.error("Vendor products error:", {
+      vendorId: req.vendorId,
+      error: err.message,
+      stack: err.stack,
+    });
     res
       .status(500)
       .json({ message: "Failed to fetch vendor products", error: err.message });
@@ -224,9 +244,20 @@ router.delete("/products/:id", vendorAuthMiddleware, async (req, res) => {
 // ✅ GET VENDOR ORDER ITEMS
 router.get("/orders", vendorAuthMiddleware, async (req, res) => {
   try {
-    const vendorProducts = await Product.find({ vendorId: req.vendorId })
+    // Ensure vendorId is converted to ObjectId if it's a valid mongo ID
+    let vendorId = req.vendorId;
+    if (mongoose.Types.ObjectId.isValid(vendorId)) {
+      vendorId = new mongoose.Types.ObjectId(vendorId);
+    }
+
+    console.log("Orders query - vendorId:", vendorId);
+
+    // First, get all vendor products
+    const vendorProducts = await Product.find({ vendorId: vendorId })
       .select("_id id name image vendorName")
-      .lean();
+      .timeout(30000);
+
+    console.log("Found vendor products:", vendorProducts.length);
 
     const productIndex = new Map();
     vendorProducts.forEach((product) => {
@@ -238,9 +269,12 @@ router.get("/orders", vendorAuthMiddleware, async (req, res) => {
       return res.json({ orders: [] });
     }
 
+    // Then get all users with orders
     const users = await User.find({ "orders.items.0": { $exists: true } })
       .select("name email mobile orders")
-      .lean();
+      .timeout(45000);
+
+    console.log("Found users with orders:", users.length);
 
     const orders = users
       .flatMap((user) =>
@@ -248,7 +282,7 @@ router.get("/orders", vendorAuthMiddleware, async (req, res) => {
           const vendorItems = (order.items || [])
             .filter((item) => {
               const itemVendorId = String(item.vendorId || "");
-              if (itemVendorId && itemVendorId === String(req.vendorId)) {
+              if (itemVendorId && itemVendorId === String(vendorId)) {
                 return true;
               }
 
@@ -298,8 +332,14 @@ router.get("/orders", vendorAuthMiddleware, async (req, res) => {
       .flat()
       .sort((a, b) => new Date(b.date) - new Date(a.date));
 
+    console.log("Processed vendor orders:", orders.length);
     res.json({ orders });
   } catch (err) {
+    console.error("Vendor orders error:", {
+      vendorId: req.vendorId,
+      error: err.message,
+      stack: err.stack,
+    });
     res.status(500).json({
       message: "Failed to fetch vendor orders",
       error: err.message,
@@ -377,11 +417,17 @@ router.patch(
 // ✅ GET VENDOR DASHBOARD STATS
 router.get("/stats", vendorAuthMiddleware, async (req, res) => {
   try {
+    // Ensure vendorId is converted to ObjectId if it's a valid mongo ID
+    let vendorId = req.vendorId;
+    if (mongoose.Types.ObjectId.isValid(vendorId)) {
+      vendorId = new mongoose.Types.ObjectId(vendorId);
+    }
+
     const totalProducts = await Product.countDocuments({
-      vendorId: req.vendorId,
+      vendorId: vendorId,
     });
     const totalRevenue = await Product.aggregate([
-      { $match: { vendorId: req.vendorId } },
+      { $match: { vendorId: vendorId } },
       { $group: { _id: null, total: { $sum: "$price" } } },
     ]);
 
