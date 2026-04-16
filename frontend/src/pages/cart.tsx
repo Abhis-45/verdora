@@ -41,6 +41,16 @@ export default function CartPage() {
     message: string;
     type: "success" | "error" | "info" | "warning";
   } | null>(null);
+  const [autoRedirectTimer, setAutoRedirectTimer] = useState<NodeJS.Timeout | null>(null);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (autoRedirectTimer) {
+        clearTimeout(autoRedirectTimer);
+      }
+    };
+  }, [autoRedirectTimer]);
 
   const couponRules: Record<
     string,
@@ -292,6 +302,13 @@ export default function CartPage() {
           type: "success",
         });
         clearCart();
+
+        // Set auto-redirect timer for 5 seconds
+        const timer = setTimeout(() => {
+          setShowThankYou(false);
+          router.push("/orders");
+        }, 5000);
+        setAutoRedirectTimer(timer);
       } else {
         console.error("Order error response:", {
           status: response.status,
@@ -477,8 +494,8 @@ export default function CartPage() {
         )}
 
         {showThankYou && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-transparent p-4">
-            <div className="w-full max-w-md rounded-lg bg-white/95 p-8 text-center shadow-lg backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+            <div className="w-full max-w-md rounded-lg bg-white p-8 text-center shadow-2xl animate-in fade-in zoom-in-95">
               <div className="text-6xl animate-bounce">🎉</div>
               <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-green-50 px-4 py-2 ring-2 ring-green-200">
                 <span className="text-2xl">💰</span>
@@ -491,8 +508,8 @@ export default function CartPage() {
                   </div>
                 </div>
               </div>
-              <h3 className="mt-4 text-2xl font-bold">
-                Thank you for your order!
+              <h3 className="mt-4 text-2xl font-bold text-green-900">
+                Thank you for your order! ✓
               </h3>
               <p className="mt-2 text-gray-800">
                 Your order has been confirmed
@@ -500,24 +517,29 @@ export default function CartPage() {
                   ? ` and will arrive by ${estimatedDeliveryText}.`
                   : "."}
               </p>
-              <div className="mt-6 flex justify-center gap-3">
+              <p className="mt-3 text-sm text-gray-600">
+                You will be redirected to your orders in a moment...
+              </p>
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
                 <button
                   onClick={() => {
+                    if (autoRedirectTimer) clearTimeout(autoRedirectTimer);
                     setShowThankYou(false);
                     router.push("/orders");
                   }}
-                  className="rounded bg-green-600 px-4 py-2 text-white"
+                  className="rounded-lg bg-green-600 px-6 py-2 font-semibold text-white transition hover:bg-green-700"
                 >
                   View Orders
                 </button>
                 <button
                   onClick={() => {
+                    if (autoRedirectTimer) clearTimeout(autoRedirectTimer);
                     setShowThankYou(false);
                     router.push("/");
                   }}
-                  className="rounded bg-gray-200 px-4 py-2"
+                  className="rounded-lg bg-gray-200 px-6 py-2 font-semibold text-gray-800 transition hover:bg-gray-300"
                 >
-                  Close
+                  Continue Shopping
                 </button>
               </div>
             </div>

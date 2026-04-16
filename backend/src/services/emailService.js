@@ -8,6 +8,7 @@ const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
   port: 587,
   secure: false, // Use STARTTLS instead of SSL
+  family: 4, // Force IPv4 (fixes ENETUNREACH IPv6 errors)
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
@@ -197,7 +198,7 @@ export const sendVendorOrderNotificationEmail = async (
     )
     .join("");
 
-  return transporter.sendMail({
+  return sendEmailWithRetry({
     from: process.env.EMAIL_USER,
     to: email,
     subject: `New Verdora Order #${orderId.slice(-6)} Received`,

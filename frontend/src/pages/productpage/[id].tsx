@@ -286,7 +286,7 @@ export default function ProductDetailPage() {
                     </h1>
 
                     <p className="text-sm sm:text-base text-gray-500 uppercase tracking-wide">
-                      {product.vendorName}
+                      {product.brand || "Verdora" }
                     </p>
 
                     <p className="mt-1 text-sm sm:text-base text-gray-700">

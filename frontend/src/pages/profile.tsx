@@ -51,6 +51,8 @@ export default function ProfilePage() {
     city: "",
     state: "",
     pincode: "",
+    name: "",
+    phone: "",
     isDefault: false,
   });
   const [addressLoading, setAddressLoading] = useState(false);
@@ -258,6 +260,8 @@ export default function ProfilePage() {
           city: "",
           state: "",
           pincode: "",
+          name: "",
+          phone: "",
           isDefault: false,
         });
         setEditingAddressId(null);
@@ -830,6 +834,8 @@ export default function ProfilePage() {
                           city: "",
                           state: "",
                           pincode: "",
+                          name: "",
+                          phone: "",
                           isDefault: false,
                         });
                         setShowAddressModal(true);
@@ -860,6 +866,16 @@ export default function ProfilePage() {
                             <h4 className="font-semibold text-green-900">
                               {addr.label}
                             </h4>
+                            {addr.name && (
+                              <p className="text-sm text-gray-600 mt-1">
+                                👤 {addr.name}
+                              </p>
+                            )}
+                            {addr.phone && (
+                              <p className="text-sm text-gray-600">
+                                📱 {addr.phone}
+                              </p>
+                            )}
                             <p className="text-sm text-gray-600 mt-1">
                               {addr.address}
                             </p>
@@ -1021,6 +1037,8 @@ export default function ProfilePage() {
                           city: "",
                           state: "",
                           pincode: "",
+                          name: "",
+                          phone: "",
                           isDefault: false,
                         });
                         setShowAddressModal(true);
@@ -1051,6 +1069,12 @@ export default function ProfilePage() {
                             <div className="font-semibold text-green-900 mb-1">
                               {addr.label}
                             </div>
+                            {addr.name && (
+                              <p className="text-xs text-gray-600">👤 {addr.name}</p>
+                            )}
+                            {addr.phone && (
+                              <p className="text-xs text-gray-600">📱 {addr.phone}</p>
+                            )}
                             <p className="text-gray-600">{addr.address}</p>
                             <p className="text-gray-600">
                               {addr.city}, {addr.state} {addr.pincode}
@@ -1264,19 +1288,47 @@ export default function ProfilePage() {
                       </div>
                     )}
 
-                    <input
-                      type="text"
-                      placeholder="Label (e.g., Home, Office)"
-                      value={addressForm.label}
-                      onChange={(e) =>
-                        setAddressForm({
-                          ...addressForm,
-                          label: e.target.value,
-                        })
-                      }
-                      disabled={addressLoading}
-                      className="w-full p-2 sm:p-3 text-sm sm:text-base border rounded mb-3 text-white bg-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-700"
-                    />
+              <input
+                type="text"
+                placeholder="Label (e.g., Home, Office)"
+                value={addressForm.label}
+                onChange={(e) =>
+                  setAddressForm({
+                    ...addressForm,
+                    label: e.target.value,
+                  })
+                }
+                disabled={addressLoading}
+                className="w-full p-2 sm:p-3 text-sm sm:text-base border rounded mb-3 text-white bg-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-700"
+              />
+
+              <input
+                type="text"
+                placeholder="Name"
+                value={addressForm.name}
+                onChange={(e) =>
+                  setAddressForm({
+                    ...addressForm,
+                    name: e.target.value,
+                  })
+                }
+                disabled={addressLoading}
+                className="w-full p-2 sm:p-3 text-sm sm:text-base border rounded mb-3 text-white bg-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-700"
+              />
+
+              <input
+                type="text"
+                placeholder="Phone Number"
+                value={addressForm.phone}
+                onChange={(e) =>
+                  setAddressForm({
+                    ...addressForm,
+                    phone: e.target.value,
+                  })
+                }
+                disabled={addressLoading}
+                className="w-full p-2 sm:p-3 text-sm sm:text-base border rounded mb-3 text-white bg-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-700"
+              />
 
                     {/* Pincode Input with Current Location Button */}
                     <div className="mb-3">

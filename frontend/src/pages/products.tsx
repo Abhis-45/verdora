@@ -304,7 +304,32 @@ export default function ProductsPages() {
     sizeFilter,
     priceRangeFilter,
   ]);
+  // Infinite scroll with Intersection Observer
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !isLoadingMore && displayedCount < filteredProducts.length) {
+          setIsLoadingMore(true);
+          // Simulate network delay and then load more products
+          setTimeout(() => {
+            setDisplayedCount((prev) => Math.min(prev + LOAD_MORE_COUNT, filteredProducts.length));
+            setIsLoadingMore(false);
+          }, 300);
+        }
+      },
+      { threshold: 0.1 }
+    );
 
+    if (loadMoreRef.current) {
+      observer.observe(loadMoreRef.current);
+    }
+
+    return () => {
+      if (loadMoreRef.current) {
+        observer.unobserve(loadMoreRef.current);
+      }
+    };
+  }, [displayedCount, filteredProducts.length, isLoadingMore]);
   const clearFilters = () => {
     setCategoryFilter("All Categories");
     setTagFilter("All Tags");
@@ -486,6 +511,7 @@ export default function ProductsPages() {
                               src={product.image || ""}
                               alt={product.name}
                               fill
+                              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                               className="rounded-lg object-cover transition-transform duration-300 hover:scale-105"
                               loading="lazy"
                             />

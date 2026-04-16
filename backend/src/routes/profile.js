@@ -198,7 +198,7 @@ router.patch("/update-field", authMiddleware, async (req, res) => {
 
 // ✅ Add address
 router.post("/address", authMiddleware, async (req, res) => {
-  const { label, address, city, state, pincode, isDefault } = req.body;
+  const { label, address, city, state, pincode, name, phone, isDefault } = req.body;
 
   if (!address) return res.status(400).json({ message: "Address is required" });
 
@@ -219,6 +219,8 @@ router.post("/address", authMiddleware, async (req, res) => {
       city,
       state,
       pincode,
+      name: name || "",
+      phone: phone || "",
       isDefault: isDefault || false,
     });
     await user.save();
@@ -236,7 +238,7 @@ router.post("/address", authMiddleware, async (req, res) => {
 
 // ✅ Update address
 router.patch("/address/:addressId", authMiddleware, async (req, res) => {
-  const { label, address, city, state, pincode, isDefault } = req.body;
+  const { label, address, city, state, pincode, name, phone, isDefault } = req.body;
   const { addressId } = req.params;
 
   try {
@@ -251,6 +253,8 @@ router.patch("/address/:addressId", authMiddleware, async (req, res) => {
     if (city) addr.city = city;
     if (state) addr.state = state;
     if (pincode) addr.pincode = pincode;
+    if (name) addr.name = name;
+    if (phone) addr.phone = phone;
 
     if (isDefault) {
       user.addresses.forEach((a) => {
@@ -883,6 +887,8 @@ router.post("/orders", authMiddleware, async (req, res) => {
         city: String(destinationAddress.city || "").trim(),
         state: String(destinationAddress.state || "").trim(),
         pincode: String(destinationAddress.pincode || "").trim(),
+        name: String(destinationAddress.name || "").trim(),
+        phone: String(destinationAddress.phone || "").trim(),
         country: "India",
       },
       mobile: String(user.mobile || "").trim(),

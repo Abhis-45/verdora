@@ -81,6 +81,7 @@ export default function ServicesPreview() {
                       src={service.image || "/images/placeholder.jpg"}
                       alt={service.title}
                       fill
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 33vw"
                       className="object-cover transform transition-transform duration-700 ease-in-out group-hover:scale-110"
                     />
                     <div className="absolute inset-0 bg-black/40" />
@@ -110,6 +111,7 @@ export default function ServicesPreview() {
                   src={service.image || "/images/placeholder.jpg"}
                   alt={service.title}
                   fill
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 33vw"
                   className="object-cover transform transition-transform duration-700 ease-in-out group-hover:scale-110"
                 />
                 <div className="absolute inset-0 bg-black/40" />

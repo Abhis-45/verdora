@@ -10,6 +10,8 @@ export interface Address {
   city: string;
   state: string;
   pincode: string;
+  name?: string;
+  phone?: string;
   isDefault: boolean;
 }
 
@@ -58,6 +60,8 @@ export interface Addresses {
   city: string;
   state: string;
   pincode: string;
+  name?: string;
+  phone?: string;
 }
 
 export interface Order {

@@ -665,6 +665,12 @@ export default function OrdersPage() {
                         <div className="font-semibold text-blue-900">
                           {selectedOrder.address.label || "Address"}
                         </div>
+                        {selectedOrder.address.name && (
+                          <div>👤 {selectedOrder.address.name}</div>
+                        )}
+                        {selectedOrder.address.phone && (
+                          <div>📱 {selectedOrder.address.phone}</div>
+                        )}
                         <div>{selectedOrder.address.address || "N/A"}</div>
                         <div>
                           {selectedOrder.address.city || "N/A"},{" "}

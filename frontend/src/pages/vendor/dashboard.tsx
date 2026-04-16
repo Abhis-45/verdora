@@ -637,9 +637,6 @@ export default function VendorDashboard() {
                   <thead className="bg-emerald-100">
                     <tr>
                       <th className="px-6 py-3 text-left text-emerald-700 font-semibold">
-                        Image
-                      </th>
-                      <th className="px-6 py-3 text-left text-emerald-700 font-semibold">
                         Product
                       </th>
                       <th className="px-6 py-3 text-left text-emerald-700 font-semibold">
@@ -662,21 +659,6 @@ export default function VendorDashboard() {
                         key={product.id}
                         className="border-t border-emerald-100 hover:bg-emerald-50"
                       >
-                        <td className="px-6 py-3">
-                          <div className="h-12 w-12 rounded-lg overflow-hidden bg-gray-100">
-                            {product.image ? (
-                              <img
-                                src={product.image}
-                                alt={product.name}
-                                className="h-full w-full object-cover"
-                              />
-                            ) : (
-                              <div className="flex h-full w-full items-center justify-center text-xs text-gray-400">
-                                No image
-                              </div>
-                            )}
-                          </div>
-                        </td>
                         <td className="px-6 py-3">
                           <div className="flex flex-col gap-1">
                             <span>{product.name}</span>
@@ -765,28 +747,31 @@ export default function VendorDashboard() {
                       <p className="text-sm font-bold text-emerald-800">
                         Order #{order.id.slice(-6)}
                       </p>
-                      <div className="mt-2 rounded-lg bg-white p-3">
+                      <div className="mt-2 rounded-lg bg-white p-3 border border-gray-200">
+                        <p className="text-xs font-semibold text-gray-600 mb-2">
+                          👤 Customer Details
+                        </p>
                         <p className="text-sm font-semibold text-gray-900">
                           {order.customer}
                         </p>
                         <p className="mt-1 text-xs text-gray-600">
                           📧 {order.email || "N/A"}
                         </p>
-                        <p className="mt-1 text-xs text-gray-600">
+                        <p className="text-xs text-gray-600">
                           📞 {order.mobile || "N/A"}
                         </p>
                       </div>
                       <p className="mt-2 text-xs text-gray-500">
-                        {new Date(order.date).toLocaleDateString("en-IN", {
+                        📅 {new Date(order.date).toLocaleDateString("en-IN", {
                           day: "numeric",
                           month: "short",
                           year: "numeric",
                         })}
                       </p>
                     </div>
-                    <div className="text-left sm:text-right">
-                      <div className="rounded-lg bg-white p-3">
-                        <p className="text-xs font-semibold text-gray-600 mb-2">
+                    <div className="space-y-2">
+                      <div className="rounded-lg bg-blue-50 p-3 border border-blue-200">
+                        <p className="text-xs font-semibold text-blue-600 mb-2">
                           📍 Shipping Address
                         </p>
                         <p className="text-sm font-semibold text-gray-900">
@@ -796,15 +781,20 @@ export default function VendorDashboard() {
                           {order.address?.city || "N/A"}, {order.address?.state || "N/A"}
                         </p>
                         <p className="text-xs text-gray-600">
-                          {order.address?.pincode || "N/A"}
+                          Pin: {order.address?.pincode || "N/A"}
                         </p>
                       </div>
-                      <p className="mt-2 text-sm font-semibold text-gray-900">
-                        {order.itemsCount} item{order.itemsCount !== 1 ? "s" : ""}
-                      </p>
-                      <p className="text-sm text-emerald-700 font-bold">
-                        Total: Rs. {Number(order.vendorSubtotal || 0).toFixed(2)}
-                      </p>
+                      <div className="rounded-lg bg-green-50 p-3 border border-green-200">
+                        <p className="text-xs font-semibold text-green-600 mb-1">
+                          📦 Order Summary
+                        </p>
+                        <p className="text-sm font-semibold text-gray-900">
+                          {order.itemsCount} item{order.itemsCount !== 1 ? "s" : ""}
+                        </p>
+                        <p className="mt-1 text-lg font-bold text-emerald-700">
+                          Rs. {Number(order.vendorSubtotal || 0).toFixed(2)}
+                        </p>
+                      </div>
                     </div>
                   </div>
 
@@ -815,8 +805,8 @@ export default function VendorDashboard() {
                         className="rounded-xl bg-emerald-50/60 p-3"
                       >
                         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                          <div className="flex gap-3">
-                            <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-white">
+                      <div className="flex gap-3">
+                            <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-white border border-gray-200">
                               {item.image ? (
                                 <img
                                   src={item.image}
@@ -829,56 +819,64 @@ export default function VendorDashboard() {
                                 </div>
                               )}
                             </div>
-                            <div>
-                              <p className="font-semibold text-gray-900">
+                            <div className="flex-1">
+                              <p className="font-bold text-gray-900">
                                 {item.title}
                               </p>
-                              <p className="mt-1 text-sm font-semibold text-gray-600">
-                                Qty: {item.quantity}
-                              </p>
-                              <p className="mt-1 text-sm text-gray-600">
-                                Price: Rs. {Number(item.price || 0).toFixed(2)}
-                              </p>
-                              <p className="mt-1 text-sm font-bold text-emerald-700">
-                                Subtotal: Rs. {(Number(item.price || 0) * Number(item.quantity || 0)).toFixed(2)}
-                              </p>
                               {item.selectedSize?.label && (
-                                <p className="mt-1 text-xs text-gray-500">
+                                <p className="text-xs text-gray-500 mt-1">
                                   Size: {item.selectedSize.label}
                                 </p>
                               )}
+                              <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                                <div className="bg-amber-50 p-2 rounded border border-amber-200">
+                                  <p className="text-gray-600">Quantity</p>
+                                  <p className="font-bold text-amber-700">{item.quantity}</p>
+                                </div>
+                                <div className="bg-blue-50 p-2 rounded border border-blue-200">
+                                  <p className="text-gray-600">Unit Price</p>
+                                  <p className="font-bold text-blue-700">Rs. {Number(item.price || 0).toFixed(2)}</p>
+                                </div>
+                                <div className="bg-green-50 p-2 rounded border border-green-200 col-span-2">
+                                  <p className="text-gray-600">Amount</p>
+                                  <p className="font-bold text-green-700">Rs. {(Number(item.price || 0) * Number(item.quantity || 0)).toFixed(2)}</p>
+                                </div>
+                              </div>
                               {item.statusReason && (
-                                <p className="mt-1 text-xs text-gray-500">
+                                <p className="mt-2 text-xs text-red-600 bg-red-50 p-2 rounded">
                                   {item.statusReason}
                                 </p>
                               )}
                               {item.trackingId && (
-                                <p className="mt-1 text-xs text-blue-600 font-semibold">
-                                  Tracking ID: {item.trackingId}
+                                <p className="mt-1 text-xs text-blue-600 font-semibold bg-blue-50 p-2 rounded">
+                                  📦 Tracking: {item.trackingId}
                                 </p>
                               )}
                               {item.deliveryOTP && item.status === "delivered" && (
-                                <p className="mt-1 text-xs text-green-600 font-semibold">
-                                  Delivery OTP: {item.deliveryOTP}
+                                <p className="mt-1 text-xs text-green-600 font-semibold bg-green-50 p-2 rounded">
+                                  ✅ OTP: {item.deliveryOTP}
                                 </p>
                               )}
                               {item.returnRequestImages &&
                                 item.returnRequestImages.length > 0 && (
-                                  <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                                    {item.returnRequestImages.map(
-                                      (image, index) => (
-                                        <div
-                                          key={`${item.itemId}-${index}`}
-                                          className="overflow-hidden rounded-lg border border-emerald-100 bg-white"
-                                        >
-                                          <img
-                                            src={image.url}
-                                            alt={`Support proof ${index + 1}`}
-                                            className="h-16 w-full object-cover"
-                                          />
-                                        </div>
-                                      ),
-                                    )}
+                                  <div className="mt-2">
+                                    <p className="text-xs font-semibold text-gray-700 mb-2">Return Images:</p>
+                                    <div className="grid grid-cols-4 gap-2">
+                                      {item.returnRequestImages.map(
+                                        (image, index) => (
+                                          <div
+                                            key={`${item.itemId}-${index}`}
+                                            className="overflow-hidden rounded-lg border border-emerald-100 bg-white"
+                                          >
+                                            <img
+                                              src={image.url}
+                                              alt={`Support proof ${index + 1}`}
+                                              className="h-16 w-full object-cover"
+                                            />
+                                          </div>
+                                        ),
+                                      )}
+                                    </div>
                                   </div>
                                 )}
                             </div>
