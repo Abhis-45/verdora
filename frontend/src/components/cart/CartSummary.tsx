@@ -13,6 +13,8 @@ export default function CartSummary({
   finalAmount,
   estimatedDeliveryText,
   onCheckout,
+  appliedCouponInfo,
+  userUsageInfo,
 }: {
   cartItems: CartItem[];
   coupon: string;
@@ -24,6 +26,18 @@ export default function CartSummary({
   finalAmount: number;
   estimatedDeliveryText?: string | null;
   onCheckout?: () => void;
+  appliedCouponInfo?: {
+    code: string;
+    discount: number;
+    fixedDiscount: number;
+    percentageDiscount: number;
+    maxDiscountAmount: number;
+  } | null;
+  userUsageInfo?: {
+    usedCount: number;
+    remainingUses: number;
+    maxUsagePerUser: number;
+  } | null;
 }) {
   const productTotal = cartItems.reduce(
     (sum, item) => sum + item.price * item.quantity,
@@ -57,6 +71,34 @@ export default function CartSummary({
 
       {feedback && (
         <p className="mt-2 text-xs text-green-700 sm:text-sm">{feedback}</p>
+      )}
+
+      {/* Applied Coupon Info */}
+      {appliedCouponInfo && (
+        <div className="mb-4 p-3 rounded-lg bg-green-100 border-2 border-green-500">
+          <p className="text-xs font-semibold text-green-800">
+            ✓ Coupon Applied: {appliedCouponInfo.code}
+          </p>
+          <p className="text-sm font-bold text-green-700 mt-1">
+            Discount: ₹{appliedCouponInfo.discount.toFixed(2)}
+          </p>
+          {appliedCouponInfo.percentageDiscount > 0 && (
+            <p className="text-xs text-green-700">
+              {appliedCouponInfo.percentageDiscount}% off
+              {appliedCouponInfo.maxDiscountAmount > 0 && (
+                <span> (Max ₹{appliedCouponInfo.maxDiscountAmount})</span>
+              )}
+            </p>
+          )}
+          {userUsageInfo && userUsageInfo.maxUsagePerUser > 1 && (
+            <p className="text-xs text-green-700 mt-1">
+              📊 Used {userUsageInfo.usedCount} of {userUsageInfo.maxUsagePerUser} times
+              {userUsageInfo.remainingUses > 0 && (
+                <span> • {userUsageInfo.remainingUses} remaining</span>
+              )}
+            </p>
+          )}
+        </div>
       )}
 
       <div className="space-y-2 text-sm text-gray-700 sm:space-y-3 sm:text-base">

@@ -12,9 +12,11 @@ import {
   StarIcon,
   PaintBrushIcon,
   Bars3Icon,
+  XMarkIcon,
 } from "@heroicons/react/24/solid";
 import servicesData from "../../data/services.json";
 import { getFromBackend } from "../../lib/fetchWrapper";
+import Spinner from "../shared/Spinner";
 
 interface Category {
   name: string;
@@ -23,11 +25,21 @@ interface Category {
   color: string;
 }
 
+interface Package {
+  id: string;
+  name: string;
+  desc: string;
+  price: number;
+}
+
 interface Service {
   slug: string;
   title: string;
-  icon: React.ReactNode;
+  icon?: React.ReactNode;
   desc: string;
+  details?: string;
+  packages?: Package[];
+  image?: string;
 }
 
 interface Props {
@@ -43,6 +55,21 @@ export default function CategoryDropdown({
   const [categories, setCategories] = useState<Category[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [selectedPackage, setSelectedPackage] = useState<Package | null>(null);
+  const [bookingData, setBookingData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    selectedDate: "",
+    selectedTime: "",
+    message: "",
+  });
+  const [bookingSubmitting, setBookingSubmitting] = useState(false);
+  const [bookingMessage, setBookingMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
 
   // Use controlled state if provided, otherwise use internal state
   const isOpen =
@@ -58,6 +85,118 @@ export default function CategoryDropdown({
     } else {
       // Uncontrolled mode (desktop): set internal state
       setInternalOpen(false);
+    }
+  };
+
+  const handleBookPackage = (pkg: Package) => {
+    setSelectedPackage(pkg);
+    setBookingData({
+      name: "",
+      email: "",
+      phone: "",
+      selectedDate: "",
+      selectedTime: "",
+      message: "",
+    });
+    setBookingMessage(null);
+  };
+
+  const handleBookingChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = e.target;
+    setBookingData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleSubmitBooking = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedService || !selectedPackage) return;
+
+    if (
+      !bookingData.name ||
+      !bookingData.email ||
+      !bookingData.phone ||
+      !bookingData.selectedDate ||
+      !bookingData.selectedTime
+    ) {
+      setBookingMessage({
+        type: "error",
+        text: "Please fill in all required fields",
+      });
+      return;
+    }
+
+    setBookingSubmitting(true);
+    try {
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+
+      const payload = {
+        serviceSlug: selectedService.slug,
+        packageId: selectedPackage.id,
+        packageName: selectedPackage.name,
+        price: selectedPackage.price,
+        selectedDate: bookingData.selectedDate,
+        selectedTime: bookingData.selectedTime,
+        name: bookingData.name,
+        email: bookingData.email,
+        phone: bookingData.phone,
+        message: bookingData.message,
+      };
+
+      const response = await fetch(`${BACKEND_URL}/api/profile/bookService`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(typeof window !== "undefined" &&
+          localStorage.getItem("token")
+            ? {
+                Authorization: `Bearer ${localStorage.getItem("token")}`,
+              }
+            : {}),
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to book service");
+      }
+
+      setBookingMessage({
+        type: "success",
+        text: data.message || "Service booked successfully! We'll contact you soon.",
+      });
+
+      setTimeout(() => {
+        setSelectedService(null);
+        setSelectedPackage(null);
+        setBookingData({
+          name: "",
+          email: "",
+          phone: "",
+          selectedDate: "",
+          selectedTime: "",
+          message: "",
+        });
+        setBookingMessage(null);
+      }, 2000);
+    } catch (error) {
+      setBookingMessage({
+        type: "error",
+        text:
+          error instanceof Error
+            ? error.message
+            : "Failed to book service. Please try again.",
+      });
+    } finally {
+      setBookingSubmitting(false);
     }
   };
 
@@ -124,11 +263,14 @@ export default function CategoryDropdown({
         throw new Error("Failed to fetch products");
       }
 
-      // Load services from JSON
+      // Load services from JSON with full details
       const servicesList: Service[] = servicesData.map((service: any) => ({
         slug: service.slug,
         title: service.title,
         desc: service.desc,
+        details: service.details,
+        packages: service.packages,
+        image: service.image,
         icon: serviceIconMap[service.slug] || (
           <SparklesIcon className="w-5 h-5" />
         ),
@@ -215,11 +357,10 @@ export default function CategoryDropdown({
                   </h3>
                   <div className="space-y-2">
                     {services.map((service) => (
-                      <Link
+                      <button
                         key={service.slug}
-                        href={`/services#${service.slug}`}
-                        onClick={() => closeDropdown()}
-                        className="p-3 rounded-lg hover:bg-blue-50 transition group block"
+                        onClick={() => setSelectedService(service)}
+                        className="w-full text-left p-3 rounded-lg hover:bg-blue-50 transition group block"
                       >
                         <div className="flex items-start gap-3">
                           <div className="text-blue-600 mt-0.5">
@@ -234,12 +375,220 @@ export default function CategoryDropdown({
                             </p>
                           </div>
                         </div>
-                      </Link>
+                      </button>
                     ))}
                   </div>
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Service Details Modal */}
+      {selectedService && !selectedPackage && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg max-w-lg w-full p-6 relative max-h-[80vh] overflow-y-auto">
+            <button
+              onClick={() => setSelectedService(null)}
+              className="absolute top-3 right-3 text-gray-500 hover:text-red-600"
+            >
+              <XMarkIcon className="h-5 w-5" />
+            </button>
+
+            <h2 className="text-xl font-bold text-green-700 mb-2">
+              {selectedService.title}
+            </h2>
+            <p className="text-sm text-gray-600 mb-4">
+              {selectedService.details || selectedService.desc}
+            </p>
+
+            <h3 className="text-md font-semibold text-green-600 mb-3">
+              Available Packages
+            </h3>
+            <div className="space-y-3">
+              {selectedService.packages && selectedService.packages.length > 0 ? (
+                selectedService.packages.map((pkg) => (
+                  <div
+                    key={pkg.id}
+                    className="border rounded-md p-3 shadow-sm hover:shadow-md transition"
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <h4 className="text-sm font-bold text-gray-900">
+                          {pkg.name}
+                        </h4>
+                        <p className="text-xs text-gray-600">{pkg.desc}</p>
+                      </div>
+                      <span className="text-sm font-bold text-green-600">
+                        ₹{pkg.price}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => handleBookPackage(pkg)}
+                      className="w-full mt-2 bg-green-600 hover:bg-green-700 text-white py-2 text-xs font-semibold rounded transition"
+                    >
+                      Book Now
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-gray-600">No packages available</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Booking Form Modal */}
+      {selectedPackage && selectedService && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6 relative max-h-[80vh] overflow-y-auto">
+            <button
+              onClick={() => {
+                setSelectedPackage(null);
+                setBookingMessage(null);
+              }}
+              className="absolute top-3 right-3 text-gray-500 hover:text-red-600"
+            >
+              <XMarkIcon className="h-5 w-5" />
+            </button>
+
+            <h2 className="text-lg font-bold text-green-700 mb-1">
+              Book {selectedService.title}
+            </h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Package: <span className="font-semibold">{selectedPackage.name}</span> - ₹
+              {selectedPackage.price}
+            </p>
+
+            {bookingMessage && (
+              <div
+                className={`p-3 rounded-md mb-4 text-sm font-semibold ${
+                  bookingMessage.type === "success"
+                    ? "bg-green-100 text-green-700"
+                    : "bg-red-100 text-red-700"
+                }`}
+              >
+                {bookingMessage.text}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmitBooking} className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Full Name *
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  value={bookingData.name}
+                  onChange={handleBookingChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  placeholder="Your name"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Email *
+                </label>
+                <input
+                  type="email"
+                  name="email"
+                  value={bookingData.email}
+                  onChange={handleBookingChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  placeholder="your@email.com"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Phone *
+                </label>
+                <input
+                  type="tel"
+                  name="phone"
+                  value={bookingData.phone}
+                  onChange={handleBookingChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  placeholder="10-digit phone number"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Preferred Date *
+                </label>
+                <input
+                  type="date"
+                  name="selectedDate"
+                  value={bookingData.selectedDate}
+                  onChange={handleBookingChange}
+                  min={new Date().toISOString().split("T")[0]}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Preferred Time *
+                </label>
+                <select
+                  name="selectedTime"
+                  value={bookingData.selectedTime}
+                  onChange={handleBookingChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  required
+                >
+                  <option value="">Select time</option>
+                  <option value="9:00 AM">9:00 AM</option>
+                  <option value="10:00 AM">10:00 AM</option>
+                  <option value="11:00 AM">11:00 AM</option>
+                  <option value="12:00 PM">12:00 PM</option>
+                  <option value="1:00 PM">1:00 PM</option>
+                  <option value="2:00 PM">2:00 PM</option>
+                  <option value="3:00 PM">3:00 PM</option>
+                  <option value="4:00 PM">4:00 PM</option>
+                  <option value="5:00 PM">5:00 PM</option>
+                  <option value="6:00 PM">6:00 PM</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Additional Message (Optional)
+                </label>
+                <textarea
+                  name="message"
+                  value={bookingData.message}
+                  onChange={handleBookingChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  placeholder="Any special requests or notes..."
+                  rows={3}
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={bookingSubmitting}
+                className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white py-2 font-semibold rounded-md transition flex items-center justify-center gap-2"
+              >
+                {bookingSubmitting ? (
+                  <>
+                    <Spinner />
+                    Booking...
+                  </>
+                ) : (
+                  "Confirm Booking"
+                )}
+              </button>
+            </form>
           </div>
         </div>
       )}

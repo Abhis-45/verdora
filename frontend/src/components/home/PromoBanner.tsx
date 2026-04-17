@@ -26,12 +26,8 @@ export default function PromoBanner({
           loading="lazy"
           className="absolute inset-0 w-full h-full object-cover"
         />
-
-        {/* Gradient Overlay */}
-        <div className="absolute inset-0 bg-linear-to-r from-green-200 via-green-100 to-green-50 opacity-70" />
-
         {/* Content */}
-        <div className="relative z-10 flex flex-col items-start justify-center h-full p-6 text-green-900">
+        <div className="relative z-10 flex flex-col items-start justify-center h-full p-6 text-white">
           <h3 className="ml-10 text-xl font-bold">{title}</h3>
           <p className="mt-2 ml-10 text-sm max-w-xs">{desc}</p>
         </div>

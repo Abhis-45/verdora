@@ -6,6 +6,7 @@ import {
   sendVendorRegistrationSubmittedEmail,
   sendSubscriptionEmail,
   sendContactEmail,
+  sendAdminContactNotificationEmail,
 } from "../services/emailService.js";
 import {
   sendVendorRegistrationReceivedSMS,
@@ -66,6 +67,21 @@ router.post("/contact", async (req, res) => {
     } catch (emailErr) {
       console.error("Email sending error:", emailErr.message);
       // Don't fail if email fails to send
+    }
+
+    // ✅ Send admin notification email
+    try {
+      const adminEmail = process.env.ADMIN_EMAIL || "admin@verdora.com";
+      await sendAdminContactNotificationEmail(adminEmail, {
+        name,
+        email,
+        message,
+      }).catch((err) => {
+        console.error("❌ Admin notification email failed:", err.message);
+      });
+    } catch (adminEmailErr) {
+      console.error("Admin email sending error:", adminEmailErr.message);
+      // Don't fail the request if admin email fails
     }
 
     res.json({ message: "Message received. We'll get back to you soon." });

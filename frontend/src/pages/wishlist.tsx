@@ -5,18 +5,15 @@ import Layout from "../components/common/layout";
 import Head from "next/head";
 import Toast from "../components/shared/Toast";
 import { useWishlist } from "../context/WishlistContext";
-import { useCart } from "../context/CartContext";
-import { HeartIcon, ShoppingCartIcon } from "@heroicons/react/24/solid";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 import Link from "next/link";
 import { ProductItem } from "@/types/ProductItem";
-import ProductMeta from "../components/product/ProductMeta";
 import { useRouter } from "next/router";
+import ProductCard from "../components/home/ProductCard";
 
 export default function WishlistPage() {
   const router = useRouter();
-  const { wishlist, removeFromWishlist } = useWishlist();
-  const { addToCart } = useCart();
+  const { wishlist } = useWishlist();
   const [toast, setToast] = useState<{
     message: string;
     type: "success" | "error" | "info";
@@ -28,21 +25,24 @@ export default function WishlistPage() {
         <title>Wishlist | Verdora</title>
       </Head>
       <Layout>
-        <main className="max-w-6xl mx-auto px-3 sm:px-4 py-6 sm:py-8">
-          {/* Back Button */}
+        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
           <button
             onClick={() => router.back()}
-            className="flex items-center gap-2 text-green-600 hover:text-green-700 font-semibold mb-4 transition"
+            className="mb-6 flex items-center gap-2 font-semibold text-green-600 transition hover:text-green-700"
             aria-label="Go back"
           >
-            <ArrowLeftIcon className="h-4 w-4" />
-            <span className="hidden sm:inline text-sm">Back</span>
+            <ArrowLeftIcon className="h-5 w-5" />
+            <span className="hidden sm:inline">Back</span>
           </button>
 
-          {/* Title */}
-          <h1 className="text-2xl sm:text-3xl font-extrabold mb-6 text-center text-green-900 tracking-tight">
-            ♡ Wishlist
-          </h1>
+          <div className="mb-8 rounded-3xl bg-linear-to-r from-green-200 to-emerald-400 p-6 text-left sm:mb-10 sm:p-8 sm:text-center lg:mb-12 lg:p-10">
+            <h1 className="text-3xl font-bold text-gray-900 sm:text-4xl">
+              ♡ Your Wishlist
+            </h1>
+            <p className="mt-3 text-sm text-gray-700 sm:mt-4 sm:text-base">
+              Items you love and want to keep for later.
+            </p>
+          </div>
 
           {wishlist.length === 0 ? (
             <div className="text-center mt-8">
@@ -60,111 +60,45 @@ export default function WishlistPage() {
               </Link>
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 mt-6">
-              {wishlist.map((product: ProductItem) => (
-                <div
-                  key={product.id}
-                  className="relative rounded-md shadow-md p-2 sm:p-3 hover:shadow-lg transition flex flex-col"
-                >
-                  {/* Product Image */}
-                  <div className="relative w-full h-32 sm:h-36 rounded-md mb-3 overflow-hidden cursor-pointer">
-                    <Link href={`/productpage/${product.id}`}>
-                      <img
-                        src={product.image}
-                        alt={product.name}
-                        className="w-full h-full object-cover rounded-md hover:scale-105 transition-transform"
-                        loading="lazy"
-                      />
-                      {product.mrp && (
-                        <div className="absolute top-2 left-2">
-                          <span className="bg-red-100 text-red-600 text-[9px] sm:text-[10px] font-semibold px-1.5 py-0.5 rounded">
-                            {Math.round(
-                              ((product.mrp - product.price) / product.mrp) *
-                                100,
-                            )}
-                            % OFF
-                          </span>
-                        </div>
-                      )}
-                    </Link>
-                    {/* Heart Icon */}
-                    <div className="absolute top-2 right-2 group">
-                      <button
-                        onClick={() => {
-                          removeFromWishlist(product.id);
-                          setToast({
-                            message: `Removed from wishlist`,
-                            type: "info",
-                          });
-                        }}
-                        className="text-green-600 hover:text-red-600 transition"
-                        aria-label="Remove from Wishlist"
-                      >
-                        <HeartIcon className="h-5 w-5" />
-                      </button>
-                      <span className="absolute mt-4 right-0 text-[10px] text-gray-100 bg-black/60 rounded px-1.5 py-0.5 opacity-0 group-hover:opacity-100 transition">
-                        Remove
-                      </span>
-                    </div>
-                  </div>
+            <>
+              <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-5 md:grid-cols-3 lg:grid-cols-4">
+                {wishlist.map((product: ProductItem) => {
+                  const productId = String(product.id);
+                  const defaultPrice = product.price;
+                  const defaultMrp = product.mrp;
+                  const discountPercentage = defaultMrp && defaultMrp > defaultPrice 
+                    ? Math.round(((defaultMrp - defaultPrice) / defaultMrp) * 100)
+                    : null;
 
-                  {/* Info */}
-                  <div className="grow">
-                    <div className="flex items-center justify-between">
-                      <h2 className="text-xs sm:text-sm font-semibold text-green-600 truncate">
-                        {product.name}
-                      </h2>
-                      <ProductMeta productId={product.id} />
-                    </div>
-                    {product.category && (
-                      <p className="text-[11px] sm:text-xs text-gray-600">
-                        {product.category}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Price + Cart Button */}
-                  <div className="mt-3 flex flex-col gap-2">
-                    <div className="flex items-center gap-2">
-                      <p className="font-bold text-green-600 text-xs sm:text-sm">
-                        ₹{product.price}
-                      </p>
-                      {product.mrp && (
-                        <p className="text-[11px] sm:text-xs text-gray-500 line-through">
-                          ₹{product.mrp}
-                        </p>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => {
-                        addToCart(product);
-                        removeFromWishlist(product.id);
-                        setToast({
-                          message: `${product.name} moved to cart`,
-                          type: "success",
-                        });
-                        router.push("/cart");
-                      }}
-                      className="w-full flex items-center justify-center gap-1 px-2 sm:px-3 py-1.5 text-[11px] sm:text-xs bg-green-600 text-white rounded-md hover:bg-green-500 transition"
-                      aria-label="Move to Cart"
-                    >
-                      <ShoppingCartIcon className="h-4 w-4 shrink-0" />
-                      <span className="hidden sm:inline">Move to Cart</span>
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
+                  return (
+                    <ProductCard
+                      key={productId}
+                      id={productId}
+                      name={product.name}
+                      price={defaultPrice}
+                      mrp={defaultMrp}
+                      image={product.image || ""}
+                      category={product.category}
+                      tags={product.tags || []}
+                      plantSizes={product.plantSizes}
+                      quantity={1}
+                      discountBadge={discountPercentage ? `${discountPercentage}% OFF` : undefined}
+                    />
+                  );
+                })}
+              </div>
+            </>
           )}
-        </main>
-        {toast && (
-          <Toast
-            message={toast.message}
-            type={toast.type}
-            onClose={() => setToast(null)}
-          />
-        )}
+        </div>
       </Layout>
+
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </>
   );
 }

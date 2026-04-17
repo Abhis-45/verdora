@@ -12,6 +12,8 @@ import reviewsRoutes from "./routes/reviews.js";
 import contactRoutes from "./routes/contact.js";
 import vendorRoutes from "./routes/vendor.js";
 import pincodeRoutes from "./routes/pincode.js";
+import couponRoutes from "./routes/coupons.js";
+import couponUserRoutes from "./routes/coupon-user.js";
 import { connectToMongo } from "./utils/connectToMongo.js";
 import { verifyEmailTransporter } from "./services/emailService.js";
 
@@ -58,6 +60,8 @@ app.use("/api/products", productsRoutes);
 app.use("/api/reviews", reviewsRoutes);
 app.use("/api/contact", contactRoutes);
 app.use("/api/pincode", pincodeRoutes);
+app.use("/api/coupons", couponRoutes);
+app.use("/api/coupon-user", couponUserRoutes);
 
 // Health check
 app.get("/api/health", (req, res) => {

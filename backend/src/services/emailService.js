@@ -77,25 +77,123 @@ export const sendOtpEmail = async (email, otp) => {
   });
 };
 
-// ✅ Send subscription confirmation email
+// ✅ Send subscription confirmation email with better formatting
 export const sendSubscriptionEmail = async (email) => {
   return sendEmailWithRetry({
     from: process.env.EMAIL_USER,
     to: email,
-    subject: "Welcome to Verdora Newsletter!",
+    subject: "🌿 Welcome to Verdora Newsletter - Exclusive Garden Tips Await!",
     html: `
-      <h2>Welcome to Verdora! 🌿</h2>
-      <p>Thank you for subscribing to our newsletter.</p>
-      <p>You will now receive:</p>
-      <ul>
-        <li>Exclusive gardening tips & tricks</li>
-        <li>New plant arrivals & product launches</li>
-        <li>Special discounts & offers</li>
-        <li>Care guides for your plants</li>
-      </ul>
-      <p>Happy gardening!</p>
-      <hr>
-      <p style="color: #888; font-size: 12px;">© 2026 Verdora. All rights reserved.</p>
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #22c55e; text-align: center;">Welcome to Verdora! 🌿</h2>
+        <p style="color: #475569; font-size: 16px;">Hi there,</p>
+        <p style="color: #475569;">Thank you for subscribing to the Verdora Newsletter! You're now part of our gardening community.</p>
+        
+        <div style="background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%); border-left: 4px solid #22c55e; padding: 20px; margin: 20px 0; border-radius: 6px;">
+          <h3 style="color: #166534; margin-top: 0; font-size: 18px;">📬 What You'll Receive:</h3>
+          <ul style="color: #334155; line-height: 2; list-style: none; padding-left: 0; margin: 0;">
+            <li style="padding: 8px 0;">✨ <strong>Exclusive Gardening Tips & Tricks</strong> from expert gardeners</li>
+            <li style="padding: 8px 0;">🌱 <strong>New Plant Arrivals</strong> and product launches</li>
+            <li style="padding: 8px 0;">💚 <strong>Special Discounts & Offers</strong> for subscribers only</li>
+            <li style="padding: 8px 0;">📖 <strong>Care Guides & Seasonal Advice</strong> for your plants</li>
+            <li style="padding: 8px 0;">🎁 <strong>Exclusive Contests</strong> and rewards program</li>
+          </ul>
+        </div>
+
+        <div style="background: #fffbeb; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 6px;">
+          <p style="margin: 0; color: #92400e;">
+            <strong>💡 Tip:</strong> Add support@verdora.com to your contacts to ensure our emails reach your inbox!
+          </p>
+        </div>
+
+        <p style="color: #475569; text-align: center; margin-top: 30px;">
+          Discover amazing plants, get expert advice, and grow your green space with Verdora.
+        </p>
+
+        <div style="text-align: center; margin: 25px 0;">
+          <a href="https://verdora.com" style="display: inline-block; background: linear-gradient(135deg, #22c55e, #16a34a); color: white; padding: 12px 30px; text-decoration: none; border-radius: 25px; font-weight: bold;">
+            🌿 Explore Verdora
+          </a>
+        </div>
+
+        <p style="color: #64748b; margin-top: 20px; font-size: 14px;">
+          <strong>Questions?</strong> Reach out to us at <strong>support@verdora.com</strong> – we're here to help!
+        </p>
+
+        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
+        <p style="color: #888; font-size: 11px; text-align: center;">
+          © 2026 Verdora. All rights reserved. | Growing Green, Growing Together 🌱
+        </p>
+      </div>
+    `,
+  });
+};
+
+// ✅ Send admin notification for new contact form submission
+export const sendAdminContactNotificationEmail = async (
+  adminEmail,
+  contactDetails
+) => {
+  const { name, email, phone, message, service, servicePackage } = contactDetails;
+  
+  return sendEmailWithRetry({
+    from: process.env.EMAIL_USER,
+    to: adminEmail,
+    subject: `📧 New Contact Form Submission${service ? ` - ${service}` : ''}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #22c55e;">📬 New Contact Form Submission</h2>
+        <p style="color: #475569;">You have received a new message through the Verdora contact form.</p>
+        
+        <div style="background: #f8fafc; border-left: 4px solid #22c55e; padding: 15px; margin: 20px 0; border-radius: 6px;">
+          <h3 style="color: #166534; margin-top: 0;">Contact Details:</h3>
+          <table style="width: 100%; color: #475569; line-height: 1.8;">
+            <tr>
+              <td style="font-weight: bold; width: 30%; padding: 5px 0;">Name:</td>
+              <td style="padding: 5px 0;">${name}</td>
+            </tr>
+            <tr style="background: #f0fdf4;">
+              <td style="font-weight: bold; padding: 5px 0;">Email:</td>
+              <td style="padding: 5px 0;"><a href="mailto:${email}" style="color: #22c55e; text-decoration: none;">${email}</a></td>
+            </tr>
+            <tr>
+              <td style="font-weight: bold; padding: 5px 0;">Phone:</td>
+              <td style="padding: 5px 0;"><a href="tel:${phone}" style="color: #22c55e; text-decoration: none;">${phone}</a></td>
+            </tr>
+            ${service ? `
+            <tr style="background: #f0fdf4;">
+              <td style="font-weight: bold; padding: 5px 0;">Service:</td>
+              <td style="padding: 5px 0;">${service}</td>
+            </tr>
+            <tr>
+              <td style="font-weight: bold; padding: 5px 0;">Package:</td>
+              <td style="padding: 5px 0;">${servicePackage || 'N/A'}</td>
+            </tr>
+            ` : ''}
+          </table>
+        </div>
+
+        <div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 15px; margin: 20px 0; border-radius: 6px;">
+          <h3 style="color: #1e40af; margin-top: 0;">Message:</h3>
+          <p style="color: #1e40af; white-space: pre-wrap; font-family: monospace; background: white; padding: 10px; border-radius: 4px; margin: 0;">${message}</p>
+        </div>
+
+        <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 6px;">
+          <p style="margin: 5px 0;"><strong>⏰ Received:</strong> ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</p>
+          <p style="margin: 5px 0;"><strong>📧 Reply To:</strong> <a href="mailto:${email}" style="color: #92400e; text-decoration: none;">${email}</a></p>
+        </div>
+
+        <div style="text-align: center; margin: 25px 0;">
+          <a href="${process.env.ADMIN_DASHBOARD_URL || 'https://verdora.com/admin'}" style="display: inline-block; background: #22c55e; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: bold;">
+            📊 View in Admin Dashboard
+          </a>
+        </div>
+
+        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
+        <p style="color: #888; font-size: 11px; text-align: center;">
+          © 2026 Verdora Admin System
+        </p>
+      </div>
     `,
   });
 };

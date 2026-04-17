@@ -2,33 +2,15 @@
 
 import Layout from "../components/common/layout";
 import Head from "next/head";
-import Image from "next/image";
 import Toast from "../components/shared/Toast";
 import ErrorFallback from "../components/shared/ErrorFallback";
-import ProductRating from "../components/product/ProductRating";
-import { useCart } from "../context/CartContext";
-import { useWishlist } from "../context/WishlistContext";
-import { useDeliveryLocation } from "@/context/DeliveryLocationContext";
+import ProductCard from "../components/home/ProductCard";
 import { useEffect, useMemo, useState, useRef } from "react";
 import { useRouter } from "next/router";
-import Link from "next/link";
-import { HeartIcon as HeartSolid } from "@heroicons/react/24/solid";
 import {
   ArrowLeftIcon,
-  BoltIcon,
-  HeartIcon as HeartOutline,
-  ShoppingCartIcon,
 } from "@heroicons/react/24/outline";
 import ProductSkeleton from "../components/product/ProductSkeleton";
-import {
-  calculateDeliveryEstimate,
-  formatDeliveryDate,
-} from "@/utils/delivery";
-import {
-  buildCartKey,
-  getDefaultPlantSize,
-  normalizePlantSizes,
-} from "@/utils/productOptions";
 
 type PlantSize = {
   id: string;
@@ -73,9 +55,6 @@ export default function ProductsPages() {
     type: "success" | "error" | "info";
   } | null>(null);
 
-  const { addToCart, cartItems } = useCart();
-  const { wishlist, addToWishlist, removeFromWishlist } = useWishlist();
-  const { deliveryLocation } = useDeliveryLocation();
   const router = useRouter();
   const {
     category,
@@ -477,206 +456,27 @@ export default function ProductsPages() {
                 <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-5 md:grid-cols-3 lg:grid-cols-4">
                   {filteredProducts.slice(0, displayedCount).map((product) => {
                     const productId = String(product._id || product.id);
-                    const plantSizes = normalizePlantSizes(
-                      product.plantSizes,
-                      product.price,
-                      product.mrp,
-                    );
-                    const defaultSize = getDefaultPlantSize(
-                      plantSizes,
-                      product.price,
-                      product.mrp,
-                    );
-                    const cartKey = buildCartKey(
-                      productId,
-                      defaultSize.id,
-                      defaultSize.label,
-                    );
-                    const cartItem = cartItems.find(
-                      (item) => (item.cartKey || String(item.id)) === cartKey,
-                    );
-                    const estimate = calculateDeliveryEstimate({
-                      origin: product.originAddress,
-                      destination: deliveryLocation,
-                    });
+                    const defaultPrice = product.price;
+                    const defaultMrp = product.mrp;
+                    const discountPercentage = defaultMrp > defaultPrice 
+                      ? Math.round(((defaultMrp - defaultPrice) / defaultMrp) * 100)
+                      : null;
 
                     return (
-                      <div
+                      <ProductCard
                         key={productId}
-                        className="flex flex-col rounded-2xl border border-gray-100 bg-white p-3 shadow-md transition hover:-translate-y-1 hover:shadow-lg sm:p-4"
-                      >
-                        <Link href={`/productpage/${productId}`}>
-                          <div className="relative mb-3 h-36 w-full overflow-hidden rounded-lg sm:h-40 md:h-44">
-                            <Image
-                              src={product.image || ""}
-                              alt={product.name}
-                              fill
-                              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                              className="rounded-lg object-cover transition-transform duration-300 hover:scale-105"
-                              loading="lazy"
-                            />
-                            {defaultSize.mrp > defaultSize.price && (
-                              <span className="absolute left-2 top-2 rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-600 shadow-sm sm:text-xs">
-                                {Math.round(
-                                  ((defaultSize.mrp - defaultSize.price) /
-                                    defaultSize.mrp) *
-                                    100,
-                                )}
-                                % OFF
-                              </span>
-                            )}
-                            <div className="absolute right-2 top-2">
-                              <button
-                                onClick={(event) => {
-                                  event.preventDefault();
-                                  const exists = wishlist.some(
-                                    (entry) => String(entry.id) === productId,
-                                  );
-                                  if (exists) {
-                                    removeFromWishlist(productId);
-                                    setToast({
-                                      message: "Removed from wishlist",
-                                      type: "info",
-                                    });
-                                  } else {
-                                    addToWishlist({
-                                      id: productId,
-                                      productId,
-                                      name: product.name,
-                                      price: defaultSize.price,
-                                      mrp: defaultSize.mrp,
-                                      quantity: 1,
-                                      image: product.image,
-                                      category: product.category,
-                                      tags: product.tags,
-                                    });
-                                    setToast({
-                                      message: "Added to wishlist",
-                                      type: "success",
-                                    });
-                                  }
-                                }}
-                                className="transition-transform hover:scale-110"
-                                aria-label="Toggle Wishlist"
-                              >
-                                {wishlist.some(
-                                  (entry) => String(entry.id) === productId,
-                                ) ? (
-                                  <HeartSolid className="h-6 w-6 text-green-600 drop-shadow-sm" />
-                                ) : (
-                                  <HeartOutline className="h-6 w-6 text-green-600 drop-shadow-sm hover:text-red-400" />
-                                )}
-                              </button>
-                            </div>
-                          </div>
-                        </Link>
-
-                        <div className="grow">
-                          <div className="mb-1 flex items-center justify-between gap-2">
-                            <h2 className="capitalize line-clamp-1 text-sm font-semibold text-green-600 sm:text-base">
-                              {product.name}
-                            </h2>
-                          </div>
-                          <div className="mb-2 flex items-center justify-between">
-                            <p className="text-xs text-gray-500">
-                              {product.category}
-                            </p>
-                            <ProductRating
-                              productId={productId}
-                              className="text-xs"
-                            />
-                          </div>
-                          <p className="mt-2 text-xs font-medium text-green-700">
-                            Delivery by{" "}
-                            {formatDeliveryDate(estimate.estimatedDeliveryDate)}
-                          </p>
-                          <div className="mt-2 flex flex-wrap gap-1">
-                            {plantSizes.map((size) => (
-                              <span
-                                key={size.id}
-                                className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                                  size.isDefault
-                                    ? "bg-green-100 text-green-700"
-                                    : "bg-gray-100 text-gray-600"
-                                }`}
-                              >
-                                {size.label}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-
-                        {(product.tags || []).length > 0 && (
-                          <div className="mt-2 flex flex-wrap gap-1">
-                            {(product.tags || []).slice(0, 2).map((tag) => (
-                              <button
-                                key={tag}
-                                onClick={() => {
-                                  setTagFilter(tag);
-                                  setDisplayedCount(PRODUCTS_PER_PAGE);
-                                }}
-                                className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] text-green-700 transition hover:opacity-80 sm:text-xs"
-                              >
-                                #{tag}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-
-                        <div className="mt-3 flex flex-col gap-3 min-[380px]:flex-row min-[380px]:items-center min-[380px]:justify-between">
-                          <div className="min-w-0">
-                            <p className=" flex gap-2 text-sm font-bold text-green-700 sm:text-base">
-                              ₹{defaultSize.price}
-                                <span className="text-[10px] text-red-500 sm:text-xs mt-1 line-through">
-                                  ₹{defaultSize.mrp}
-                                </span>
-                            </p>
-                            <p className="text-[10px] text-gray-500 sm:text-xs">
-                              {plantSizes.length > 1
-                                ? `from ${defaultSize.label}`
-                                : "Customizable available"}
-                            </p>
-                          </div>
-                          {cartItem ? (
-                            <button
-                              onClick={() => router.push("/cart")}
-                              className="flex w-full items-center justify-center gap-2 rounded-lg bg-green-900 px-2 py-2 text-xs font-medium text-white transition hover:bg-green-700 min-[380px]:w-auto sm:gap-2 sm:px-3 sm:text-sm"
-                            >
-                              <BoltIcon className="h-4 w-4 shrink-0" />
-                              <span className="hidden sm:inline">Buy Now</span>
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => {
-                                addToCart({
-                                  cartKey,
-                                  id: productId,
-                                  productId,
-                                  name: product.name,
-                                  price: defaultSize.price,
-                                  mrp: defaultSize.mrp,
-                                  quantity: 1,
-                                  image: product.image,
-                                  category: product.category,
-                                  tags: product.tags,
-                                  selectedSize: defaultSize,
-                                  plantSizes,
-                                  originAddress: product.originAddress,
-                                  deliveryEstimate: estimate,
-                                });
-                                setToast({
-                                  message: `${product.name} added to cart`,
-                                  type: "success",
-                                });
-                              }}
-                              className="flex w-full items-center justify-center gap-2 rounded-lg bg-green-600 px-2 py-2 text-xs font-medium text-white transition hover:bg-green-700 min-[380px]:w-auto sm:gap-2 sm:px-3 sm:text-sm"
-                            >
-                              <ShoppingCartIcon className="h-4 w-4 shrink-0" />
-                              <span className="hidden sm:inline">Add to cart</span>
-                            </button>
-                          )}
-                        </div>
-                      </div>
+                        id={productId}
+                        _id={product._id}
+                        name={product.name}
+                        price={defaultPrice}
+                        mrp={defaultMrp}
+                        image={product.image || ""}
+                        category={product.category}
+                        tags={product.tags || []}
+                        plantSizes={product.plantSizes}
+                        quantity={1}
+                        discountBadge={discountPercentage ? `${discountPercentage}% OFF` : undefined}
+                      />
                     );
                   })}
                 </div>

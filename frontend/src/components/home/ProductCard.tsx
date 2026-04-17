@@ -2,14 +2,16 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { HeartIcon as HeartSolid, BoltIcon } from "@heroicons/react/24/solid";
+import { HeartIcon as HeartSolid, BoltIcon, ShoppingCartIcon } from "@heroicons/react/24/solid";
 import { HeartIcon as HeartOutline } from "@heroicons/react/24/outline";
 import { useCart } from "../../context/CartContext";
 import { useWishlist } from "../../context/WishlistContext";
+import { useDeliveryLocation } from "../../context/DeliveryLocationContext";
 import { ProductItem } from "../../types/ProductItem";
 import ProductRating from "../product/ProductRating";
 import Toast from "../shared/Toast";
 import { PlantSizeOption } from "@/utils/productOptions";
+import { calculateDeliveryEstimate, formatDeliveryDate } from "@/utils/delivery";
 
 type ProductCardProps = ProductItem & { _id?: string; discountBadge?: string };
 
@@ -30,6 +32,7 @@ export default function ProductCard({
     plantSizes && plantSizes.length > 0 ? plantSizes[0] : null,
   );
   const [showSizeModal, setShowSizeModal] = useState(false);
+  const [isAddedToCart, setIsAddedToCart] = useState(false);
   const [toast, setToast] = useState<{
     message: string;
     type: "success" | "error" | "info";
@@ -37,6 +40,7 @@ export default function ProductCard({
   const router = useRouter();
   const { addToCart } = useCart();
   const { wishlist, addToWishlist, removeFromWishlist } = useWishlist();
+  const { deliveryLocation } = useDeliveryLocation();
 
   // Use _id (MongoDB ObjectId) for routing, fallback to id
   const productId = _id || id;
@@ -44,6 +48,15 @@ export default function ProductCard({
     (p) =>
       String(p.id) === String(productId) ||
       String(p.productId) === String(productId),
+  );
+
+  // Calculate estimated delivery date
+  const deliveryEstimate = calculateDeliveryEstimate({
+    origin: undefined, // Origin would be warehouse location
+    destination: deliveryLocation,
+  });
+  const estimatedDeliveryDate = formatDeliveryDate(
+    deliveryEstimate.estimatedDeliveryDate,
   );
 
   return (
@@ -55,7 +68,7 @@ export default function ProductCard({
           onClose={() => setToast(null)}
         />
       )}
-      <div className="relative rounded-xl overflow-hidden group h-80 hover:shadow-lg transition-shadow duration-300">
+      <div className="relative rounded-xl overflow-hidden group h-96 hover:shadow-lg transition-shadow duration-300">
         {/* Clickable Image Link Area */}
         <Link
           href={`/productpage/${productId}`}
@@ -124,40 +137,83 @@ export default function ProductCard({
           )}
         </button>
 
-        {/* Text + Actions - Clean 3-Line Layout */}
-        <div className="absolute bottom-0 left-0 p-3 sm:p-4 text-white z-10 w-full space-y-1.5">
-          {/* Line 1: Product Name */}
-          <h2 className="text-sm sm:text-base font-semibold drop-shadow-md line-clamp-1 text-green-400">
-            {name}
-          </h2>
+        {/* Text + Actions - Bottom Overlay with Transparent Green Background */}
+        <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 text-white z-10 w-full bg-linear-to-t from-green-600/50 to-transparent space-y-2">
+          {/* Top Section: Details */}
+          <div className="space-y-1.5">
+            {/* Line 1: Product Name */}
+            <h2 className="text-sm sm:text-base font-semibold drop-shadow-md line-clamp-1 text-green-400">
+              {name}
+            </h2>
 
-          {/* Line 2: Category + Rating (Same Line) */}
-          <div className="flex items-center gap-2 justify-between">
-            <p className="text-xs text-gray-300 line-clamp-1 flex-1">
-              {category || "Product"}
-            </p>
-            <div className="shrink-0">
-              <ProductRating
-                productId={String(productId)}
-                className="text-xs"
-              />
+            {/* Line 2: Category + Rating */}
+            <div className="flex items-center gap-2 justify-between ">
+              <p className="text-xs text-gray-100 line-clamp-1 flex-1">
+                {category || "Product"}
+              </p>
+              <div className="shrink-0 bg-green-100/70 px-2 py-0.5 rounded-full">
+                <ProductRating
+                  productId={String(productId)}
+                  className="text-xs"
+                />
+              </div>
+            </div>
+
+            {/* Line 3: Tags (if available) */}
+            {tags && tags.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {tags.slice(0, 2).map((tag, index) => (
+                  <span
+                    key={index}
+                    className="text-xs bg-green-900 px-2 py-0.5 rounded-full text-white"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Line 4: Available Sizes (if available) */}
+            {plantSizes && plantSizes.length > 0 && (
+              <div className="flex items-center gap-1 flex-wrap">
+                <span className="text-xs font-semibold text-gray-100">Sizes:</span>
+                {plantSizes.slice(0, 3).map((size) => (
+                  <span
+                    key={size.id}
+                    className="text-xs bg-green-600 px-1.5 py-0.5 rounded text-white"
+                  >
+                    {size.label}
+                  </span>
+                ))}
+                {plantSizes.length > 3 && (
+                  <span className="text-xs text-gray-200">+{plantSizes.length - 3}</span>
+                )}
+              </div>
+            )}
+
+            {/* Line 5: Delivery Info */}
+            <div className="text-xs text-gray-100">
+              {deliveryLocation?.pincode
+                ? `Delivery by ${estimatedDeliveryDate} to ${deliveryLocation.city || "your area"}`
+                : "Enter pincode for delivery date"}
             </div>
           </div>
 
-          {/* Line 3: Price + Buy Now Button (Same Line) */}
-          <div className="flex items-center justify-between gap-2">
+          {/* Bottom Section: Price + Single Button */}
+          <div className="flex items-center justify-between gap-2 pt-1">
             <div className="flex items-center gap-1.5">
-              <span className="font-bold text-green-300 text-sm">₹{price}</span>
+              <span className="font-bold text-green-900 text-sm bg-green-100/70 px-2 py-0.5 rounded-full">₹{selectedSize?.price || price}</span>
               {typeof mrp === "number" && mrp > price && (
-                <span className="text-xs text-gray-400 line-through">
+                <span className="text-xs text-red-600 line-through">
                   ₹{mrp}
                 </span>
               )}
             </div>
 
-            {/* Buy Now Button */}
+            {/* Single Toggle Button */}
             <button
-              onClick={() => {
+              onClick={(e) => {
+                e.preventDefault();
                 if (plantSizes && plantSizes.length > 0 && !selectedSize) {
                   setShowSizeModal(true);
                   return;
@@ -166,8 +222,8 @@ export default function ProductCard({
                 const cartItem = {
                   id: productId,
                   name,
-                  price,
-                  mrp,
+                  price: selectedSize?.price || price,
+                  mrp: selectedSize?.mrp || mrp,
                   image,
                   category,
                   tags,
@@ -176,21 +232,34 @@ export default function ProductCard({
                   plantSizes: plantSizes || undefined,
                 };
 
-                addToCart(cartItem);
-                setToast({
-                  message: `${name} added to cart`,
-                  type: "success",
-                });
-                setTimeout(() => {
+                if (!isAddedToCart) {
+                  // First click: Add to cart
+                  addToCart(cartItem);
+                  setIsAddedToCart(true);
+                  setToast({
+                    message: `${name} added to cart`,
+                    type: "success",
+                  });
+                } else {
+                  // Second click: Redirect to cart
                   router.push("/cart");
-                }, 1000);
+                }
               }}
               className="flex items-center justify-center gap-1 px-2.5 py-1 bg-green-600 text-white rounded-full hover:bg-green-700 transition shadow-md hover:shadow-lg text-xs font-semibold whitespace-nowrap"
-              aria-label="Add to Cart"
-              title="Buy Now"
+              aria-label={isAddedToCart ? "Go to Cart" : "Add to Cart"}
+              title={isAddedToCart ? "Go to Cart" : "Add to Cart"}
             >
-              <BoltIcon className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Buy</span>
+              {isAddedToCart ? (
+                <>
+                  <BoltIcon className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Buy</span>
+                </>
+              ) : (
+                <>
+                  <ShoppingCartIcon className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Cart</span>
+                </>
+              )}
             </button>
           </div>
         </div>

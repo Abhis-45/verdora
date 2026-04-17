@@ -11,8 +11,6 @@ interface User {
   email?: string;
 }
 
-const loggedInUser: User | null = null; // ✅ set to null if not logged in
-
 export default function Contact() {
   const router = useRouter();
   const [formData, setFormData] = useState({
@@ -56,14 +54,25 @@ ${prev.name || "Your Name"}`,
     }
   }, [router.query]);
 
-  // ✅ Prefill name/email if user is logged in
+  // ✅ Prefill name/email if user is logged in (optional)
   useEffect(() => {
-    if (loggedInUser?.name || loggedInUser?.email) {
-      setFormData((prev) => ({
-        ...prev,
-        name: loggedInUser.name || prev.name,
-        email: loggedInUser.email || prev.email,
-      }));
+    // Try to get user from context or localStorage
+    try {
+      const userToken = localStorage.getItem("userToken");
+      if (userToken) {
+        // If user is logged in, prefill their details
+        const userData = localStorage.getItem("userData");
+        if (userData) {
+          const user = JSON.parse(userData);
+          setFormData((prev) => ({
+            ...prev,
+            name: user.name || prev.name,
+            email: user.email || prev.email,
+          }));
+        }
+      }
+    } catch (err) {
+      // Silent fail - allow anonymous submissions
     }
   }, []);
 
@@ -133,8 +142,8 @@ ${prev.name || "Your Name"}`,
                       type: "success",
                     });
                     setFormData({
-                      name: loggedInUser?.name || "",
-                      email: loggedInUser?.email || "",
+                      name: "",
+                      email: "",
                       phone: "",
                       message: "",
                       service: "",
@@ -222,23 +231,11 @@ ${prev.name || "Your Name"}`,
               <div className="flex flex-col items-center gap-2">
                 <button
                   type="submit"
-                  disabled={isLoading || !loggedInUser}
+                  disabled={isLoading}
                   className="w-full sm:w-auto px-6 py-2 text-sm bg-linear-to-r from-green-600 to-emerald-500 text-white font-semibold rounded-full shadow-md hover:shadow-lg hover:scale-105 transition-transform duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isLoading ? "Sending..." : "Send Message"}
                 </button>
-
-                {!loggedInUser && (
-                  <p className="text-xs text-red-600 font-medium">
-                    Please log in to send a message.{" "}
-                    <a
-                      href="/login"
-                      className="underline text-green-600 hover:text-green-700"
-                    >
-                      Log in here
-                    </a>
-                  </p>
-                )}
               </div>
             </form>
           </div>

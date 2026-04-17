@@ -1,21 +1,19 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 import React, { useState, useEffect } from "react";
 import servicesData from "../../data/services.json";
 import { XMarkIcon } from "@heroicons/react/24/outline";
-import { useRouter } from "next/router";
 import Image from "next/image";
 import Link from "next/link";
-import { Swiper, SwiperSlide } from "swiper/react";
-import { Pagination, Autoplay } from "swiper/modules";
-import "swiper/css";
-import "swiper/css/pagination";
 import { ArrowRightCircleIcon } from "@heroicons/react/24/solid";
+import Spinner from "@/components/shared/Spinner";
 
 interface Package {
   id: string;
   name: string;
   desc: string;
+  price: number;
 }
 
 interface Service {
@@ -29,12 +27,137 @@ interface Service {
 
 export default function ServicesPreview() {
   const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [selectedPackage, setSelectedPackage] = useState<Package | null>(null);
+  const [bookingData, setBookingData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    selectedDate: "",
+    selectedTime: "",
+    message: "",
+  });
+  const [bookingSubmitting, setBookingSubmitting] = useState(false);
+  const [bookingMessage, setBookingMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
 
   useEffect(() => {
     if (servicesData && servicesData.length > 0) setLoading(false);
   }, []);
+
+  const handleBookPackage = (pkg: Package) => {
+    setSelectedPackage(pkg);
+    setBookingData({
+      name: "",
+      email: "",
+      phone: "",
+      selectedDate: "",
+      selectedTime: "",
+      message: "",
+    });
+    setBookingMessage(null);
+  };
+
+  const handleBookingChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = e.target;
+    setBookingData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleSubmitBooking = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedService || !selectedPackage) return;
+
+    if (
+      !bookingData.name ||
+      !bookingData.email ||
+      !bookingData.phone ||
+      !bookingData.selectedDate ||
+      !bookingData.selectedTime
+    ) {
+      setBookingMessage({
+        type: "error",
+        text: "Please fill in all required fields",
+      });
+      return;
+    }
+
+    setBookingSubmitting(true);
+    try {
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+
+      const payload = {
+        serviceSlug: selectedService.slug,
+        packageId: selectedPackage.id,
+        packageName: selectedPackage.name,
+        price: selectedPackage.price,
+        selectedDate: bookingData.selectedDate,
+        selectedTime: bookingData.selectedTime,
+        name: bookingData.name,
+        email: bookingData.email,
+        phone: bookingData.phone,
+        message: bookingData.message,
+      };
+
+      const response = await fetch(`${BACKEND_URL}/api/profile/bookService`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(typeof window !== "undefined" &&
+          localStorage.getItem("token")
+            ? {
+                Authorization: `Bearer ${localStorage.getItem("token")}`,
+              }
+            : {}),
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to book service");
+      }
+
+      setBookingMessage({
+        type: "success",
+        text: data.message || "Service booked successfully! We'll contact you soon.",
+      });
+
+      setTimeout(() => {
+        setSelectedService(null);
+        setSelectedPackage(null);
+        setBookingData({
+          name: "",
+          email: "",
+          phone: "",
+          selectedDate: "",
+          selectedTime: "",
+          message: "",
+        });
+        setBookingMessage(null);
+      }, 2000);
+    } catch (error) {
+      setBookingMessage({
+        type: "error",
+        text:
+          error instanceof Error
+            ? error.message
+            : "Failed to book service. Please try again.",
+      });
+    } finally {
+      setBookingSubmitting(false);
+    }
+  };
 
   return (
     <section className="mb-8 sm:mb-10">
@@ -57,70 +180,35 @@ export default function ServicesPreview() {
         </div>
       ) : (
         <>
-          {/* Mobile/Tablet Swiper */}
-          <div className="block lg:hidden">
-            <Swiper
-              modules={[Pagination, Autoplay]}
-              slidesPerView={1.15}
-              spaceBetween={12}
-              autoplay={{ delay: 4000, disableOnInteraction: false }}
-              pagination={{ clickable: true }}
-              breakpoints={{
-                640: { slidesPerView: 2.3 },
-                768: { slidesPerView: 3 },
-              }}
-              className="-mx-4 px-4 custom-swiper"
-            >
-              {servicesData.map((service: Service) => (
-                <SwiperSlide key={service.slug}>
-                  <div
-                    className="relative h-40 sm:h-48 rounded-lg shadow-md hover:shadow-lg transition cursor-pointer overflow-hidden group"
-                    onClick={() => setSelectedService(service)}
-                  >
-                    <Image
-                      src={service.image || "/images/placeholder.jpg"}
-                      alt={service.title}
-                      fill
-                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 33vw"
-                      className="object-cover transform transition-transform duration-700 ease-in-out group-hover:scale-110"
-                    />
-                    <div className="absolute inset-0 bg-black/40" />
-                    <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white p-4">
-                      <h3 className="text-base sm:text-lg font-semibold drop-shadow-md">
-                        {service.title}
-                      </h3>
-                      <p className="text-xs sm:text-sm mt-1 line-clamp-2 drop-shadow-md">
-                        {service.desc}
-                      </p>
-                    </div>
-                  </div>
-                </SwiperSlide>
-              ))}
-            </Swiper>
-          </div>
-
-          {/* Desktop Grid */}
-          <div className="hidden lg:grid grid-cols-3 gap-6">
+          {/* Grid View - Updated to show full service cards like services page */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
             {servicesData.map((service: Service) => (
               <div
                 key={service.slug}
-                className="relative h-40 sm:h-48 rounded-lg shadow-md hover:shadow-lg transition cursor-pointer overflow-hidden group"
+                className="bg-white rounded-lg shadow-md hover:shadow-xl transition transform hover:-translate-y-1 cursor-pointer overflow-hidden"
                 onClick={() => setSelectedService(service)}
               >
-                <Image
-                  src={service.image || "/images/placeholder.jpg"}
-                  alt={service.title}
-                  fill
-                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 33vw"
-                  className="object-cover transform transition-transform duration-700 ease-in-out group-hover:scale-110"
-                />
-                <div className="absolute inset-0 bg-black/40" />
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white p-4">
-                  <h3 className="text-base sm:text-lg font-semibold drop-shadow-md">
+                {/* Elegant Image */}
+                <div className="relative h-28 sm:h-32 md:h-36 w-full">
+                  <Image
+                    src={service.image || "/images/placeholder.jpg"}
+                    alt={service.title}
+                    fill
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 50vw"
+                    className="object-cover"
+                  />
+                </div>
+
+                {/* Service Content */}
+                <div className="p-3 sm:p-4 flex flex-col h-full">
+                  <h2 className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 mb-1 line-clamp-1">
                     {service.title}
-                  </h3>
-                  <p className="text-xs sm:text-sm mt-1 line-clamp-2 drop-shadow-md">
+                  </h2>
+                  <p className="text-xs sm:text-sm text-gray-600 mb-2 line-clamp-2">
                     {service.desc}
+                  </p>
+                  <p className="text-xs text-gray-700 mb-3 grow line-clamp-3">
+                    {service.details}
                   </p>
                 </div>
               </div>
@@ -129,10 +217,10 @@ export default function ServicesPreview() {
         </>
       )}
 
-      {/* Modal Popup for Packages */}
-      {selectedService && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg max-w-lg w-full p-6 relative">
+      {/* Service Details Modal */}
+      {selectedService && !selectedPackage && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg max-w-lg w-full p-6 relative max-h-[80vh] overflow-y-auto">
             <button
               onClick={() => setSelectedService(null)}
               className="absolute top-3 right-3 text-gray-500 hover:text-red-600"
@@ -147,32 +235,188 @@ export default function ServicesPreview() {
               {selectedService.details}
             </p>
 
-            <h3 className="text-md font-semibold text-green-600 mb-2">
-              Packages
+            <h3 className="text-md font-semibold text-green-600 mb-3">
+              Available Packages
             </h3>
             <div className="space-y-3">
               {selectedService.packages.map((pkg) => (
                 <div
                   key={pkg.id}
-                  onClick={() =>
-                    router.push(
-                      `/contact?service=${encodeURIComponent(
-                        selectedService.title,
-                      )}&package=${encodeURIComponent(pkg.name)}`,
-                    )
-                  }
-                  className="border rounded-md p-3 shadow-sm hover:shadow-md transition cursor-pointer"
+                  className="border rounded-md p-3 shadow-sm hover:shadow-md transition"
                 >
-                  <h4 className="text-sm font-bold text-gray-900">
-                    {pkg.name}
-                  </h4>
-                  <p className="text-xs text-gray-600 mb-1">{pkg.desc}</p>
-                  <span className="text-xs text-green-700">
-                    Click to contact →
-                  </span>
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <h4 className="text-sm font-bold text-gray-900">
+                        {pkg.name}
+                      </h4>
+                      <p className="text-xs text-gray-600">{pkg.desc}</p>
+                    </div>
+                    <span className="text-sm font-bold text-green-600">
+                      ₹{pkg.price}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => handleBookPackage(pkg)}
+                    className="w-full mt-2 bg-green-600 hover:bg-green-700 text-white py-2 text-xs font-semibold rounded transition"
+                  >
+                    Book Now
+                  </button>
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Booking Form Modal */}
+      {selectedPackage && selectedService && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6 relative max-h-[80vh] overflow-y-auto">
+            <button
+              onClick={() => {
+                setSelectedPackage(null);
+                setBookingMessage(null);
+              }}
+              className="absolute top-3 right-3 text-gray-500 hover:text-red-600"
+            >
+              <XMarkIcon className="h-5 w-5" />
+            </button>
+
+            <h2 className="text-lg font-bold text-green-700 mb-1">
+              Book {selectedService.title}
+            </h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Package: <span className="font-semibold">{selectedPackage.name}</span> - ₹
+              {selectedPackage.price}
+            </p>
+
+            {bookingMessage && (
+              <div
+                className={`p-3 rounded-md mb-4 text-sm font-semibold ${
+                  bookingMessage.type === "success"
+                    ? "bg-green-100 text-green-700"
+                    : "bg-red-100 text-red-700"
+                }`}
+              >
+                {bookingMessage.text}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmitBooking} className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Full Name *
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  value={bookingData.name}
+                  onChange={handleBookingChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  placeholder="Your name"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Email *
+                </label>
+                <input
+                  type="email"
+                  name="email"
+                  value={bookingData.email}
+                  onChange={handleBookingChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  placeholder="your@email.com"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Phone *
+                </label>
+                <input
+                  type="tel"
+                  name="phone"
+                  value={bookingData.phone}
+                  onChange={handleBookingChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  placeholder="10-digit phone number"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Preferred Date *
+                </label>
+                <input
+                  type="date"
+                  name="selectedDate"
+                  value={bookingData.selectedDate}
+                  onChange={handleBookingChange}
+                  min={new Date().toISOString().split("T")[0]}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Preferred Time *
+                </label>
+                <select
+                  name="selectedTime"
+                  value={bookingData.selectedTime}
+                  onChange={handleBookingChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  required
+                >
+                  <option value="">Select time</option>
+                  <option value="9:00 AM">9:00 AM</option>
+                  <option value="10:00 AM">10:00 AM</option>
+                  <option value="11:00 AM">11:00 AM</option>
+                  <option value="12:00 PM">12:00 PM</option>
+                  <option value="1:00 PM">1:00 PM</option>
+                  <option value="2:00 PM">2:00 PM</option>
+                  <option value="3:00 PM">3:00 PM</option>
+                  <option value="4:00 PM">4:00 PM</option>
+                  <option value="5:00 PM">5:00 PM</option>
+                  <option value="6:00 PM">6:00 PM</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Additional Message (Optional)
+                </label>
+                <textarea
+                  name="message"
+                  value={bookingData.message}
+                  onChange={handleBookingChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  placeholder="Any special requests or notes..."
+                  rows={3}
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={bookingSubmitting}
+                className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white py-2 font-semibold rounded-md transition flex items-center justify-center gap-2"
+              >
+                {bookingSubmitting ? (
+                  <>
+                    <Spinner />
+                    Booking...
+                  </>
+                ) : (
+                  "Confirm Booking"
+                )}
+              </button>
+            </form>
           </div>
         </div>
       )}

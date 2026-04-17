@@ -291,6 +291,8 @@ router.get("/orders", vendorAuthMiddleware, async (req, res) => {
             .map((item) => {
               const product = productIndex.get(String(item.id));
               const normalizedStatus = getItemStatus(item, order.status);
+              const itemPrice = item.price ? Number(item.price) : (product?.price || 0);
+              const itemQuantity = item.quantity ? Number(item.quantity) : 1;
 
               return {
                 ...item,
@@ -299,6 +301,8 @@ router.get("/orders", vendorAuthMiddleware, async (req, res) => {
                 title: item.title || product?.name || "Product",
                 image: item.image || product?.image || "",
                 vendorName: item.vendorName || product?.vendorName || "",
+                price: itemPrice,
+                quantity: itemQuantity,
                 status: normalizedStatus,
                 statusReason: item.statusReason || "",
                 trackingId: item.trackingId || "",
@@ -306,7 +310,7 @@ router.get("/orders", vendorAuthMiddleware, async (req, res) => {
                 statusUpdatedAt:
                   item.statusUpdatedAt || order.statusUpdatedAt || order.date,
               };
-            });
+            });;
 
           if (!vendorItems.length) {
             return [];

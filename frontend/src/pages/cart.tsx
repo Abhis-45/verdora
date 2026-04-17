@@ -14,6 +14,7 @@ import Spinner from "@/components/shared/Spinner";
 import Toast from "../components/shared/Toast";
 import CartItemsList from "../components/cart/CartItemsList";
 import CartSummary from "../components/cart/CartSummary";
+import AvailableCoupons from "../components/cart/AvailableCoupons";
 import {
   calculateDeliveryEstimate,
   formatDeliveryDate,
@@ -36,6 +37,20 @@ export default function CartPage() {
   const [showThankYou, setShowThankYou] = useState(false);
   const [coupon, setCoupon] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
+  const [appliedCouponInfo, setAppliedCouponInfo] = useState<{
+    code: string;
+    discount: number;
+    fixedDiscount: number;
+    percentageDiscount: number;
+    maxDiscountAmount: number;
+    minCartValue: number;
+    expiryDate?: string;
+  } | null>(null);
+  const [userUsageInfo, setUserUsageInfo] = useState<{
+    usedCount: number;
+    remainingUses: number;
+    maxUsagePerUser: number;
+  } | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [toast, setToast] = useState<{
     message: string;
@@ -52,14 +67,6 @@ export default function CartPage() {
     };
   }, [autoRedirectTimer]);
 
-  const couponRules: Record<
-    string,
-    { type: "percent" | "flat"; value: number }
-  > = {
-    VERDORA10: { type: "percent", value: 10 },
-    SAVE50: { type: "flat", value: 50 },
-  };
-
   // Calculate subtotal using MRP (original price) - if MRP is not set, fallback to price
   // This ensures we always have a baseline for discount calculation
   const subtotal = cartItems.reduce((acc, item) => {
@@ -73,14 +80,8 @@ export default function CartPage() {
     0,
   );
 
-  let couponDiscount = 0;
-  if (appliedCoupon && couponRules[appliedCoupon]) {
-    const rule = couponRules[appliedCoupon];
-    couponDiscount =
-      rule.type === "percent"
-        ? (discountedTotal * rule.value) / 100
-        : rule.value;
-  }
+  // Use the discount from validated coupon info
+  const couponDiscount = appliedCouponInfo ? appliedCouponInfo.discount : 0;
 
   // Product discount = difference between original price (MRP) and selling price
   const productDiscount = subtotal - discountedTotal;
@@ -199,21 +200,58 @@ export default function CartPage() {
     return formatDeliveryDate(latest);
   }, [cartItemsWithEstimate]);
 
-  const handleApplyCoupon = (event: React.FormEvent) => {
+  const handleApplyCoupon = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!coupon) {
+    if (!coupon.trim()) {
       setFeedback("Please enter a coupon code");
       return;
     }
 
-    if (couponRules[coupon]) {
-      setAppliedCoupon(coupon);
-      setFeedback(`Coupon "${coupon}" applied successfully!`);
-    } else {
-      setAppliedCoupon(null);
-      setFeedback("Invalid coupon code");
+    const token =
+      typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    if (!token) {
+      setFeedback("Please login to apply coupon");
+      setShowAuth(true);
+      return;
     }
-    setCoupon("");
+
+    try {
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+      const response = await fetch(`${BACKEND_URL}/api/coupon-user/validate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          couponCode: coupon.toUpperCase(),
+          cartTotal: discountedTotal,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setAppliedCoupon(coupon.toUpperCase());
+        setAppliedCouponInfo(data.coupon);
+        setUserUsageInfo(data.userUsage);
+        setFeedback(`Coupon "${coupon.toUpperCase()}" applied successfully!`);
+        setCoupon("");
+      } else {
+        setAppliedCoupon(null);
+        setAppliedCouponInfo(null);
+        setUserUsageInfo(null);
+        setFeedback(data.message || "Failed to apply coupon");
+      }
+    } catch (error) {
+      setAppliedCoupon(null);
+      setAppliedCouponInfo(null);
+      setUserUsageInfo(null);
+      setFeedback(`Error: ${error instanceof Error ? error.message : "Unknown error"}`);
+    }
   };
 
   const handleCheckout = async () => {
@@ -413,6 +451,59 @@ export default function CartPage() {
                   onRemove={removeFromCart}
                   onClear={clearCart}
                 />
+                <AvailableCoupons
+                  cartTotal={discountedTotal}
+                  appliedCoupon={appliedCouponInfo}
+                  onApplyCoupon={(couponData) => {
+                    setAppliedCoupon(couponData.code);
+                    setAppliedCouponInfo(couponData);
+                    // Fetch user usage info
+                    const token =
+                      typeof window !== "undefined"
+                        ? localStorage.getItem("token")
+                        : null;
+                    if (token) {
+                      fetch(
+                        `${
+                          typeof window !== "undefined"
+                            ? process.env.NEXT_PUBLIC_BACKEND_URL ||
+                              "https://verdora.onrender.com"
+                            : "https://verdora.onrender.com"
+                        }/api/coupon-user/validate`,
+                        {
+                          method: "POST",
+                          headers: {
+                            "Content-Type": "application/json",
+                            Authorization: `Bearer ${token}`,
+                          },
+                          body: JSON.stringify({
+                            couponCode: couponData.code,
+                            cartTotal: discountedTotal,
+                          }),
+                        }
+                      )
+                        .then((res) => res.json())
+                        .then((data) => {
+                          if (data.userUsage) {
+                            setUserUsageInfo(data.userUsage);
+                          }
+                        })
+                        .catch((err) => console.error("Error fetching usage:", err));
+                    }
+                  }}
+                  token={
+                    typeof window !== "undefined"
+                      ? localStorage.getItem("token") || ""
+                      : ""
+                  }
+                  backendUrl={
+                    typeof window !== "undefined"
+                      ? process.env.NEXT_PUBLIC_BACKEND_URL ||
+                        "https://verdora.onrender.com"
+                      : "https://verdora.onrender.com"
+                  }
+                  userUsageInfo={userUsageInfo}
+                />
               </div>
 
               <div>
@@ -427,6 +518,8 @@ export default function CartPage() {
                   finalAmount={finalAmount}
                   estimatedDeliveryText={estimatedDeliveryText}
                   onCheckout={handleCheckout}
+                  appliedCouponInfo={appliedCouponInfo}
+                  userUsageInfo={userUsageInfo}
                 />
               </div>
             </div>

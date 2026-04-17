@@ -637,6 +637,9 @@ export default function VendorDashboard() {
                   <thead className="bg-emerald-100">
                     <tr>
                       <th className="px-6 py-3 text-left text-emerald-700 font-semibold">
+                        Image
+                      </th>
+                      <th className="px-6 py-3 text-left text-emerald-700 font-semibold">
                         Product
                       </th>
                       <th className="px-6 py-3 text-left text-emerald-700 font-semibold">
@@ -659,6 +662,21 @@ export default function VendorDashboard() {
                         key={product.id}
                         className="border-t border-emerald-100 hover:bg-emerald-50"
                       >
+                        <td className="px-6 py-3">
+                          <div className="h-12 w-12 rounded-lg overflow-hidden bg-gray-100">
+                            {product.image ? (
+                              <img
+                                src={product.image}
+                                alt={product.name}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center text-xs text-gray-400">
+                                No image
+                              </div>
+                            )}
+                          </div>
+                        </td>
                         <td className="px-6 py-3">
                           <div className="flex flex-col gap-1">
                             <span>{product.name}</span>

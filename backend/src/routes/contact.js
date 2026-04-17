@@ -1,6 +1,10 @@
 import express from "express";
 import jwt from "jsonwebtoken";
 import Contact from "../models/Contact.js";
+import {
+  sendContactEmail,
+  sendAdminContactNotificationEmail,
+} from "../services/emailService.js";
 
 const router = express.Router();
 
@@ -62,6 +66,34 @@ router.post("/", async (req, res) => {
     });
 
     await contact.save();
+
+    // ✅ Send thank you email to user
+    try {
+      await sendContactEmail(email, name).catch((err) => {
+        console.error("❌ User thank you email failed:", err.message);
+      });
+    } catch (emailErr) {
+      console.error("Email sending error:", emailErr.message);
+      // Don't fail the request if email fails
+    }
+
+    // ✅ Send admin notification email
+    try {
+      const adminEmail = process.env.ADMIN_EMAIL || "admin@verdora.com";
+      await sendAdminContactNotificationEmail(adminEmail, {
+        name,
+        email,
+        phone,
+        message,
+        service,
+        servicePackage,
+      }).catch((err) => {
+        console.error("❌ Admin notification email failed:", err.message);
+      });
+    } catch (adminEmailErr) {
+      console.error("Admin email sending error:", adminEmailErr.message);
+      // Don't fail the request if admin email fails
+    }
 
     res.status(201).json({
       message: "Thank you for reaching out! We'll get back to you soon.",

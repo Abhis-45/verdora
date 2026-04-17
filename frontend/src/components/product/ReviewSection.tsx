@@ -305,7 +305,7 @@ export default function ReviewSection({
             </div>
 
             {/* Rating Distribution */}
-            <div className="ml-auto space-y-1">
+            <div className="m-auto space-y-1">
               {[5, 4, 3, 2, 1].map((rating) => (
                 <div key={rating} className="flex items-center gap-2">
                   <span className="text-sm text-gray-600 w-12">{rating} ★</span>
@@ -323,7 +323,7 @@ export default function ReviewSection({
                       }}
                     />
                   </div>
-                  <span className="text-sm text-gray-600 w-12 text-right">
+                  <span className="text-sm text-gray-600 w-12 ">
                     {stats.ratingDistribution[rating] || 0}
                   </span>
                 </div>
