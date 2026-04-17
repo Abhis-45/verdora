@@ -892,7 +892,16 @@ export default function ProfilePage() {
                             <button
                               onClick={() => {
                                 setEditingAddressId(addr._id);
-                                setAddressForm(addr);
+                                setAddressForm({
+                                  label: addr.label || "",
+                                  address: addr.address || "",
+                                  city: addr.city || "",
+                                  state: addr.state || "",
+                                  pincode: addr.pincode || "",
+                                  name: addr.name || "",
+                                  phone: addr.phone || "",
+                                  isDefault: addr.isDefault || false,
+                                });
                                 setShowAddressModal(true);
                               }}
                               className="text-green-600 hover:text-green-700"
@@ -1089,7 +1098,16 @@ export default function ProfilePage() {
                             <button
                               onClick={() => {
                                 setEditingAddressId(addr._id);
-                                setAddressForm(addr);
+                                setAddressForm({
+                                  label: addr.label || "",
+                                  address: addr.address || "",
+                                  city: addr.city || "",
+                                  state: addr.state || "",
+                                  pincode: addr.pincode || "",
+                                  name: addr.name || "",
+                                  phone: addr.phone || "",
+                                  isDefault: addr.isDefault || false,
+                                });
                                 setShowAddressModal(true);
                               }}
                               className="text-green-600 hover:text-green-700"
