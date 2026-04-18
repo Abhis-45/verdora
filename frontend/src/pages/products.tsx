@@ -446,14 +446,14 @@ export default function ProductsPages() {
             </div>
 
             {isLoading ? (
-              <div className="mt-8 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
+              <div className="mt-8 grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
                 {Array.from({ length: 8 }).map((_, index) => (
                   <ProductSkeleton key={index} />
                 ))}
               </div>
             ) : filteredProducts.length > 0 ? (
               <>
-                <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-5 md:grid-cols-3 lg:grid-cols-4">
+                <div className="mt-6 grid grid-cols-1 gap-3 sm:gap-5 md:grid-cols-3 lg:grid-cols-4">
                   {filteredProducts.slice(0, displayedCount).map((product) => {
                     const productId = String(product._id || product.id);
                     const defaultPrice = product.price;

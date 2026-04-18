@@ -5,7 +5,7 @@ export default function ProductsByCharacteristics() {
   const characteristics = [
     {
       label: "Fragrant",
-      tag: "FragrantFlowers",
+      tag: "fragrant",
       symbol: "🌸",
       desc: "Explore our fragrant flowers collection.",
       bg: "bg-gradient-to-br from-pink-100 to-pink-200 hover:from-pink-200 hover:to-pink-300",

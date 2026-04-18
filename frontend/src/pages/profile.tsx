@@ -42,6 +42,7 @@ export default function ProfilePage() {
     null,
   );
   const [editValue, setEditValue] = useState("");
+  const [editLoading, setEditLoading] = useState(false);
 
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
@@ -57,6 +58,7 @@ export default function ProfilePage() {
   });
   const [addressLoading, setAddressLoading] = useState(false);
   const [addressError, setAddressError] = useState<string | null>(null);
+  const [submitAddressLoading, setSubmitAddressLoading] = useState(false);
 
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordOtpStep, setPasswordOtpStep] = useState<"request" | "verify">(
@@ -192,7 +194,7 @@ export default function ProfilePage() {
 
   const updateField = async (field: string, value: string) => {
     if (!token) return;
-    setLoading(true);
+    setEditLoading(true);
     try {
       const BACKEND_URL =
         typeof window !== "undefined"
@@ -219,13 +221,13 @@ export default function ProfilePage() {
         err instanceof Error ? err.message : "Failed to update field";
       setFeedback({ type: "error", msg: errorMsg });
     } finally {
-      setLoading(false);
+      setEditLoading(false);
     }
   };
 
   const addOrUpdateAddress = async () => {
     if (!token || !addressForm.address) return;
-    setLoading(true);
+    setSubmitAddressLoading(true);
     try {
       const method = editingAddressId ? "PATCH" : "POST";
       const endpoint = editingAddressId
@@ -273,7 +275,7 @@ export default function ProfilePage() {
         err instanceof Error ? err.message : "Failed to add/update address";
       setFeedback({ type: "error", msg: errorMsg });
     } finally {
-      setLoading(false);
+      setSubmitAddressLoading(false);
     }
   };
 
@@ -614,18 +616,19 @@ export default function ProfilePage() {
         <title>Profile | Verdora</title>
       </Head>
       <Layout>
-        <div className="mx-auto max-w-6xl p-4 sm:p-6 lg:p-8">
-          {/* Back Button */}
-          <button
-            onClick={() => router.back()}
-            className="flex items-center gap-2 text-green-600 hover:text-green-700 font-semibold mb-6 transition"
-          >
-            <ArrowLeftIcon className="h-5 w-5" />
-            <span>Back</span>
-          </button>
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-green-50">
+          <div className="mx-auto max-w-6xl p-4 sm:p-6 lg:p-8">
+            {/* Back Button */}
+            <button
+              onClick={() => router.back()}
+              className="inline-flex items-center gap-2 text-green-700 hover:text-green-900 font-semibold mb-8 transition duration-200 hover:translate-x-1"
+            >
+              <ArrowLeftIcon className="h-5 w-5" />
+              <span>Back</span>
+            </button>
 
-          {/* Loading State */}
-          {loading ? (
+          {/* Loading State - Only on initial load */}
+          {loading && !profile ? (
             <div className="flex items-center justify-center min-h-screen">
               <Spinner />
             </div>
@@ -660,30 +663,31 @@ export default function ProfilePage() {
               {/* Feedback */}
               {feedback && (
                 <div
-                  className={`mb-4 p-3 rounded ${
+                  className={`mb-6 p-4 rounded-lg font-semibold flex items-center gap-3 animate-pulse ${
                     feedback.type === "error"
-                      ? "bg-red-100 text-red-700"
-                      : "bg-green-100 text-green-700"
+                      ? "bg-red-50 border-2 border-red-300 text-red-700"
+                      : "bg-green-50 border-2 border-green-300 text-green-700"
                   }`}
                 >
+                  <span className="text-xl">{feedback.type === "error" ? "⚠️" : "✅"}</span>
                   {feedback.msg}
                 </div>
               )}
 
               {/* Desktop Layout */}
-              <div className="hidden xl:grid grid-cols-2 gap-6">
+              <div className="hidden xl:grid grid-cols-2 gap-8">
                 {/* Left: Personal Info */}
-                <div className="col-span-1 bg-white p-6 rounded-xl border border-gray-200">
-                  <h2 className="text-xl font-bold mb-5 text-green-900">
+                <div className="col-span-1 bg-gradient-to-br from-white to-green-50 p-8 rounded-2xl border-2 border-green-100 shadow-lg hover:shadow-xl transition duration-300">
+                  <h2 className="text-2xl font-bold mb-8 text-transparent bg-gradient-to-r from-green-700 to-green-900 bg-clip-text">
                     My Profile
                   </h2>
 
-                  <div className="space-y-5">
+                  <div className="space-y-6">
                     {/* Name */}
-                    <div className="flex justify-between items-center">
+                    <div className="flex justify-between items-center p-4 rounded-xl bg-white border border-green-100 hover:border-green-300 transition">
                       <div>
-                        <label className="text-xs text-gray-500">Name</label>
-                        <p className="font-semibold text-gray-900">
+                        <label className="text-xs font-semibold text-gray-500 uppercase">Name</label>
+                        <p className="font-bold text-gray-900 mt-1 text-lg">
                           {profile.name}
                         </p>
                       </div>
@@ -693,17 +697,17 @@ export default function ProfilePage() {
                           setEditValue(profile.name || "");
                           setShowEditModal(true);
                         }}
-                        className="text-green-600 hover:text-green-700"
+                        className="p-2 text-green-600 hover:text-white hover:bg-green-600 rounded-lg transition duration-200"
                       >
-                        <PencilIcon className="h-4 w-4" />
+                        <PencilIcon className="h-5 w-5" />
                       </button>
                     </div>
 
                     {/* Gender */}
-                    <div className="flex justify-between items-center">
+                    <div className="flex justify-between items-center p-4 rounded-xl bg-white border border-green-100 hover:border-green-300 transition">
                       <div>
-                        <label className="text-xs text-gray-500">Gender</label>
-                        <p className="font-semibold capitalize text-gray-900">
+                        <label className="text-xs font-semibold text-gray-500 uppercase">Gender</label>
+                        <p className="font-bold capitalize text-gray-900 mt-1 text-lg">
                           {profile.gender || "-"}
                         </p>
                       </div>
@@ -713,19 +717,19 @@ export default function ProfilePage() {
                           setEditValue(profile.gender || "");
                           setShowEditModal(true);
                         }}
-                        className="text-green-600 hover:text-green-700"
+                        className="p-2 text-green-600 hover:text-white hover:bg-green-600 rounded-lg transition duration-200"
                       >
-                        <PencilIcon className="h-4 w-4" />
+                        <PencilIcon className="h-5 w-5" />
                       </button>
                     </div>
 
                     {/* DOB */}
-                    <div className="flex justify-between items-center">
+                    <div className="flex justify-between items-center p-4 rounded-xl bg-white border border-green-100 hover:border-green-300 transition">
                       <div>
-                        <label className="text-xs text-gray-500">
+                        <label className="text-xs font-semibold text-gray-500 uppercase">
                           Date of Birth
                         </label>
-                        <p className="font-semibold text-gray-900">
+                        <p className="font-bold text-gray-900 mt-1 text-lg">
                           {profile.dob
                             ? new Date(profile.dob).toLocaleDateString()
                             : "-"}
@@ -739,19 +743,19 @@ export default function ProfilePage() {
                           );
                           setShowEditModal(true);
                         }}
-                        className="text-green-600 hover:text-green-700"
+                        className="p-2 text-green-600 hover:text-white hover:bg-green-600 rounded-lg transition duration-200"
                       >
-                        <PencilIcon className="h-4 w-4" />
+                        <PencilIcon className="h-5 w-5" />
                       </button>
                     </div>
 
-                    <hr className="my-4 border-gray-200" />
+                    <div className="my-2 border-t-2 border-green-100"></div>
 
                     {/* Email */}
-                    <div className="flex justify-between items-center">
+                    <div className="flex justify-between items-center p-4 rounded-xl bg-white border border-green-100 hover:border-green-300 transition">
                       <div>
-                        <label className="text-xs text-gray-500">Email</label>
-                        <p className="font-semibold text-sm text-gray-900">
+                        <label className="text-xs font-semibold text-gray-500 uppercase">Email</label>
+                        <p className="font-bold text-sm text-gray-900 mt-1">
                           {profile.email}
                         </p>
                       </div>
@@ -762,17 +766,17 @@ export default function ProfilePage() {
                           setEmailOtpStep("request");
                           setShowEmailModal(true);
                         }}
-                        className="text-green-600 hover:text-green-700"
+                        className="p-2 text-green-600 hover:text-white hover:bg-green-600 rounded-lg transition duration-200"
                       >
-                        <PencilIcon className="h-4 w-4" />
+                        <PencilIcon className="h-5 w-5" />
                       </button>
                     </div>
 
                     {/* Mobile */}
-                    <div className="flex justify-between items-center">
+                    <div className="flex justify-between items-center p-4 rounded-xl bg-white border border-green-100 hover:border-green-300 transition">
                       <div>
-                        <label className="text-xs text-gray-500">Mobile</label>
-                        <p className="font-semibold text-gray-900">
+                        <label className="text-xs font-semibold text-gray-500 uppercase">Mobile</label>
+                        <p className="font-bold text-gray-900 mt-1 text-lg">
                           {profile.mobile}
                         </p>
                       </div>
@@ -783,19 +787,19 @@ export default function ProfilePage() {
                           setMobileOtpStep("request");
                           setShowMobileModal(true);
                         }}
-                        className="text-green-600 hover:text-green-700"
+                        className="p-2 text-green-600 hover:text-white hover:bg-green-600 rounded-lg transition duration-200"
                       >
-                        <PencilIcon className="h-4 w-4" />
+                        <PencilIcon className="h-5 w-5" />
                       </button>
                     </div>
                   </div>
 
                   {/* Actions */}
-                  <div className="mt-6 flex gap-3">
+                  <div className="mt-8 flex gap-3">
                     {/* Update Password */}
                     <button
                       onClick={() => setShowPasswordModal(true)}
-                      className="flex-1 py-2.5 rounded-lg bg-linear-to-r from-blue-600 to-indigo-600 text-white font-medium hover:from-blue-700 hover:to-indigo-700 transition"
+                      className="flex-1 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold hover:from-blue-700 hover:to-indigo-700 transition duration-200 shadow-md hover:shadow-lg"
                     >
                       Update Password
                     </button>
@@ -803,7 +807,7 @@ export default function ProfilePage() {
                     {/* Logout */}
                     <button
                       onClick={logout}
-                      className="flex-1 py-2.5 rounded-lg bg-linear-to-r from-red-500 to-red-600 text-white font-medium flex items-center justify-center gap-2 hover:from-red-600 hover:to-red-700 transition"
+                      className="flex-1 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-red-600 text-white font-bold flex items-center justify-center gap-2 hover:from-orange-600 hover:to-red-700 transition duration-200 shadow-md hover:shadow-lg"
                     >
                       <ArrowRightOnRectangleIcon className="h-5 w-5" />
                       Logout
@@ -812,7 +816,7 @@ export default function ProfilePage() {
                     {/* Delete Account */}
                     <button
                       onClick={() => setShowDeleteModal(true)}
-                      className="flex-1 py-2.5 rounded-lg bg-linear-to-r from-gray-700 to-gray-800 text-white font-medium hover:from-gray-800 hover:to-black transition"
+                      className="flex-1 py-3 rounded-xl bg-gradient-to-r from-gray-700 to-gray-800 text-white font-bold hover:from-gray-800 hover:to-black transition duration-200 shadow-md hover:shadow-lg"
                     >
                       Delete Account
                     </button>
@@ -820,9 +824,9 @@ export default function ProfilePage() {
                 </div>
 
                 {/* Right: Addresses */}
-                <div className="col-span-1 bg-white p-6 rounded-xl border border-gray-200">
-                  <div className="flex justify-between items-center mb-5">
-                    <h3 className="text-xl font-bold text-green-900">
+                <div className="col-span-1 bg-gradient-to-br from-white to-green-50 p-8 rounded-2xl border-2 border-green-100 shadow-lg hover:shadow-xl transition duration-300">
+                  <div className="flex justify-between items-center mb-8">
+                    <h3 className="text-2xl font-bold text-transparent bg-gradient-to-r from-green-700 to-green-900 bg-clip-text">
                       Addresses
                     </h3>
                     <button
@@ -840,9 +844,9 @@ export default function ProfilePage() {
                         });
                         setShowAddressModal(true);
                       }}
-                      className="flex items-center gap-2 px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium"
+                      className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 text-sm font-bold transition duration-200 shadow-md"
                     >
-                      <PlusIcon className="h-4 w-4" />
+                      <PlusIcon className="h-5 w-5" />
                       Add
                     </button>
                   </div>
@@ -852,7 +856,7 @@ export default function ProfilePage() {
                       profile.addresses.map((addr) => (
                         <div
                           key={addr._id}
-                          className="p-4 border border-gray-200 rounded-lg flex items-start gap-4"
+                          className="p-5 border-2 border-green-100 rounded-xl flex items-start gap-4 hover:border-green-300 hover:bg-green-50 transition duration-200 cursor-pointer"
                         >
                           <input
                             type="radio"
@@ -860,31 +864,31 @@ export default function ProfilePage() {
                             value={addr._id}
                             checked={selectedAddressId === addr._id}
                             onChange={() => handleSelectAddress(addr._id)}
-                            className="mt-1"
+                            className="mt-1 w-5 h-5 accent-green-600"
                           />
                           <div className="flex-1">
-                            <h4 className="font-semibold text-green-900">
+                            <h4 className="font-bold text-green-900 mb-2">
                               {addr.label}
                             </h4>
                             {addr.name && (
-                              <p className="text-sm text-gray-600 mt-1">
+                              <p className="text-sm text-gray-700 mt-1">
                                 👤 {addr.name}
                               </p>
                             )}
                             {addr.phone && (
-                              <p className="text-sm text-gray-600">
+                              <p className="text-sm text-gray-700">
                                 📱 {addr.phone}
                               </p>
                             )}
-                            <p className="text-sm text-gray-600 mt-1">
+                            <p className="text-sm text-gray-700 mt-2">
                               {addr.address}
                             </p>
-                            <p className="text-sm text-gray-600">
+                            <p className="text-sm text-gray-700">
                               {addr.city}, {addr.state} {addr.pincode}
                             </p>
                             {addr.isDefault && (
-                              <span className="inline-block mt-2 px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded">
-                                Default
+                              <span className="inline-block mt-3 px-3 py-1 bg-gradient-to-r from-green-500 to-green-600 text-white text-xs font-bold rounded-full">
+                                ⭐ Default
                               </span>
                             )}
                           </div>
@@ -904,13 +908,13 @@ export default function ProfilePage() {
                                 });
                                 setShowAddressModal(true);
                               }}
-                              className="text-green-600 hover:text-green-700"
+                              className="p-2 text-green-600 hover:text-white hover:bg-green-600 rounded-lg transition duration-200"
                             >
                               <PencilIcon className="h-5 w-5" />
                             </button>
                             <button
                               onClick={() => deleteAddress(addr._id)}
-                              className="text-red-600 hover:text-red-700"
+                              className="p-2 text-red-600 hover:text-white hover:bg-red-600 rounded-lg transition duration-200"
                             >
                               <TrashIcon className="h-5 w-5" />
                             </button>
@@ -918,15 +922,15 @@ export default function ProfilePage() {
                         </div>
                       ))
                     ) : (
-                      <p className="text-gray-600">No addresses added yet.</p>
+                      <p className="text-gray-600 py-8 text-center">No addresses added yet.</p>
                     )}
                   </div>
 
                   {selectedAddressId && (
-                    <div className="mt-6 flex justify-end">
+                    <div className="mt-8 flex justify-end">
                       <button
                         onClick={chooseDeliveryAddress}
-                        className="flex items-center gap-1 text-green-600 font-medium hover:text-green-700 transition"
+                        className="flex items-center gap-2 text-green-700 font-bold hover:text-white hover:bg-green-700 px-6 py-3 rounded-lg transition duration-200"
                       >
                         Proceed to Cart →
                       </button>
@@ -938,36 +942,40 @@ export default function ProfilePage() {
               {/* Tablet & Mobile Layout */}
               <div className="xl:hidden space-y-6">
                 {/* Personal Info Card */}
-                <div className="bg-white p-5 sm:p-6 rounded-xl border border-gray-200">
-                  <h2 className="text-lg sm:text-xl font-bold mb-4 text-green-900">
+                <div className="bg-gradient-to-br from-white to-green-50 p-5 sm:p-6 rounded-2xl border-2 border-green-100 shadow-lg">
+                  <h2 className="text-xl sm:text-2xl font-bold mb-6 text-transparent bg-gradient-to-r from-green-700 to-green-900 bg-clip-text">
                     My Profile
                   </h2>
 
                   <div className="space-y-4">
                     {/* Name */}
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-gray-500">Name</span>
-                      <span className="font-semibold text-gray-900">
-                        {profile.name}
-                      </span>
+                    <div className="flex justify-between items-center p-4 rounded-xl bg-white border border-green-100 hover:border-green-300 transition">
+                      <div className="flex-1">
+                        <span className="text-xs font-semibold text-gray-500 uppercase block mb-1">Name</span>
+                        <span className="font-bold text-gray-900 block">
+                          {profile.name}
+                        </span>
+                      </div>
                       <button
                         onClick={() => {
                           setEditField("name");
                           setEditValue(profile.name || "");
                           setShowEditModal(true);
                         }}
-                        className="text-green-600 hover:text-green-700"
+                        className="ml-2 p-2 text-green-600 hover:text-white hover:bg-green-600 rounded-lg transition duration-200 shrink-0"
                       >
                         <PencilIcon className="h-4 w-4" />
                       </button>
                     </div>
 
                     {/* Email */}
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-gray-500">Email</span>
-                      <span className="font-semibold text-sm text-gray-900">
-                        {profile.email}
-                      </span>
+                    <div className="flex justify-between items-center p-4 rounded-xl bg-white border border-green-100 hover:border-green-300 transition">
+                      <div className="flex-1">
+                        <span className="text-xs font-semibold text-gray-500 uppercase block mb-1">Email</span>
+                        <span className="font-semibold text-sm text-gray-900 block">
+                          {profile.email}
+                        </span>
+                      </div>
                       <button
                         onClick={() => {
                           setNewEmail("");
@@ -975,18 +983,20 @@ export default function ProfilePage() {
                           setEmailOtpStep("request");
                           setShowEmailModal(true);
                         }}
-                        className="text-green-600 hover:text-green-700"
+                        className="ml-2 p-2 text-green-600 hover:text-white hover:bg-green-600 rounded-lg transition duration-200 shrink-0"
                       >
                         <PencilIcon className="h-4 w-4" />
                       </button>
                     </div>
 
                     {/* Mobile */}
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-gray-500">Mobile</span>
-                      <span className="font-semibold text-gray-900">
-                        {profile.mobile}
-                      </span>
+                    <div className="flex justify-between items-center p-4 rounded-xl bg-white border border-green-100 hover:border-green-300 transition">
+                      <div className="flex-1">
+                        <span className="text-xs font-semibold text-gray-500 uppercase block mb-1">Mobile</span>
+                        <span className="font-bold text-gray-900 block">
+                          {profile.mobile}
+                        </span>
+                      </div>
                       <button
                         onClick={() => {
                           setNewMobile("");
@@ -994,7 +1004,7 @@ export default function ProfilePage() {
                           setMobileOtpStep("request");
                           setShowMobileModal(true);
                         }}
-                        className="text-green-600 hover:text-green-700"
+                        className="ml-2 p-2 text-green-600 hover:text-white hover:bg-green-600 rounded-lg transition duration-200 shrink-0"
                       >
                         <PencilIcon className="h-4 w-4" />
                       </button>
@@ -1002,11 +1012,11 @@ export default function ProfilePage() {
                   </div>
 
                   {/* Actions */}
-                  <div className="mt-5 flex gap-2">
+                  <div className="mt-6 flex gap-2">
                     {/* Change Password */}
                     <button
                       onClick={() => setShowPasswordModal(true)}
-                      className="flex-1 py-2 rounded-lg bg-linear-to-r from-blue-600 to-indigo-600 text-white text-sm font-medium hover:from-blue-700 hover:to-indigo-700 transition"
+                      className="flex-1 py-2.5 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-bold hover:from-blue-700 hover:to-indigo-700 transition duration-200 shadow-md"
                     >
                       Change Password
                     </button>
@@ -1014,7 +1024,7 @@ export default function ProfilePage() {
                     {/* Logout */}
                     <button
                       onClick={logout}
-                      className="flex-1 py-2 rounded-lg bg-linear-to-r from-red-500 to-red-600 text-white text-sm font-medium flex items-center justify-center gap-1 hover:from-red-600 hover:to-red-700 transition"
+                      className="flex-1 py-2.5 rounded-lg bg-gradient-to-r from-orange-500 to-red-600 text-white text-sm font-bold flex items-center justify-center gap-1 hover:from-orange-600 hover:to-red-700 transition duration-200 shadow-md"
                     >
                       <ArrowRightOnRectangleIcon className="h-4 w-4" />
                       Logout
@@ -1023,7 +1033,7 @@ export default function ProfilePage() {
                     {/* Delete Account */}
                     <button
                       onClick={() => setShowDeleteModal(true)}
-                      className="flex-1 py-2 rounded-lg bg-linear-to-r from-gray-700 to-gray-800 text-white text-sm font-medium hover:from-gray-800 hover:to-black transition"
+                      className="flex-1 py-2.5 rounded-lg bg-gradient-to-r from-gray-700 to-gray-800 text-white text-sm font-bold hover:from-gray-800 hover:to-black transition duration-200 shadow-md"
                     >
                       Delete
                     </button>
@@ -1031,10 +1041,10 @@ export default function ProfilePage() {
                 </div>
 
                 {/* Addresses Card */}
-                <div className="bg-white p-5 sm:p-6 rounded-xl border border-gray-200">
+                <div className="bg-gradient-to-br from-white to-green-50 p-5 sm:p-6 rounded-2xl border-2 border-green-100 shadow-lg">
                   {/* Header */}
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg sm:text-xl font-bold text-green-900">
+                  <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-xl sm:text-2xl font-bold text-transparent bg-gradient-to-r from-green-700 to-green-900 bg-clip-text">
                       Addresses
                     </h3>
                     <button
@@ -1052,9 +1062,9 @@ export default function ProfilePage() {
                         });
                         setShowAddressModal(true);
                       }}
-                      className="px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 font-medium transition"
+                      className="px-3 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white text-sm rounded-lg hover:from-green-700 hover:to-green-800 font-bold transition duration-200 shadow-md flex items-center gap-1"
                     >
-                      <PlusIcon className="h-4 w-4 inline" /> Add
+                      <PlusIcon className="h-4 w-4" /> Add
                     </button>
                   </div>
 
@@ -1064,7 +1074,7 @@ export default function ProfilePage() {
                       profile.addresses.map((addr) => (
                         <div
                           key={addr._id}
-                          className="p-3 border border-gray-200 rounded-lg text-sm flex items-start gap-3 transition hover:-translate-y-0.5"
+                          className="p-4 border-2 border-green-100 rounded-xl text-sm flex items-start gap-3 transition hover:border-green-300 hover:bg-green-50 cursor-pointer"
                         >
                           <input
                             type="radio"
@@ -1072,29 +1082,29 @@ export default function ProfilePage() {
                             value={addr._id}
                             checked={selectedAddressId === addr._id}
                             onChange={() => handleSelectAddress(addr._id)}
-                            className="mt-0.5"
+                            className="mt-1 w-4 h-4 accent-green-600 shrink-0"
                           />
                           <div className="flex-1">
-                            <div className="font-semibold text-green-900 mb-1">
+                            <div className="font-bold text-green-900 mb-2">
                               {addr.label}
                             </div>
                             {addr.name && (
-                              <p className="text-xs text-gray-600">👤 {addr.name}</p>
+                              <p className="text-xs text-gray-700">👤 {addr.name}</p>
                             )}
                             {addr.phone && (
-                              <p className="text-xs text-gray-600">📱 {addr.phone}</p>
+                              <p className="text-xs text-gray-700">📱 {addr.phone}</p>
                             )}
-                            <p className="text-gray-600">{addr.address}</p>
-                            <p className="text-gray-600">
+                            <p className="text-gray-700 mt-2">{addr.address}</p>
+                            <p className="text-gray-700">
                               {addr.city}, {addr.state} {addr.pincode}
                             </p>
                             {addr.isDefault && (
-                              <span className="inline-block mt-2 px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded">
-                                Default
+                              <span className="inline-block mt-3 px-2.5 py-1 bg-gradient-to-r from-green-500 to-green-600 text-white text-xs font-bold rounded-full">
+                                ⭐ Default
                               </span>
                             )}
                           </div>
-                          <div className="flex gap-2 mt-1">
+                          <div className="flex gap-2 shrink-0">
                             <button
                               onClick={() => {
                                 setEditingAddressId(addr._id);
@@ -1110,13 +1120,13 @@ export default function ProfilePage() {
                                 });
                                 setShowAddressModal(true);
                               }}
-                              className="text-green-600 hover:text-green-700"
+                              className="p-2 text-green-600 hover:text-white hover:bg-green-600 rounded-lg transition duration-200"
                             >
                               <PencilIcon className="h-4 w-4" />
                             </button>
                             <button
                               onClick={() => deleteAddress(addr._id)}
-                              className="text-red-600 hover:text-red-700"
+                              className="p-2 text-red-600 hover:text-white hover:bg-red-600 rounded-lg transition duration-200"
                             >
                               <TrashIcon className="h-4 w-4" />
                             </button>
@@ -1124,17 +1134,17 @@ export default function ProfilePage() {
                         </div>
                       ))
                     ) : (
-                      <p className="text-gray-600 text-sm">
+                      <p className="text-gray-600 text-sm py-8 text-center">
                         No addresses added yet.
                       </p>
                     )}
 
                     {/* Proceed Link */}
                     {selectedAddressId && (
-                      <div className="mt-4 flex justify-end border-t border-gray-200 pt-3">
+                      <div className="mt-4 flex justify-end border-t-2 border-green-100 pt-4">
                         <button
                           onClick={chooseDeliveryAddress}
-                          className="flex items-center gap-1 text-green-600 font-medium hover:text-green-700 transition"
+                          className="flex items-center gap-1 text-green-700 font-bold hover:text-white hover:bg-green-700 px-4 py-2 rounded-lg transition duration-200"
                         >
                           Proceed to Cart <span className="text-lg">→</span>
                         </button>
@@ -1147,15 +1157,15 @@ export default function ProfilePage() {
               {/* Edit Field Modal */}
               {showEditModal && editField && (
                 <div className="app-modal-shell">
-                  <div className="app-modal-card w-full max-w-sm rounded-lg bg-white p-5 shadow-2xl sm:p-6">
-                    <h3 className="text-lg font-bold mb-4 capitalize">
+                  <div className="app-modal-card w-full max-w-sm rounded-lg bg-gradient-to-br from-green-900 to-green-800 p-5 shadow-2xl sm:p-6 border border-green-700">
+                    <h3 className="text-lg font-bold mb-4 text-white capitalize">
                       Edit {editField}
                     </h3>
                     {editField === "gender" ? (
                       <select
                         value={editValue}
                         onChange={(e) => setEditValue(e.target.value)}
-                        className="w-full p-2 border rounded mb-4"
+                        className="w-full p-2 sm:p-3 border-2 border-green-600 rounded-lg mb-4 bg-green-950 text-white focus:outline-none focus:ring-2 focus:ring-green-400 transition"
                       >
                         <option value="">Select</option>
                         <option value="male">Male</option>
@@ -1167,27 +1177,27 @@ export default function ProfilePage() {
                         type="date"
                         value={editValue}
                         onChange={(e) => setEditValue(e.target.value)}
-                        className="w-full p-2 border rounded mb-4"
+                        className="w-full p-2 sm:p-3 border-2 border-green-600 rounded-lg mb-4 bg-green-950 text-white focus:outline-none focus:ring-2 focus:ring-green-400 transition"
                       />
                     ) : (
                       <input
                         type="text"
                         value={editValue}
                         onChange={(e) => setEditValue(e.target.value)}
-                        className="w-full p-2 border rounded mb-4"
+                        className="w-full p-2 sm:p-3 border-2 border-green-600 rounded-lg mb-4 bg-green-950 text-white focus:outline-none focus:ring-2 focus:ring-green-400 transition"
                       />
                     )}
                     <div className="flex gap-2">
                       <button
                         onClick={() => updateField(editField, editValue)}
-                        disabled={loading}
-                        className="flex-1 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+                        disabled={editLoading}
+                        className="flex-1 py-2 sm:py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
                       >
-                        Save
+                        {editLoading ? "Saving..." : "Save"}
                       </button>
                       <button
                         onClick={() => setShowEditModal(false)}
-                        className="flex-1 py-2 bg-gray-400 text-white rounded hover:bg-gray-500"
+                        className="flex-1 py-2 sm:py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition font-semibold"
                       >
                         Cancel
                       </button>
@@ -1199,15 +1209,16 @@ export default function ProfilePage() {
               {/* Password Update Modal */}
               {showPasswordModal && (
                 <div className="app-modal-shell">
-                  <div className="app-modal-card w-full max-w-sm rounded-lg bg-green-900 p-5 shadow-2xl sm:p-6">
+                  <div className="app-modal-card w-full max-w-sm rounded-2xl bg-gradient-to-br from-green-900 to-green-800 p-6 shadow-2xl border border-green-700 relative">
                     <button
                       onClick={() => setShowPasswordModal(false)}
-                      className="absolute top-2 right-2 text-gray-300 hover:text-red-500 text-xl"
+                      className="absolute top-4 right-4 p-1.5 text-gray-300 hover:text-red-400 hover:bg-red-600 hover:bg-opacity-20 rounded-full transition text-xl font-bold"
+                      title="Close"
                     >
                       ✕
                     </button>
-                    <h3 className="text-lg font-bold mb-4 text-white">
-                      Update Password
+                    <h3 className="text-xl font-bold mb-6 text-white">
+                      🔐 Update Password
                     </h3>
 
                     {passwordOtpStep === "request" ? (
@@ -1217,14 +1228,14 @@ export default function ProfilePage() {
                           placeholder="New Password"
                           value={newPassword}
                           onChange={(e) => setNewPassword(e.target.value)}
-                          className="w-full p-2 sm:p-3 text-sm sm:text-base border rounded mb-3 text-white bg-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500"
+                          className="w-full p-3 sm:p-4 text-sm sm:text-base border-2 border-green-600 rounded-lg mb-3 text-white bg-green-950 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition"
                         />
                         <input
                           type="password"
                           placeholder="Confirm Password"
                           value={confirmPassword}
                           onChange={(e) => setConfirmPassword(e.target.value)}
-                          className="w-full p-2 sm:p-3 text-sm sm:text-base border rounded mb-4 text-white bg-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500"
+                          className="w-full p-3 sm:p-4 text-sm sm:text-base border-2 border-green-600 rounded-lg mb-5 text-white bg-green-950 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition"
                         />
                         <button
                           onClick={() => sendOtp("password")}
@@ -1234,15 +1245,15 @@ export default function ProfilePage() {
                             !confirmPassword ||
                             newPassword !== confirmPassword
                           }
-                          className="w-full py-2 sm:py-3 text-sm sm:text-base bg-green-600 text-white rounded hover:bg-green-700 transition disabled:bg-gray-600 disabled:cursor-not-allowed"
+                          className="w-full py-3 sm:py-4 text-sm sm:text-base bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 transition disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed font-bold shadow-md"
                         >
-                          {loading ? "Sending..." : "Send OTP"}
+                          {loading ? "Sending OTP..." : "Send OTP"}
                         </button>
                       </>
                     ) : (
                       <>
-                        <p className="text-sm text-gray-300 mb-3">
-                          OTP sent to your email and mobile
+                        <p className="text-sm text-gray-300 mb-4 bg-green-950 bg-opacity-50 p-3 rounded-lg">
+                          ✉️ OTP sent to your email and mobile
                         </p>
                         <input
                           type="text"
@@ -1257,12 +1268,12 @@ export default function ProfilePage() {
                             setPasswordOtp(cleaned);
                           }}
                           maxLength={6}
-                          className="w-full p-2 sm:p-3 text-sm sm:text-base border rounded mb-4 text-white bg-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500"
+                          className="w-full p-3 sm:p-4 text-sm sm:text-base border-2 border-green-600 rounded-lg mb-5 text-white bg-green-950 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition text-center text-2xl tracking-widest"
                         />
                         <button
                           onClick={() => updatePassword(true)}
                           disabled={loading || passwordOtp.length < 6}
-                          className="w-full py-2 sm:py-3 text-sm sm:text-base bg-green-600 text-white rounded hover:bg-green-700 transition disabled:bg-gray-600 disabled:cursor-not-allowed"
+                          className="w-full py-3 sm:py-4 text-sm sm:text-base bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 transition disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed font-bold shadow-md"
                         >
                           {loading ? "Updating..." : "Verify & Update"}
                         </button>
@@ -1277,7 +1288,7 @@ export default function ProfilePage() {
                         setPasswordOtp("");
                         setPasswordOtpStep("request");
                       }}
-                      className="w-full mt-2 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+                      className="w-full mt-3 py-2.5 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition font-semibold"
                     >
                       Cancel
                     </button>
@@ -1288,91 +1299,91 @@ export default function ProfilePage() {
               {/* Address Modal */}
               {showAddressModal && (
                 <div className="app-modal-shell">
-                  <div className="app-modal-card w-full max-w-sm rounded-lg bg-green-900 p-5 shadow-2xl sm:p-6">
+                  <div className="app-modal-card w-full max-w-sm rounded-2xl bg-gradient-to-br from-green-900 to-green-800 p-6 shadow-2xl border border-green-700 relative max-h-[90vh] overflow-y-auto">
                     <button
                       onClick={() => setShowAddressModal(false)}
-                      className="absolute top-2 right-2 text-gray-300 hover:text-red-500 text-xl"
+                      className="absolute top-4 right-4 p-1.5 text-gray-300 hover:text-red-400 hover:bg-red-600 hover:bg-opacity-20 rounded-full transition text-xl font-bold sticky top-0"
                     >
                       ✕
                     </button>
-                    <h3 className="text-lg font-bold mb-4 text-white">
-                      {editingAddressId ? "Edit Address" : "Add Address"}
+                    <h3 className="text-xl font-bold mb-6 text-white">
+                      {editingAddressId ? "📍 Edit Address" : "📍 Add Address"}
                     </h3>
 
                     {/* Error Message */}
                     {addressError && (
-                      <div className="mb-3 p-2 bg-red-600 text-red-100 rounded text-sm">
-                        {addressError}
+                      <div className="mb-4 p-3 bg-red-600 bg-opacity-30 border-2 border-red-500 text-red-100 rounded-lg text-sm font-semibold">
+                        ⚠️ {addressError}
                       </div>
                     )}
 
-              <input
-                type="text"
-                placeholder="Label (e.g., Home, Office)"
-                value={addressForm.label}
-                onChange={(e) =>
-                  setAddressForm({
-                    ...addressForm,
-                    label: e.target.value,
-                  })
-                }
-                disabled={addressLoading}
-                className="w-full p-2 sm:p-3 text-sm sm:text-base border rounded mb-3 text-white bg-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-700"
-              />
+                    <input
+                      type="text"
+                      placeholder="Label (e.g., Home, Office)"
+                      value={addressForm.label}
+                      onChange={(e) =>
+                        setAddressForm({
+                          ...addressForm,
+                          label: e.target.value,
+                        })
+                      }
+                      disabled={addressLoading}
+                      className="w-full p-3 sm:p-4 text-sm sm:text-base border-2 border-green-600 rounded-lg mb-4 text-white bg-green-950 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition disabled:bg-gray-700"
+                    />
 
-              <input
-                type="text"
-                placeholder="Name"
-                value={addressForm.name}
-                onChange={(e) =>
-                  setAddressForm({
-                    ...addressForm,
-                    name: e.target.value,
-                  })
-                }
-                disabled={addressLoading}
-                className="w-full p-2 sm:p-3 text-sm sm:text-base border rounded mb-3 text-white bg-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-700"
-              />
+                    <input
+                      type="text"
+                      placeholder="Name"
+                      value={addressForm.name}
+                      onChange={(e) =>
+                        setAddressForm({
+                          ...addressForm,
+                          name: e.target.value,
+                        })
+                      }
+                      disabled={addressLoading}
+                      className="w-full p-3 sm:p-4 text-sm sm:text-base border-2 border-green-600 rounded-lg mb-4 text-white bg-green-950 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition disabled:bg-gray-700"
+                    />
 
-              <input
-                type="text"
-                placeholder="Phone Number"
-                value={addressForm.phone}
-                onChange={(e) =>
-                  setAddressForm({
-                    ...addressForm,
-                    phone: e.target.value,
-                  })
-                }
-                disabled={addressLoading}
-                className="w-full p-2 sm:p-3 text-sm sm:text-base border rounded mb-3 text-white bg-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-700"
-              />
+                    <input
+                      type="text"
+                      placeholder="Phone Number"
+                      value={addressForm.phone}
+                      onChange={(e) =>
+                        setAddressForm({
+                          ...addressForm,
+                          phone: e.target.value,
+                        })
+                      }
+                      disabled={addressLoading}
+                      className="w-full p-3 sm:p-4 text-sm sm:text-base border-2 border-green-600 rounded-lg mb-4 text-white bg-green-950 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition disabled:bg-gray-700"
+                    />
 
                     {/* Pincode Input with Current Location Button */}
-                    <div className="mb-3">
+                    <div className="mb-4">
                       <PincodeSuggestions
                         onSelect={handleAddressPincodeSuggestionSelect}
                         placeholder="Enter 6-digit pincode"
-                        inputClassName="bg-gray-800 text-white border-gray-600 focus:ring-green-500"
+                        inputClassName="bg-green-950 text-white border-green-600 focus:ring-green-400 border-2 rounded-lg placeholder-gray-400"
                       />
                     </div>
-                    <div className="mb-3">
+                    <div className="mb-4">
                       <button
                         type="button"
                         onClick={handleGetCurrentLocationForAddress}
                         disabled={addressLoading}
-                        className="w-full px-3 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 disabled:bg-gray-700 transition font-semibold"
+                        className="w-full px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg text-sm hover:from-blue-700 hover:to-blue-800 disabled:from-gray-700 disabled:to-gray-700 transition font-bold shadow-md"
                         title="Use current location"
                       >
                         {addressLoading
-                          ? "Getting location..."
+                          ? "📍 Getting location..."
                           : "📍 Use My Current Location"}
                       </button>
                     </div>
 
                     {addressLoading && (
-                      <p className="text-xs text-blue-300 mb-2">
-                        Fetching location...
+                      <p className="text-xs text-blue-300 mb-4 bg-blue-900 bg-opacity-30 p-2 rounded-lg">
+                        ⏳ Fetching your location...
                       </p>
                     )}
 
@@ -1387,10 +1398,10 @@ export default function ProfilePage() {
                         })
                       }
                       disabled={addressLoading}
-                      className="w-full p-2 sm:p-3 text-sm sm:text-base border rounded mb-3 text-white bg-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-700"
+                      className="w-full p-3 sm:p-4 text-sm sm:text-base border-2 border-green-600 rounded-lg mb-4 text-white bg-green-950 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition disabled:bg-gray-700"
                     />
 
-                    <div className="grid grid-cols-2 gap-2 mb-3">
+                    <div className="grid grid-cols-2 gap-3 mb-4">
                       <input
                         type="text"
                         placeholder="City"
@@ -1402,7 +1413,7 @@ export default function ProfilePage() {
                           })
                         }
                         disabled={addressLoading}
-                        className="p-2 sm:p-3 text-sm sm:text-base border rounded text-white bg-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-700"
+                        className="p-3 sm:p-4 text-sm sm:text-base border-2 border-green-600 rounded-lg text-white bg-green-950 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition disabled:bg-gray-700"
                       />
                       <input
                         type="text"
@@ -1415,15 +1426,15 @@ export default function ProfilePage() {
                           })
                         }
                         disabled={addressLoading}
-                        className="p-2 sm:p-3 text-sm sm:text-base border rounded text-white bg-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-700"
+                        className="p-3 sm:p-4 text-sm sm:text-base border-2 border-green-600 rounded-lg text-white bg-green-950 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition disabled:bg-gray-700"
                       />
                     </div>
 
-                    <p className="mb-2 text-xs text-green-100">
-                      Enter a 6-digit pincode to auto-fill city and state.
+                    <p className="mb-4 text-xs text-green-200 bg-green-950 bg-opacity-50 p-2 rounded-lg font-semibold">
+                      💡 Enter a 6-digit pincode to auto-fill city and state.
                     </p>
 
-                    <label className="flex items-center gap-2 mb-4 text-white">
+                    <label className="flex items-center gap-3 mb-5 text-white font-semibold cursor-pointer hover:text-green-200 transition">
                       <input
                         type="checkbox"
                         checked={addressForm.isDefault}
@@ -1434,23 +1445,24 @@ export default function ProfilePage() {
                           })
                         }
                         disabled={addressLoading}
+                        className="w-4 h-4 accent-green-500 cursor-pointer"
                       />
-                      <span className="text-sm">Set as default</span>
+                      <span className="text-sm">⭐ Set as default address</span>
                     </label>
 
                     <button
                       onClick={addOrUpdateAddress}
-                      disabled={loading || addressLoading}
-                      className="w-full py-2 sm:py-3 text-sm sm:text-base bg-green-600 text-white rounded hover:bg-green-700 transition disabled:bg-gray-600 disabled:cursor-not-allowed"
+                      disabled={submitAddressLoading || addressLoading}
+                      className="w-full py-3 sm:py-4 text-sm sm:text-base bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 transition disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed font-bold shadow-md"
                     >
-                      {editingAddressId ? "Update" : "Add"}
+                      {submitAddressLoading ? (editingAddressId ? "Updating..." : "Adding...") : (editingAddressId ? "Update Address" : "Add Address")}
                     </button>
                     <button
                       onClick={() => {
                         setShowAddressModal(false);
                         setAddressError(null);
                       }}
-                      className="w-full mt-2 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+                      className="w-full mt-3 py-2.5 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition font-semibold"
                     >
                       Cancel
                     </button>
@@ -1461,15 +1473,15 @@ export default function ProfilePage() {
               {/* Email Update Modal */}
               {showEmailModal && (
                 <div className="app-modal-shell">
-                  <div className="app-modal-card w-full max-w-sm rounded-lg bg-green-900 p-5 shadow-2xl sm:p-6">
+                  <div className="app-modal-card w-full max-w-sm rounded-2xl bg-gradient-to-br from-green-900 to-green-800 p-6 shadow-2xl border border-green-700 relative">
                     <button
                       onClick={() => setShowEmailModal(false)}
-                      className="absolute top-2 right-2 text-gray-300 hover:text-red-500 text-xl"
+                      className="absolute top-4 right-4 p-1.5 text-gray-300 hover:text-red-400 hover:bg-red-600 hover:bg-opacity-20 rounded-full transition text-xl font-bold"
                     >
                       ✕
                     </button>
-                    <h3 className="text-lg font-bold mb-4 text-white">
-                      Update Email
+                    <h3 className="text-xl font-bold mb-6 text-white">
+                      📧 Update Email
                     </h3>
 
                     {emailOtpStep === "request" ? (
@@ -1479,26 +1491,26 @@ export default function ProfilePage() {
                           placeholder="New Email"
                           value={newEmail}
                           onChange={(e) => setNewEmail(e.target.value)}
-                          className="w-full p-2 sm:p-3 text-sm sm:text-base border rounded mb-4 text-white bg-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500"
+                          className="w-full p-3 sm:p-4 text-sm sm:text-base border-2 border-green-600 rounded-lg mb-5 text-white bg-green-950 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition"
                         />
                         <button
                           onClick={() => sendOtp("email", newEmail)}
                           disabled={loading || !newEmail}
-                          className="w-full py-2 sm:py-3 text-sm sm:text-base bg-green-600 text-white rounded hover:bg-green-700 transition disabled:bg-gray-600 disabled:cursor-not-allowed"
+                          className="w-full py-3 sm:py-4 text-sm sm:text-base bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 transition disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed font-bold shadow-md"
                         >
-                          {loading ? "Sending..." : "Send OTP"}
+                          {loading ? "Sending OTP..." : "Send OTP"}
                         </button>
                         <button
                           onClick={() => setShowEmailModal(false)}
-                          className="w-full mt-2 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+                          className="w-full mt-3 py-2.5 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition font-semibold"
                         >
                           Cancel
                         </button>
                       </>
                     ) : (
                       <>
-                        <p className="text-sm text-gray-300 mb-3">
-                          OTP sent to your email and mobile
+                        <p className="text-sm text-gray-300 mb-4 bg-green-950 bg-opacity-50 p-3 rounded-lg">
+                          ✉️ OTP sent to your email and mobile
                         </p>
                         <input
                           type="text"
@@ -1513,18 +1525,18 @@ export default function ProfilePage() {
                             setEmailOtp(cleaned);
                           }}
                           maxLength={6}
-                          className="w-full p-2 sm:p-3 text-sm sm:text-base border rounded mb-4 text-white bg-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500"
+                          className="w-full p-3 sm:p-4 text-sm sm:text-base border-2 border-green-600 rounded-lg mb-5 text-white bg-green-950 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition text-center text-2xl tracking-widest"
                         />
                         <button
                           onClick={() => verifyOtpUpdate("email")}
                           disabled={loading || !emailOtp || emailOtp.length < 6}
-                          className="w-full py-2 sm:py-3 text-sm sm:text-base bg-green-600 text-white rounded hover:bg-green-700 transition disabled:bg-gray-600 disabled:cursor-not-allowed"
+                          className="w-full py-3 sm:py-4 text-sm sm:text-base bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 transition disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed font-bold shadow-md"
                         >
                           {loading ? "Verifying..." : "Verify & Update"}
                         </button>
                         <button
                           onClick={() => setShowEmailModal(false)}
-                          className="w-full mt-2 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+                          className="w-full mt-3 py-2.5 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition font-semibold"
                         >
                           Cancel
                         </button>
@@ -1537,15 +1549,15 @@ export default function ProfilePage() {
               {/* Mobile Update Modal */}
               {showMobileModal && (
                 <div className="app-modal-shell">
-                  <div className="app-modal-card w-full max-w-sm rounded-lg bg-green-900 p-5 shadow-2xl sm:p-6">
+                  <div className="app-modal-card w-full max-w-sm rounded-2xl bg-gradient-to-br from-green-900 to-green-800 p-6 shadow-2xl border border-green-700 relative">
                     <button
                       onClick={() => setShowMobileModal(false)}
-                      className="absolute top-2 right-2 text-gray-300 hover:text-red-500 text-xl"
+                      className="absolute top-4 right-4 p-1.5 text-gray-300 hover:text-red-400 hover:bg-red-600 hover:bg-opacity-20 rounded-full transition text-xl font-bold"
                     >
                       ✕
                     </button>
-                    <h3 className="text-lg font-bold mb-4 text-white">
-                      Update Mobile
+                    <h3 className="text-xl font-bold mb-6 text-white">
+                      📱 Update Mobile
                     </h3>
 
                     {mobileOtpStep === "request" ? (
@@ -1555,26 +1567,26 @@ export default function ProfilePage() {
                           placeholder="New Mobile (with +91)"
                           value={newMobile}
                           onChange={(e) => setNewMobile(e.target.value)}
-                          className="w-full p-2 sm:p-3 text-sm sm:text-base border rounded mb-4 text-white bg-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500"
+                          className="w-full p-3 sm:p-4 text-sm sm:text-base border-2 border-green-600 rounded-lg mb-5 text-white bg-green-950 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition"
                         />
                         <button
                           onClick={() => sendOtp("mobile", newMobile)}
                           disabled={loading || !newMobile}
-                          className="w-full py-2 sm:py-3 text-sm sm:text-base bg-green-600 text-white rounded hover:bg-green-700 transition disabled:bg-gray-600 disabled:cursor-not-allowed"
+                          className="w-full py-3 sm:py-4 text-sm sm:text-base bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 transition disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed font-bold shadow-md"
                         >
-                          {loading ? "Sending..." : "Send OTP"}
+                          {loading ? "Sending OTP..." : "Send OTP"}
                         </button>
                         <button
                           onClick={() => setShowMobileModal(false)}
-                          className="w-full mt-2 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+                          className="w-full mt-3 py-2.5 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition font-semibold"
                         >
                           Cancel
                         </button>
                       </>
                     ) : (
                       <>
-                        <p className="text-sm text-gray-300 mb-3">
-                          OTP sent to your email and mobile
+                        <p className="text-sm text-gray-300 mb-4 bg-green-950 bg-opacity-50 p-3 rounded-lg">
+                          ✉️ OTP sent to your email and mobile
                         </p>
                         <input
                           type="text"
@@ -1589,20 +1601,20 @@ export default function ProfilePage() {
                             setMobileOtp(cleaned);
                           }}
                           maxLength={6}
-                          className="w-full p-2 sm:p-3 text-sm sm:text-base border rounded mb-4 text-white bg-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500"
+                          className="w-full p-3 sm:p-4 text-sm sm:text-base border-2 border-green-600 rounded-lg mb-5 text-white bg-green-950 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition text-center text-2xl tracking-widest"
                         />
                         <button
                           onClick={() => verifyOtpUpdate("mobile")}
                           disabled={
                             loading || !mobileOtp || mobileOtp.length < 6
                           }
-                          className="w-full py-2 sm:py-3 text-sm sm:text-base bg-green-600 text-white rounded hover:bg-green-700 transition disabled:bg-gray-600 disabled:cursor-not-allowed"
+                          className="w-full py-3 sm:py-4 text-sm sm:text-base bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 transition disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed font-bold shadow-md"
                         >
                           {loading ? "Verifying..." : "Verify & Update"}
                         </button>
                         <button
                           onClick={() => setShowMobileModal(false)}
-                          className="w-full mt-2 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+                          className="w-full mt-3 py-2.5 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition font-semibold"
                         >
                           Cancel
                         </button>
@@ -1615,23 +1627,22 @@ export default function ProfilePage() {
               {/* Delete Account Modal */}
               {showDeleteModal && (
                 <div className="app-modal-shell">
-                  <div className="app-modal-card w-full max-w-sm rounded-lg bg-green-900 p-5 shadow-2xl sm:p-6">
+                  <div className="app-modal-card w-full max-w-sm rounded-2xl bg-gradient-to-br from-red-900 to-red-800 p-6 shadow-2xl border border-red-700 relative">
                     <button
                       onClick={() => {
                         setShowDeleteModal(false);
                         setDeleteOtp("");
                       }}
-                      className="absolute top-2 right-2 text-gray-300 hover:text-red-500 text-xl"
+                      className="absolute top-4 right-4 p-1.5 text-gray-300 hover:text-white hover:bg-red-600 rounded-full transition text-xl font-bold"
                       aria-label="close-delete-modal"
                     >
                       ✕
                     </button>
-                    <h3 className="text-lg font-bold mb-4 text-red-400">
-                      Delete Account
+                    <h3 className="text-xl font-bold mb-4 text-red-200">
+                      ⚠️ Delete Account
                     </h3>
-                    <p className="text-sm text-gray-300 mb-4">
-                      This action cannot be undone. Enter OTP sent to your email
-                      to confirm.
+                    <p className="text-sm text-gray-200 mb-6 bg-red-950 bg-opacity-50 p-4 rounded-lg border border-red-700">
+                      <span className="font-bold">Warning!</span> This action cannot be undone. Your account and all data will be permanently deleted. Enter OTP sent to your email to confirm.
                     </p>
                     <input
                       type="text"
@@ -1646,29 +1657,29 @@ export default function ProfilePage() {
                         setDeleteOtp(cleaned);
                       }}
                       maxLength={6}
-                      className="w-full p-2 sm:p-3 text-sm sm:text-base border rounded mb-4 text-white bg-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500"
+                      className="w-full p-3 sm:p-4 text-sm sm:text-base border-2 border-red-600 rounded-lg mb-5 text-white bg-red-950 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-400 focus:border-transparent transition text-center text-2xl tracking-widest"
                     />
-                    <div className="flex flex-col gap-2">
+                    <div className="flex flex-col gap-3">
                       <button
                         onClick={() => sendOtp("delete")}
                         disabled={loading}
-                        className="w-full mb-2 py-2 sm:py-3 text-sm sm:text-base bg-yellow-600 text-white rounded hover:bg-yellow-700 transition disabled:bg-gray-600 disabled:cursor-not-allowed"
+                        className="w-full py-3 sm:py-4 text-sm sm:text-base bg-gradient-to-r from-yellow-600 to-yellow-700 text-white rounded-lg hover:from-yellow-700 hover:to-yellow-800 transition disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed font-bold shadow-md"
                       >
-                        {loading ? "Sending..." : "Send OTP"}
+                        {loading ? "Sending OTP..." : "Send OTP"}
                       </button>
                       <button
                         onClick={deleteAccount}
                         disabled={loading || deleteOtp.length < 6}
-                        className="w-full py-2 sm:py-3 text-sm sm:text-base bg-red-600 text-white rounded hover:bg-red-700 transition disabled:bg-gray-600 disabled:cursor-not-allowed"
+                        className="w-full py-3 sm:py-4 text-sm sm:text-base bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg hover:from-red-700 hover:to-red-800 transition disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed font-bold shadow-md"
                       >
-                        {loading ? "Deleting..." : "Delete Account"}
+                        {loading ? "Deleting..." : "Delete Account Permanently"}
                       </button>
                       <button
                         onClick={() => {
                           setShowDeleteModal(false);
                           setDeleteOtp("");
                         }}
-                        className="w-full mt-2 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+                        className="w-full py-2.5 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition font-semibold"
                       >
                         Cancel
                       </button>
@@ -1679,6 +1690,7 @@ export default function ProfilePage() {
             </>
           )}
         </div>
+      </div>
       </Layout>
     </>
   );

@@ -251,6 +251,7 @@ export default function ServicesPreview() {
                       </h4>
                       <p className="text-xs text-gray-600">{pkg.desc}</p>
                     </div>
+                    <span className="text-xs text-gray-600"> Start from</span>
                     <span className="text-sm font-bold text-green-600">
                       ₹{pkg.price}
                     </span>

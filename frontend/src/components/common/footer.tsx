@@ -137,10 +137,13 @@ export default function Footer() {
         {/* Tablet footer (md - lg) */}
         <div className="hidden md:block lg:hidden">
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
-            <div>
-              <h4 className="text-xs md:text-sm font-semibold mb-2">Verdora</h4>
-              <p className="text-xs md:text-sm text-gray-300 line-clamp-3">
-                Fresh plants & garden supplies online.
+                <img
+                  src="/logos.png"
+                  alt="Verdora Logo"
+                  className="h-10 lg:h-12 w-auto mb-2 lg:mb-3"
+                />
+              <p className="text-xs lg:text-sm text-gray-300 leading-relaxed">
+                Verdora – A complete online marketplace platform for nursery businesses enabling them to sell products, manage vendors, and serve customers at scale.
               </p>
             </div>
             <div>
@@ -150,6 +153,7 @@ export default function Footer() {
                 <li><Link href="/products" className="text-gray-300 hover:text-white transition">Products</Link></li>
                 <li><Link href="/services" className="text-gray-300 hover:text-white transition">Services</Link></li>
                 <li><Link href="/about" className="text-gray-300 hover:text-white transition">About</Link></li>
+                <li><Link href="/contact" className="text-gray-300 hover:text-white transition">Contact</Link></li>
               </ul>
             </div>
             <div>
@@ -159,15 +163,19 @@ export default function Footer() {
                 <li><Link href="/vendor/login" className="text-gray-300 hover:text-white transition">Vendor Login</Link></li>
               </ul>
             </div>
-          </div>
         </div>
 
         {/* Mobile footer (below md) */}
         <div className="block md:hidden">
           <div className="text-center space-y-3 sm:space-y-4">
-            <p className="text-xs sm:text-sm text-gray-300">
-              Verdora — fresh plants delivered to your door.
-            </p>
+                <img
+                  src="/logos.png"
+                  alt="Verdora Logo"
+                  className="h-10 lg:h-12 w-auto mb-2 lg:mb-3"
+                />
+              <p className="text-xs lg:text-sm text-gray-300 leading-relaxed">
+                Verdora – A complete online marketplace platform for nursery businesses enabling them to sell products, manage vendors, and serve customers at scale.
+              </p>
             <div className="border-t border-gray-700 pt-2 sm:pt-3">
               <p className="text-[10px] sm:text-xs font-semibold text-gray-400 mb-1.5 sm:mb-2">
                 NAVIGATE
@@ -177,6 +185,7 @@ export default function Footer() {
                 <Link href="/products" className="text-gray-300 hover:text-white">Products</Link>
                 <Link href="/services" className="text-gray-300 hover:text-white">Services</Link>
                 <Link href="/about" className="text-gray-300 hover:text-white">About</Link>
+                <Link href="/contact" className="text-gray-300 hover:text-white">Contact</Link>
               </div>
             </div>
             <div className="border-t border-gray-700 pt-2 sm:pt-3">

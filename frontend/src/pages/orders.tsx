@@ -449,15 +449,25 @@ export default function OrdersPage() {
                               )}
                             </button>
                           ))}
+                          {order.services && order.services.length > 0 && (
+                            <div className="h-16 w-16 shrink-0 rounded bg-purple-100 flex items-center justify-center text-purple-600 font-semibold text-xs text-center px-1" title="Service booking">
+                              📋<br/>Service
+                            </div>
+                          )}
                         </div>
 
                         <div>
                           <div className="text-sm font-semibold text-gray-900">
-                            {order.items?.[0]?.title || "Items"}
+                            {order.items?.[0]?.title || order.services?.[0]?.packageName || "Items"}
                           </div>
                           <div className="mt-1 text-xs text-gray-600">
-                            {order.items.length} item
-                            {order.items.length !== 1 ? "s" : ""}
+                            {(order.items?.length || 0) + (order.services?.length || 0)} item
+                            {(order.items?.length || 0) + (order.services?.length || 0) !== 1 ? "s" : ""}
+                            {order.services && order.services.length > 0 && (
+                              <span className="ml-1 inline-block">
+                                (incl. {order.services.length} service{order.services.length !== 1 ? 's' : ''})
+                              </span>
+                            )}
                           </div>
                           {order.deliveryEstimate?.estimatedDeliveryDate && (
                             <div className="mt-1 text-xs text-blue-700">
@@ -874,6 +884,82 @@ export default function OrdersPage() {
                       })}
                     </div>
                   </div>
+
+                  {selectedOrder.services && selectedOrder.services.length > 0 && (
+                    <div>
+                      <h3 className="mb-3 font-bold text-gray-900">Services Booked</h3>
+                      <div className="space-y-3">
+                        {selectedOrder.services.map((service, index) => (
+                          <div
+                            key={`${service.packageId}-${index}`}
+                            className="rounded-xl border border-purple-200 bg-purple-50 p-3 sm:p-4"
+                          >
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                              <div className="flex-1">
+                                <div className="flex flex-wrap items-start justify-between gap-3">
+                                  <div>
+                                    <h4 className="font-semibold text-gray-900">
+                                      {service.packageName}
+                                    </h4>
+                                    <p className="mt-1 text-xs text-gray-600">
+                                      Service: {service.serviceSlug}
+                                    </p>
+                                  </div>
+                                  <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
+                                    ORDER_STATUS_STYLES[selectedOrder.status] ||
+                                    "bg-gray-100 text-gray-700"
+                                  }`}>
+                                    {selectedOrder.status.toUpperCase()}
+                                  </span>
+                                </div>
+
+                                <div className="mt-3 grid grid-cols-1 gap-2 text-sm text-gray-600 sm:grid-cols-2">
+                                  <div>
+                                    <span className="text-gray-500">Scheduled Date:</span>
+                                    <div className="font-semibold text-gray-900">
+                                      {new Date(service.selectedDate).toLocaleDateString('en-IN', { 
+                                        weekday: 'short', 
+                                        year: 'numeric', 
+                                        month: 'short', 
+                                        day: 'numeric' 
+                                      })}
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-500">Scheduled Time:</span>
+                                    <div className="font-semibold text-gray-900">
+                                      {service.selectedTime}
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-500">Price:</span>
+                                    <div className="font-semibold text-purple-700">
+                                      Rs. {(service.price || 0).toFixed(2)}
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-500">Quantity:</span>
+                                    <div className="font-semibold text-gray-900">
+                                      {service.quantity || 1}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {service.message && (
+                                  <div className="mt-3 rounded-lg bg-white p-2 text-xs text-gray-600">
+                                    <span className="text-gray-500">Special Requests:</span>
+                                    <p className="mt-1 whitespace-pre-wrap text-gray-700">
+                                      {service.message}
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   <div className="rounded-lg bg-gray-50 p-4">
                     <h3 className="mb-3 font-bold text-gray-900">

@@ -5,17 +5,34 @@ import User from "../models/User.js";
 
 const router = express.Router();
 
-// Middleware to verify user
-const userAuthMiddleware = (req, res, next) => {
+// Middleware to verify user - OPTIONAL for coupon validation
+const optionalUserAuth = (req, res, next) => {
+  const token = req.headers.authorization?.split(" ")[1];
+  if (token) {
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      req.userId = decoded.id || null;
+    } catch (err) {
+      // Token invalid but that's okay, continue as anonymous
+      req.userId = null;
+    }
+  } else {
+    req.userId = null;
+  }
+  next();
+};
+
+// Middleware to verify user - REQUIRED for coupon usage recording
+const requiredUserAuth = (req, res, next) => {
   const token = req.headers.authorization?.split(" ")[1];
   if (!token) {
-    return res.status(401).json({ message: "Token required" });
+    return res.status(401).json({ message: "Authentication required" });
   }
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    if (decoded.role !== "user") {
-      return res.status(403).json({ message: "User access required" });
+    if (!decoded.id) {
+      return res.status(403).json({ message: "Invalid user token" });
     }
     req.userId = decoded.id;
     next();
@@ -51,7 +68,7 @@ router.get("/available", async (req, res) => {
 });
 
 // ✅ VALIDATE AND APPLY COUPON
-router.post("/validate", userAuthMiddleware, async (req, res) => {
+router.post("/validate", optionalUserAuth, async (req, res) => {
   try {
     const { couponCode, cartTotal } = req.body;
 
@@ -89,19 +106,24 @@ router.post("/validate", userAuthMiddleware, async (req, res) => {
       });
     }
 
-    // Check user's usage count for this coupon
-    const couponUsage = await CouponUsage.findOne({
-      userId: req.userId,
-      couponId: coupon._id,
-    });
-
-    const usedCount = couponUsage?.usedCount || 0;
-    const remainingUses = coupon.maxUsagePerUser - usedCount;
-
-    if (remainingUses <= 0) {
-      return res.status(400).json({
-        message: `You have already used this coupon ${coupon.maxUsagePerUser} times`,
+    // Check user's usage count for this coupon (if user is logged in)
+    let usedCount = 0;
+    let remainingUses = coupon.maxUsagePerUser;
+    
+    if (req.userId) {
+      const couponUsage = await CouponUsage.findOne({
+        userId: req.userId,
+        couponId: coupon._id,
       });
+
+      usedCount = couponUsage?.usedCount || 0;
+      remainingUses = coupon.maxUsagePerUser - usedCount;
+
+      if (remainingUses <= 0) {
+        return res.status(400).json({
+          message: `You have already used this coupon ${coupon.maxUsagePerUser} times`,
+        });
+      }
     }
 
     // Calculate discount
@@ -145,7 +167,7 @@ router.post("/validate", userAuthMiddleware, async (req, res) => {
 });
 
 // ✅ RECORD COUPON USAGE WHEN ORDER IS PLACED
-router.post("/use", userAuthMiddleware, async (req, res) => {
+router.post("/use", requiredUserAuth, async (req, res) => {
   try {
     const { couponCode } = req.body;
 
@@ -199,7 +221,7 @@ router.post("/use", userAuthMiddleware, async (req, res) => {
 });
 
 // ✅ GET USER'S COUPON USAGE STATISTICS
-router.get("/user-usage", userAuthMiddleware, async (req, res) => {
+router.get("/user-usage", requiredUserAuth, async (req, res) => {
   try {
     const usageStats = await CouponUsage.find({ userId: req.userId })
       .populate("couponId", "couponCode maxUsagePerUser")

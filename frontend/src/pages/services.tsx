@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Layout from "../components/common/layout";
 import { ArrowLeftIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import Head from "next/head";
@@ -7,6 +7,7 @@ import servicesData from "../data/services.json";
 import { useRouter } from "next/router";
 import Image from "next/image";
 import Spinner from "@/components/shared/Spinner";
+import { useUser } from "@/context/UserContext";
 
 interface Package {
   id: string;
@@ -41,13 +42,15 @@ export default function Services() {
     text: string;
   } | null>(null);
   const router = useRouter();
+  const { user } = useUser();
 
   const handleBookPackage = (pkg: Package) => {
     setSelectedPackage(pkg);
+    // Auto-fill user data if logged in
     setBookingData({
-      name: "",
-      email: "",
-      phone: "",
+      name: user?.name || "",
+      email: user?.email || "",
+      phone: user?.mobile || "",
       selectedDate: "",
       selectedTime: "",
       message: "",
@@ -125,7 +128,7 @@ export default function Services() {
 
       setBookingMessage({
         type: "success",
-        text: data.message || "Service booked successfully! We'll contact you soon.",
+        text: "Thank you for booking! We'll contact you soon with confirmation details.",
       });
 
       setTimeout(() => {
@@ -253,8 +256,9 @@ export default function Services() {
                         </h4>
                         <p className="text-xs text-gray-600">{pkg.desc}</p>
                       </div>
+                      <span className="text-xs text-gray-600"> Start from</span>
                       <span className="text-sm font-bold text-green-600">
-                        ₹{pkg.price}
+                       ₹{pkg.price}
                       </span>
                     </div>
                     <button

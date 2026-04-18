@@ -15,6 +15,7 @@ import {
   sendOrderStatusUpdateEmail,
   sendUserReturnRequestEmail,
   sendUserOrderCancelledEmail,
+  sendServiceBookingConfirmationEmail,
 } from "../services/emailService.js";
 import { uploadToCloudinary } from "../services/cloudinaryService.js";
 import {
@@ -141,6 +142,23 @@ const decorateOrderForResponse = (order = {}) => {
       safeOrder.statusUpdatedAt || safeOrder.date,
     ).toISOString(),
   };
+};
+
+// ✅ Verify JWT token (optional - doesn't block if no token)
+const optionalAuthMiddleware = (req, res, next) => {
+  const token = req.headers.authorization?.split(" ")[1];
+  if (token) {
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      req.userId = decoded.id;
+    } catch {
+      // Invalid token, continue without auth
+      req.userId = null;
+    }
+  } else {
+    req.userId = null;
+  }
+  next();
 };
 
 // ✅ Middleware to verify JWT token
@@ -1024,10 +1042,9 @@ router.post("/orders", authMiddleware, async (req, res) => {
   }
 });
 
-// ✅ Book a service (save to ServiceRequest collection)
-// Note: This endpoint works without requiring authentication
-// It saves service requests to the database for admin review
-router.post("/bookService", (req, res) => {
+// ✅ Book a service (save to ServiceRequest collection AND user.orders if authenticated)
+// Works with or without authentication - authenticated users get it saved to their order history
+router.post("/bookService", optionalAuthMiddleware, (req, res) => {
   const {
     serviceSlug,
     packageId,
@@ -1082,7 +1099,21 @@ router.post("/bookService", (req, res) => {
 
     Promise.race([savePromise, timeoutPromise])
       .then((savedRequest) => {
-        // Optionally save to user.orders if user is logged in
+        // Send confirmation email to customer
+        sendServiceBookingConfirmationEmail(
+          email,
+          name,
+          serviceSlug,
+          packageName,
+          selectedDate,
+          selectedTime,
+          price,
+          message
+        ).catch((err) => {
+          console.error("Failed to send service booking confirmation email:", err.message);
+        });
+
+        // Save to user.orders if user is logged in (authenticated)
         if (req.userId) {
           User.findById(req.userId).then((user) => {
             if (user) {
@@ -1098,7 +1129,7 @@ router.post("/bookService", (req, res) => {
                     quantity: 1,
                     selectedDate: selectedDate,
                     selectedTime: selectedTime,
-                    message: message,
+                    message: message || "",
                   },
                 ],
                 total: price,

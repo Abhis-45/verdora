@@ -1001,3 +1001,103 @@ export const sendVendorOrderShippedEmail = async (
   });
 };
 
+// ✅ SERVICE BOOKING CONFIRMATION EMAIL
+export const sendServiceBookingConfirmationEmail = async (
+  email,
+  customerName,
+  serviceTitle,
+  packageName,
+  selectedDate,
+  selectedTime,
+  price,
+  message
+) => {
+  return sendEmailWithRetry({
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: `✓ Service Booking Confirmed - ${serviceTitle} | Verdora`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #22c55e;">Service Booking Confirmed! ✓</h2>
+        <p>Hi ${customerName},</p>
+        <p>Thank you for booking with Verdora! We're excited to serve you. Here are your booking details:</p>
+        
+        <div style="background: #f0fdf4; border-left: 4px solid #22c55e; padding: 15px; margin: 20px 0; border-radius: 4px;">
+          <h3 style="color: #166534; margin-top: 0; margin-bottom: 10px;">📋 Booking Details</h3>
+          <table style="width: 100%; color: #475569; line-height: 1.8;">
+            <tr>
+              <td style="font-weight: bold; width: 40%; padding: 5px 0;">Service:</td>
+              <td style="padding: 5px 0;">${serviceTitle}</td>
+            </tr>
+            <tr style="background: #ecfdf5;">
+              <td style="font-weight: bold; padding: 5px 0;">Package:</td>
+              <td style="padding: 5px 0;">${packageName}</td>
+            </tr>
+            <tr>
+              <td style="font-weight: bold; padding: 5px 0;">Scheduled Date:</td>
+              <td style="padding: 5px 0;">${new Date(selectedDate).toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</td>
+            </tr>
+            <tr style="background: #ecfdf5;">
+              <td style="font-weight: bold; padding: 5px 0;">Scheduled Time:</td>
+              <td style="padding: 5px 0;">${selectedTime}</td>
+            </tr>
+            <tr>
+              <td style="font-weight: bold; padding: 5px 0;">Price:</td>
+              <td style="padding: 5px 0; color: #22c55e; font-size: 16px; font-weight: bold;">₹${price}</td>
+            </tr>
+          </table>
+        </div>
+
+        <div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 15px; margin: 20px 0; border-radius: 4px;">
+          <h4 style="color: #1e40af; margin-top: 0;">📞 What Happens Next:</h4>
+          <ol style="color: #1e40af; padding-left: 20px; margin: 10px 0; line-height: 1.8;">
+            <li>Our team will confirm your booking and contact you within 24 hours</li>
+            <li>We'll discuss any specific requirements or preferences</li>
+            <li>Our expert will arrive at the scheduled time with all necessary materials</li>
+            <li>You'll receive a follow-up message after service completion</li>
+          </ol>
+        </div>
+
+        ${message ? `
+        <div style="background: #f8fafc; border-left: 4px solid #64748b; padding: 15px; margin: 20px 0; border-radius: 4px;">
+          <h4 style="color: #1e3a8a; margin-top: 0;">📝 Your Special Requests:</h4>
+          <p style="color: #475569; margin: 10px 0; white-space: pre-wrap;">${message}</p>
+        </div>
+        ` : ''}
+
+        <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 4px;">
+          <h4 style="color: #92400e; margin-top: 0;">💡 Important Information:</h4>
+          <ul style="color: #92400e; padding-left: 20px; margin: 10px 0; line-height: 1.8;">
+            <li>Please ensure someone is available at the scheduled time</li>
+            <li>Our team will call you 30 minutes before arrival</li>
+            <li>Payment can be made at the time of service</li>
+            <li>We offer a satisfaction guarantee on all services</li>
+          </ul>
+        </div>
+
+        <div style="text-align: center; margin: 25px 0;">
+          <p style="color: #475569; font-size: 14px; margin-bottom: 10px;">Need to reschedule or cancel?</p>
+          <a href="https://verdora.com/orders" style="display: inline-block; background: #22c55e; color: white; padding: 10px 20px; text-decoration: none; border-radius: 25px; font-weight: bold;">
+            ✏️ Manage Booking
+          </a>
+        </div>
+
+        <p style="color: #64748b; margin-top: 20px;">
+          Have questions? Our customer support team is here to help:<br/>
+          <strong>📧 support@verdora.com</strong>
+        </p>
+
+        <p style="color: #475569; margin-top: 20px; text-align: center;">
+          Thank you for choosing Verdora!<br/>
+          <strong>🌿 Growing Green, Growing Together</strong>
+        </p>
+
+        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
+        <p style="color: #888; font-size: 11px; text-align: center;">
+          © 2026 Verdora. All rights reserved.
+        </p>
+      </div>
+    `,
+  });
+};
+

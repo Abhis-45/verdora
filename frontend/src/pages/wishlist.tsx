@@ -61,7 +61,7 @@ export default function WishlistPage() {
             </div>
           ) : (
             <>
-              <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-5 md:grid-cols-3 lg:grid-cols-4">
+              <div className="mt-6 grid grid-cols-1 gap-3 sm:gap-5 md:grid-cols-3 lg:grid-cols-4">
                 {wishlist.map((product: ProductItem) => {
                   const productId = String(product.id);
                   const defaultPrice = product.price;

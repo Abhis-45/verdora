@@ -122,10 +122,10 @@ export default function Header() {
   );
 
   return (
-    <header className="sticky top-0 z-50 bg-green-600 shadow-md">
-      <div className="mx-auto w-full max-w-full px-2 sm:px-3 md:px-4 lg:px-6">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-green-600 shadow-md w-full">
+      <div className="container mx-auto px-2 sm:px-3 md:px-4 lg:px-6">
         {/* Desktop & Tablet: Single Row (md and up) */}
-        <div className="hidden md:flex w-full items-center gap-1 py-2.5 md:py-2.5 lg:py-3">
+        <div className="hidden md:flex w-full items-center gap-5 py-2.5 md:py-2.5 lg:py-3">
           {/* Logo */}
           <Link href="/" className="flex shrink-0 items-center">
             <Image
@@ -133,7 +133,7 @@ export default function Header() {
               alt="Verdora Logo"
               width={100}
               height={60}
-              className="h-auto w-16 md:w-16 lg:w-20"
+              className="h-auto w-16 md:w-26 lg:w-30"
             />
           </Link>
 
@@ -146,7 +146,7 @@ export default function Header() {
           </div>
 
           {/* Search Bar - Flexible, fills space */}
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0">
             <SearchBar mobile={false} />
           </div>
 
@@ -269,14 +269,14 @@ export default function Header() {
                 alt="Verdora Logo"
                 width={100}
                 height={60}
-                className="h-auto w-14 sm:w-16"
+                className="h-auto w-25 sm:w-16"
               />
             </Link>
 
             <div className="flex flex-shrink-0 items-center gap-1 sm:gap-2">
               {/* Wishlist Icon */}
               <Link href="/wishlist" className="relative inline-flex items-center justify-center rounded-lg p-1 transition hover:bg-white/10">
-                <HeartIcon className="h-5 w-5 sm:h-6 sm:w-6 text-white transition hover:text-pink-400" />
+                <HeartIcon className="h-8 w-8 sm:h-6 sm:w-6 text-white transition hover:text-pink-400" />
                 {wishlistCount > 0 && (
                   <span className="absolute -right-1 -top-1 flex h-4 w-4 sm:h-4.5 sm:w-4.5 items-center justify-center rounded-full bg-pink-500 text-[9px] sm:text-[10px] font-bold text-white">
                     {wishlistCount}
@@ -286,7 +286,7 @@ export default function Header() {
 
               {/* Cart Icon */}
               <Link href="/cart" className="relative inline-flex items-center justify-center rounded-lg p-1 transition hover:bg-white/10">
-                <ShoppingCartIcon className="h-5 w-5 sm:h-6 sm:w-6 text-white transition hover:text-green-900" />
+                <ShoppingCartIcon className="h-8 w-8 sm:h-6 sm:w-6 text-white transition hover:text-green-900" />
                 {itemCount > 0 && (
                   <span className="absolute -right-1 -top-1 flex h-4 w-4 sm:h-4.5 sm:w-4.5 items-center justify-center rounded-full bg-red-500 text-[9px] sm:text-[10px] font-bold text-white">
                     {itemCount}
@@ -302,7 +302,7 @@ export default function Header() {
                     className="flex items-center justify-center rounded-lg p-1 text-white transition hover:bg-white/10 hover:text-green-100"
                     onClick={() => setDropdownOpen(!dropdownOpen)}
                   >
-                    <UserCircleIcon className="h-5 w-5 sm:h-6 sm:w-6" />
+                    <UserCircleIcon className="h-8 w-8 sm:h-6 sm:w-6" />
                   </button>
                 ) : (
                   <button
@@ -310,7 +310,7 @@ export default function Header() {
                     className="flex items-center justify-center rounded-lg p-1 text-white transition hover:bg-white/10 hover:text-green-100"
                     onClick={() => setShowAuth(true)}
                   >
-                    <UserCircleIcon className="h-5 w-5 sm:h-6 sm:w-6" />
+                    <UserCircleIcon className="h-8 w-8 sm:h-6 sm:w-6" />
                   </button>
                 )}
 
@@ -368,6 +368,9 @@ export default function Header() {
           </div>
 
           {/* Row 2: Category + Search + Location */}
+          <div className="flex-shrink-0 max-w-full">
+              {renderLocationCard()}
+            </div>
           <div className="flex w-full gap-2 sm:gap-2.5 items-stretch">
             <div className="flex-shrink-0">
               <CategoryDropdown
@@ -378,9 +381,7 @@ export default function Header() {
             <div className="min-w-0 flex-1">
               <SearchBar mobile={true} />
             </div>
-            <div className="flex-shrink-0 max-w-[40%]">
-              {renderLocationCard()}
-            </div>
+
           </div>
         </div>
       </div>
