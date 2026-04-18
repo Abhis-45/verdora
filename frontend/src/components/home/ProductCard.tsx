@@ -124,6 +124,8 @@ export default function ProductCard({
                 category,
                 tags,
                 quantity: 1,
+                selectedSize,
+                plantSizes,
               });
             }
           }}
@@ -173,8 +175,16 @@ export default function ProductCard({
               </div>
             )}
 
-            {/* Line 4: Available Sizes (if available) */}
-            {plantSizes && plantSizes.length > 0 && (
+            {/* Line 4: Selected Size or Available Sizes (if available) */}
+            {selectedSize && (
+              <div className="flex items-center gap-1">
+                <span className="text-xs font-semibold text-gray-100">Size:</span>
+                <span className="text-xs bg-green-700 px-2 py-0.5 rounded text-white font-semibold">
+                  {selectedSize.label}
+                </span>
+              </div>
+            )}
+            {!selectedSize && plantSizes && plantSizes.length > 0 && (
               <div className="flex items-center gap-1 flex-wrap">
                 <span className="text-xs font-semibold text-gray-100">Sizes:</span>
                 {plantSizes.slice(0, 3).map((size) => (
@@ -190,13 +200,6 @@ export default function ProductCard({
                 )}
               </div>
             )}
-
-            {/* Line 5: Delivery Info */}
-            <div className="text-xs text-gray-100">
-              {deliveryLocation?.pincode
-                ? `Delivery by ${estimatedDeliveryDate} to ${deliveryLocation.city || "your area"}`
-                : "Enter pincode for delivery date"}
-            </div>
           </div>
 
           {/* Bottom Section: Price + Single Button */}
@@ -204,7 +207,7 @@ export default function ProductCard({
             <div className="flex items-center gap-1.5">
               <span className="font-bold text-green-900 text-sm bg-green-100/70 px-2 py-0.5 rounded-full">₹{selectedSize?.price || price}</span>
               {typeof mrp === "number" && mrp > price && (
-                <span className="text-xs text-red-600 line-through">
+                <span className="text-sm text-red-600 line-through">
                   ₹{mrp}
                 </span>
               )}
@@ -245,7 +248,7 @@ export default function ProductCard({
                   router.push("/cart");
                 }
               }}
-              className="flex items-center justify-center gap-1 px-2.5 py-1 bg-green-600 text-white rounded-full hover:bg-green-700 transition shadow-md hover:shadow-lg text-xs font-semibold whitespace-nowrap"
+              className="flex items-center justify-center gap-1 px-2.5 py-1 bg-green-600 text-white rounded-full hover:bg-green-700 transition shadow-md hover:shadow-lg text-sm font-semibold whitespace-nowrap"
               aria-label={isAddedToCart ? "Go to Cart" : "Add to Cart"}
               title={isAddedToCart ? "Go to Cart" : "Add to Cart"}
             >

@@ -14,7 +14,6 @@ import Spinner from "@/components/shared/Spinner";
 import Toast from "../components/shared/Toast";
 import CartItemsList from "../components/cart/CartItemsList";
 import CartSummary from "../components/cart/CartSummary";
-import AvailableCoupons from "../components/cart/AvailableCoupons";
 import {
   calculateDeliveryEstimate,
   formatDeliveryDate,
@@ -88,34 +87,7 @@ export default function CartPage() {
   const totalDiscount = productDiscount + couponDiscount;
   const finalAmount = Math.max(discountedTotal - couponDiscount, 0);
 
-  // Debug logging to check discount calculations
-  useEffect(() => {
-    if (cartItems.length > 0) {
-      console.log("=== Cart Discount Debug ===");
-      console.log("Total Items in Cart:", cartItems.length);
-      console.log("Subtotal (with MRP):", subtotal.toFixed(2));
-      console.log(
-        "Discounted Total (selling price):",
-        discountedTotal.toFixed(2),
-      );
-      console.log("Product Discount:", productDiscount.toFixed(2));
-      console.log("Coupon Discount:", couponDiscount.toFixed(2));
-      console.log("Total Discount:", totalDiscount.toFixed(2));
-      console.log("Final Amount:", finalAmount.toFixed(2));
-      cartItems.forEach((item, idx) => {
-        const itemMrp =
-          item.mrp && item.mrp > item.price ? item.mrp : item.price;
-        const itemDiscount = (itemMrp - item.price) * item.quantity;
-        console.log(`Item ${idx + 1}: ${item.name}`, {
-          price: item.price,
-          mrp: item.mrp,
-          effectiveMrp: itemMrp,
-          quantity: item.quantity,
-          itemDiscount: itemDiscount.toFixed(2),
-        });
-      });
-    }
-  }, [cartItems, appliedCoupon]);
+
 
   useEffect(() => {
     const token =
@@ -451,59 +423,6 @@ export default function CartPage() {
                   onRemove={removeFromCart}
                   onClear={clearCart}
                 />
-                <AvailableCoupons
-                  cartTotal={discountedTotal}
-                  appliedCoupon={appliedCouponInfo}
-                  onApplyCoupon={(couponData) => {
-                    setAppliedCoupon(couponData.code);
-                    setAppliedCouponInfo(couponData);
-                    // Fetch user usage info
-                    const token =
-                      typeof window !== "undefined"
-                        ? localStorage.getItem("token")
-                        : null;
-                    if (token) {
-                      fetch(
-                        `${
-                          typeof window !== "undefined"
-                            ? process.env.NEXT_PUBLIC_BACKEND_URL ||
-                              "https://verdora.onrender.com"
-                            : "https://verdora.onrender.com"
-                        }/api/coupon-user/validate`,
-                        {
-                          method: "POST",
-                          headers: {
-                            "Content-Type": "application/json",
-                            Authorization: `Bearer ${token}`,
-                          },
-                          body: JSON.stringify({
-                            couponCode: couponData.code,
-                            cartTotal: discountedTotal,
-                          }),
-                        }
-                      )
-                        .then((res) => res.json())
-                        .then((data) => {
-                          if (data.userUsage) {
-                            setUserUsageInfo(data.userUsage);
-                          }
-                        })
-                        .catch((err) => console.error("Error fetching usage:", err));
-                    }
-                  }}
-                  token={
-                    typeof window !== "undefined"
-                      ? localStorage.getItem("token") || ""
-                      : ""
-                  }
-                  backendUrl={
-                    typeof window !== "undefined"
-                      ? process.env.NEXT_PUBLIC_BACKEND_URL ||
-                        "https://verdora.onrender.com"
-                      : "https://verdora.onrender.com"
-                  }
-                  userUsageInfo={userUsageInfo}
-                />
               </div>
 
               <div>
@@ -520,6 +439,84 @@ export default function CartPage() {
                   onCheckout={handleCheckout}
                   appliedCouponInfo={appliedCouponInfo}
                   userUsageInfo={userUsageInfo}
+                  token={
+                    typeof window !== "undefined"
+                      ? localStorage.getItem("token") || ""
+                      : ""
+                  }
+                  backendUrl={
+                    typeof window !== "undefined"
+                      ? process.env.NEXT_PUBLIC_BACKEND_URL ||
+                        "https://verdora.onrender.com"
+                      : "https://verdora.onrender.com"
+                  }
+                  onApplyCouponFromList={(couponData) => {
+                    // Trigger coupon validation through the main handler
+                    setCoupon(couponData.code);
+                    // Validate the coupon
+                    const validateCoupon = async () => {
+                      const token =
+                        typeof window !== "undefined"
+                          ? localStorage.getItem("token")
+                          : null;
+                      if (!token) {
+                        setFeedback("Please login to apply coupon");
+                        setShowAuth(true);
+                        return;
+                      }
+
+                      try {
+                        const BACKEND_URL =
+                          typeof window !== "undefined"
+                            ? process.env.NEXT_PUBLIC_BACKEND_URL ||
+                              "https://verdora.onrender.com"
+                            : "https://verdora.onrender.com";
+                        const response = await fetch(
+                          `${BACKEND_URL}/api/coupon-user/validate`,
+                          {
+                            method: "POST",
+                            headers: {
+                              "Content-Type": "application/json",
+                              Authorization: `Bearer ${token}`,
+                            },
+                            body: JSON.stringify({
+                              couponCode: couponData.code,
+                              cartTotal: discountedTotal,
+                            }),
+                          }
+                        );
+
+                        const data = await response.json();
+
+                        if (response.ok) {
+                          setAppliedCoupon(couponData.code);
+                          setAppliedCouponInfo(data.coupon);
+                          setUserUsageInfo(data.userUsage);
+                          setFeedback(
+                            `Coupon "${couponData.code}" applied successfully!`
+                          );
+                        } else {
+                          setAppliedCoupon(null);
+                          setAppliedCouponInfo(null);
+                          setUserUsageInfo(null);
+                          setFeedback(data.message || "Failed to apply coupon");
+                        }
+                      } catch (error) {
+                        setAppliedCoupon(null);
+                        setAppliedCouponInfo(null);
+                        setUserUsageInfo(null);
+                        setFeedback(
+                          `Error: ${
+                            error instanceof Error
+                              ? error.message
+                              : "Unknown error"
+                          }`
+                        );
+                      }
+                    };
+
+                    validateCoupon();
+                  }}
                 />
               </div>
             </div>

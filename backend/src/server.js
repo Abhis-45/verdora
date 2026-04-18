@@ -74,19 +74,6 @@ const server = app.listen(port, "0.0.0.0", () => {
   console.log(`✅ Server running on port ${port}`);
 });
 
-// Verify email transporter
-verifyEmailTransporter()
-  .then((isValid) => {
-    if (isValid) {
-      console.log("✅ Email service ready");
-    } else {
-      console.warn("⚠️  Email service may not be working - check credentials");
-    }
-  })
-  .catch((err) => {
-    console.error("❌ Email service check failed:", err.message);
-  });
-
 // Connect to MongoDB
 connectToMongo()
   .then(() => {

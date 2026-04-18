@@ -148,7 +148,7 @@ router.post("/verify-otp", async (req, res) => {
     }
   }
 
-  const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+  const token = jwt.sign({ id: user._id, role: "user" }, process.env.JWT_SECRET, {
     expiresIn: "1d",
   });
   res.json({ message: "Login successful", token, user, isNewUser });
@@ -166,7 +166,7 @@ router.post("/password", async (req, res) => {
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) return res.status(400).json({ message: "Invalid password" });
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+    const token = jwt.sign({ id: user._id, role: "user" }, process.env.JWT_SECRET, {
       expiresIn: "1d",
     });
     return res.json({ message: "Login successful", token, user });
@@ -194,7 +194,7 @@ router.post("/password", async (req, res) => {
       // Don't fail the registration even if notification fails
     }
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+    const token = jwt.sign({ id: user._id, role: "user" }, process.env.JWT_SECRET, {
       expiresIn: "1d",
     });
     return res.json({ message: "Registered successfully", token, user });

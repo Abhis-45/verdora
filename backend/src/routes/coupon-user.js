@@ -1,4 +1,5 @@
 import express from "express";
+import jwt from "jsonwebtoken";
 import { Coupon, CouponUsage } from "../models/Coupon.js";
 import User from "../models/User.js";
 
@@ -12,17 +13,14 @@ const userAuthMiddleware = (req, res, next) => {
   }
 
   try {
-    const decoded = require("jsonwebtoken").verify(
-      token,
-      process.env.JWT_SECRET
-    );
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     if (decoded.role !== "user") {
       return res.status(403).json({ message: "User access required" });
     }
     req.userId = decoded.id;
     next();
   } catch (err) {
-    return res.status(401).json({ message: "Invalid token" });
+    return res.status(401).json({ message: "Invalid token", error: err.message });
   }
 };
 

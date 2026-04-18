@@ -55,20 +55,10 @@ export function DeliveryLocationProvider({
         // Only restore if it's a user-entered pincode (not default empty)
         if (parsed.pincode && parsed.pincode.trim()) {
           setDeliveryLocation(resolveDeliveryLocation(parsed));
-          console.log(
-            "[DeliveryLocationContext] Loaded user-entered location from sessionStorage:",
-            parsed,
-          );
         } else {
-          console.log(
-            "[DeliveryLocationContext] Stored location is empty, using default",
-          );
           setDeliveryLocation(DEFAULT_DELIVERY_LOCATION);
         }
       } else {
-        console.log(
-          "[DeliveryLocationContext] No stored location, using default",
-        );
         setDeliveryLocation(DEFAULT_DELIVERY_LOCATION);
       }
     } catch (error) {
@@ -91,10 +81,6 @@ export function DeliveryLocationProvider({
     ) {
       try {
         sessionStorage.setItem(STORAGE_KEY, JSON.stringify(deliveryLocation));
-        console.log(
-          "[DeliveryLocationContext] Saved user-entered location to sessionStorage:",
-          deliveryLocation,
-        );
       } catch (error) {
         console.error(
           "[DeliveryLocationContext] Error saving to sessionStorage:",
@@ -108,9 +94,6 @@ export function DeliveryLocationProvider({
       // If pincode is empty, clear from sessionStorage (user reset it)
       try {
         sessionStorage.removeItem(STORAGE_KEY);
-        console.log(
-          "[DeliveryLocationContext] Cleared empty location from sessionStorage",
-        );
       } catch (error) {
         console.error(
           "[DeliveryLocationContext] Error clearing sessionStorage:",
@@ -123,9 +106,6 @@ export function DeliveryLocationProvider({
   useEffect(() => {
     // Only sync from profile if user is logged in
     if (!user) {
-      console.log(
-        "[DeliveryLocationContext] No authenticated user, keeping saved location",
-      );
       return;
     }
 
@@ -163,10 +143,6 @@ export function DeliveryLocationProvider({
 
         if (!defaultAddress || isCancelled) return;
 
-        console.log(
-          "[DeliveryLocationContext] Syncing profile default address:",
-          defaultAddress,
-        );
         setDeliveryLocation(
           resolveDeliveryLocation({
             label: defaultAddress.label,

@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { SparklesIcon } from "@heroicons/react/24/outline";
+import { SparklesIcon, CheckIcon, DocumentDuplicateIcon } from "@heroicons/react/24/outline";
 
 interface AvailableCoupon {
   _id?: string;
@@ -44,6 +44,7 @@ export default function AvailableCoupons({
   const [availableCoupons, setAvailableCoupons] = useState<AvailableCoupon[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchAvailableCoupons = async () => {
@@ -68,30 +69,22 @@ export default function AvailableCoupons({
     fetchAvailableCoupons();
   }, [backendUrl]);
 
-  const handleApplyQuickCoupon = async (couponCode: string) => {
-    try {
-      const res = await fetch(`${backendUrl}/api/coupon-user/validate`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          couponCode,
-          cartTotal,
-        }),
-      });
+  const handleCopyCoupon = (code: string) => {
+    navigator.clipboard.writeText(code);
+    setCopiedCode(code);
+    setTimeout(() => setCopiedCode(null), 2000);
+  };
 
-      if (res.ok) {
-        const data = await res.json();
-        onApplyCoupon(data.coupon);
-      } else {
-        const errorData = await res.json();
-        setError(errorData.message || "Failed to apply coupon");
-      }
-    } catch (err) {
-      setError(`Error: ${err instanceof Error ? err.message : "Unknown error"}`);
-    }
+  const handleApplyQuickCoupon = (couponCode: string) => {
+    // Just pass the coupon code to parent - let parent handle API validation
+    onApplyCoupon({
+      code: couponCode,
+      discount: 0, // Will be calculated by parent
+      fixedDiscount: 0,
+      percentageDiscount: 0,
+      maxDiscountAmount: 0,
+      minCartValue: 0,
+    });
   };
 
   if (loading) {
@@ -103,7 +96,7 @@ export default function AvailableCoupons({
   }
 
   return (
-    <div className="rounded-lg bg-gradient-to-r from-blue-50 to-purple-50 p-4">
+    <div className="rounded-lg bg-gradient-to-r from-blue-50 to-purple-50 p-4 mb-4">
       <div className="flex items-center gap-2 mb-3">
         <SparklesIcon className="w-5 h-5 text-purple-600" />
         <h3 className="text-sm font-semibold text-gray-900">Available Coupons</h3>
@@ -145,38 +138,55 @@ export default function AvailableCoupons({
                 key={coupon._id || coupon.couponCode}
                 className={`p-3 rounded-lg border-2 transition ${
                   isEligible && !appliedCoupon
-                    ? "border-blue-300 bg-white hover:border-blue-500 cursor-pointer"
+                    ? "border-blue-300 bg-white hover:border-blue-500"
                     : "border-gray-200 bg-gray-50"
                 }`}
               >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-bold text-gray-900">
-                      {coupon.couponCode}
-                    </p>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-bold text-gray-900 font-mono bg-blue-100 px-2 py-1 rounded">
+                        {coupon.couponCode}
+                      </p>
+                      <button
+                        onClick={() => handleCopyCoupon(coupon.couponCode)}
+                        className="p-1 text-gray-600 hover:text-blue-600 transition"
+                        title="Copy coupon code"
+                      >
+                        {copiedCode === coupon.couponCode ? (
+                          <CheckIcon className="w-4 h-4 text-green-600" />
+                        ) : (
+                          <DocumentDuplicateIcon className="w-4 h-4" />
+                        )}
+                      </button>
+                    </div>
                     <p className="text-xs text-gray-600 mt-1">
                       Save {discountText}
                       {coupon.maxDiscountAmount > 0 && (
                         <span> (Max ₹{coupon.maxDiscountAmount})</span>
                       )}
                     </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Min ₹{coupon.minCartValue} purchase
+                    <p className="text-xs text-gray-500">
+                      Min ₹{coupon.minCartValue}
                     </p>
                   </div>
-                  {isEligible && !appliedCoupon ? (
+                  {isEligible && !appliedCoupon && token ? (
                     <button
                       onClick={() => handleApplyQuickCoupon(coupon.couponCode)}
-                      className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded font-semibold transition"
+                      className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded font-semibold transition whitespace-nowrap"
                     >
                       Apply
                     </button>
+                  ) : !token ? (
+                    <span className="text-xs text-orange-600 font-semibold whitespace-nowrap">
+                      Login to Apply
+                    </span>
                   ) : !isEligible ? (
-                    <span className="text-xs text-red-600 font-semibold">
+                    <span className="text-xs text-red-600 font-semibold whitespace-nowrap">
                       Not Eligible
                     </span>
                   ) : (
-                    <span className="text-xs text-green-600 font-semibold">
+                    <span className="text-xs text-green-600 font-semibold whitespace-nowrap">
                       Applied ✓
                     </span>
                   )}

@@ -1,6 +1,7 @@
 "use client";
 
 import { CartItem } from "../../types/types";
+import AvailableCoupons from "./AvailableCoupons";
 
 export default function CartSummary({
   cartItems,
@@ -15,6 +16,9 @@ export default function CartSummary({
   onCheckout,
   appliedCouponInfo,
   userUsageInfo,
+  token,
+  backendUrl,
+  onApplyCouponFromList,
 }: {
   cartItems: CartItem[];
   coupon: string;
@@ -32,12 +36,17 @@ export default function CartSummary({
     fixedDiscount: number;
     percentageDiscount: number;
     maxDiscountAmount: number;
+    minCartValue: number;
+    expiryDate?: string;
   } | null;
   userUsageInfo?: {
     usedCount: number;
     remainingUses: number;
     maxUsagePerUser: number;
   } | null;
+  token?: string;
+  backendUrl?: string;
+  onApplyCouponFromList?: (coupon: any) => void;
 }) {
   const productTotal = cartItems.reduce(
     (sum, item) => sum + item.price * item.quantity,
@@ -50,6 +59,22 @@ export default function CartSummary({
         Order Summary
       </h2>
 
+      {/* Available Coupons Section */}
+      {token && backendUrl && (
+        <AvailableCoupons
+          cartTotal={cartItems.reduce(
+            (sum, item) => sum + item.price * item.quantity,
+            0,
+          )}
+          appliedCoupon={appliedCouponInfo || null}
+          onApplyCoupon={onApplyCouponFromList || (() => {})}
+          token={token}
+          backendUrl={backendUrl}
+          userUsageInfo={userUsageInfo || null}
+        />
+      )}
+
+      {/* Coupon Input Form */}
       <form
         onSubmit={handleApplyCoupon}
         className="mb-4 flex flex-col gap-2 sm:mb-6 sm:flex-row"
@@ -58,8 +83,8 @@ export default function CartSummary({
           type="text"
           value={coupon}
           onChange={(event) => setCoupon(event.target.value)}
-          placeholder="Enter coupon code"
-          className="grow rounded-lg border border-green-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
+          placeholder="Paste coupon code here"
+          className="grow rounded-lg border border-green-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 font-mono"
         />
         <button
           type="submit"
