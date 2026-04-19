@@ -68,9 +68,189 @@ export default function ProductCard({
           onClose={() => setToast(null)}
         />
       )}
+      
+      {/* MOBILE: Horizontal Tile Layout */}
+      <div className="md:hidden border border-green-900 relative rounded-xl overflow-hidden group hover:shadow-lg transition-shadow duration-300 bg-white flex">
+        {/* Image Section - Left Side */}
+        <Link
+          href={`/productpage/${productId}`}
+          className="relative w-32 h-full flex-shrink-0 cursor-pointer group/image overflow-hidden"
+        >
+          <img
+            src={image}
+            alt={name}
+            className={`w-full h-full object-fill transition-transform duration-700 ease-in-out group-hover/image:scale-105 ${
+              loaded ? "opacity-100" : "opacity-0"
+            }`}
+            loading="lazy"
+            onLoad={() => setLoaded(true)}
+          />
+
+          {/* Shimmer skeleton */}
+          <div
+            className={`absolute inset-0 shimmer transition-opacity duration-300 ease-in-out ${
+              loaded ? "opacity-0" : "opacity-100"
+            }`}
+          />
+        </Link>
+
+        {/* Discount Badge - Top Left on Image */}
+        <div className="absolute top-1 left-1 z-20">
+          {discountBadge && (
+            <span className="bg-red-50 text-red-600 text-[9px] font-semibold px-1.5 py-0.5 rounded-full">
+              {discountBadge}
+            </span>
+          )}
+          {!discountBadge && typeof mrp === "number" && (
+            <span className="bg-red-50 text-red-600 text-[9px] font-semibold px-1.5 py-0.5 rounded-full">
+              {Math.round(((mrp - price) / mrp) * 100)}% OFF
+            </span>
+          )}
+        </div>
+
+        {/* Wishlist Icon - Top Right on Image */}
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            if (isInWishlist) {
+              removeFromWishlist(productId);
+            } else {
+              addToWishlist({
+                id: productId,
+                name,
+                price,
+                mrp,
+                image,
+                category,
+                tags,
+                quantity: 1,
+                selectedSize,
+                plantSizes,
+              });
+            }
+          }}
+          aria-label="Toggle Wishlist"
+          className="absolute top-1 right-1 z-20 transition-transform hover:scale-110"
+        >
+          {isInWishlist ? (
+            <HeartSolid className="h-5 w-5 text-green-500" />
+          ) : (
+            <HeartOutline className="h-5 w-5 text-green-500 hover:text-red-400" />
+          )}
+        </button>
+
+        {/* Details Section - Right Side */}
+        <div className="flex-1 p-2 sm:p-3 flex flex-col justify-between">
+          {/* Top Section: Product Info */}
+          <div className="space-y-1">
+            <h2 className="text-sm sm:text-sm font-semibold text-green-600 line-clamp-2">
+              {name}
+            </h2>
+            
+            {/* Category + Rating */}
+            <div className="flex items-center gap-1.5 justify-between flex-wrap">
+              <p className="text-xs text-gray-600">
+                {category || "Product"}
+              </p>
+              <div className="bg-green-100/70 px-1.5 py-0.5 rounded-full">
+                <ProductRating
+                  productId={String(productId)}
+                  className="text-xs"
+                />
+              </div>
+            </div>
+
+            {/* Tags - All tags */}
+            {tags && tags.length > 0 && (
+              <div className="flex flex-wrap gap-0.5">
+                {tags.map((tag, index) => (
+                  <span
+                    key={index}
+                    className="text-xs bg-green-900 px-1.5 py-0.5 rounded text-white"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Size */}
+            {selectedSize && (
+              <div className="flex items-center gap-1">
+                <span className="text-xs font-semibold text-gray-700">Size:</span>
+                <span className="text-xs bg-green-100 px-1.5 py-0.5 rounded text-green-700 font-semibold">
+                  {selectedSize.label}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Bottom Section: Price + Button */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-green-700 text-sm">₹{selectedSize?.price || price}</span>
+              {typeof mrp === "number" && mrp > price && (
+                <span className="text-xs text-red-600 line-through">
+                  ₹{mrp}
+                </span>
+              )}
+            
+
+            {/* Action Button */}
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                if (plantSizes && plantSizes.length > 0 && !selectedSize) {
+                  setShowSizeModal(true);
+                  return;
+                }
+
+                const cartItem = {
+                  id: productId,
+                  name,
+                  price: selectedSize?.price || price,
+                  mrp: selectedSize?.mrp || mrp,
+                  image,
+                  category,
+                  tags,
+                  quantity: 1,
+                  selectedSize: selectedSize || undefined,
+                  plantSizes: plantSizes || undefined,
+                };
+
+                if (!isAddedToCart) {
+                  addToCart(cartItem);
+                  setIsAddedToCart(true);
+                  setToast({
+                    message: `${name} added to cart`,
+                    type: "success",
+                  });
+                } else {
+                  router.push("/cart");
+                }
+              }}
+              className="w-full flex items-center justify-center gap-1 px-2 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition shadow-sm hover:shadow-md text-xs font-semibold"
+              aria-label={isAddedToCart ? "Go to Cart" : "Add to Cart"}
+            >
+              {isAddedToCart ? (
+                <>
+                  <BoltIcon className="h-3 w-3" />
+                  Buy
+                </>
+              ) : (
+                <>
+                  <ShoppingCartIcon className="h-3 w-3" />
+                  Cart
+                </>
+              )}
+            </button>
+          </div>
+          </div>
+        </div>
+      </div>
 
       {/* DESKTOP: Vertical Card Layout */}
-      <div className="relative rounded-xl overflow-hidden group h-96 hover:shadow-lg transition-shadow duration-300">
+      <div className="hidden md:block relative rounded-xl overflow-hidden group h-96 hover:shadow-lg transition-shadow duration-300">
         {/* Clickable Image Link Area */}
         <Link
           href={`/productpage/${productId}`}
@@ -257,12 +437,12 @@ export default function ProductCard({
               {isAddedToCart ? (
                 <>
                   <BoltIcon className="h-3.5 w-3.5" />
-                  <span className="sm:inline">Buy</span>
+                  <span className="hidden sm:inline">Buy</span>
                 </>
               ) : (
                 <>
                   <ShoppingCartIcon className="h-3.5 w-3.5" />
-                  <span className="sm:inline">Cart</span>
+                  <span className="hidden sm:inline">Cart</span>
                 </>
               )}
             </button>

@@ -75,19 +75,19 @@ export default function Header() {
   };
 
   const renderLocationCard = () => (
-    <div className="relative w-full">
+    <div className="relative w-full md:max-w-xs lg:max-w-sm">
       <button
         onClick={() => {
           setLocationEditorOpen((current) => !current);
         }}
-        className="flex w-full items-center gap-2 rounded-lg sm:rounded-xl lg:rounded-2xl border border-white/20 bg-white/10 px-2 sm:px-2.5 py-1.5 sm:py-2 lg:py-2.5 text-left text-white transition hover:bg-white/20"
+        className="flex w-full items-center gap-2 rounded-lg sm:rounded-xl lg:rounded-2xl border border-white/20 bg-white/10 px-2 sm:px-2.5 md:px-2 py-1.5 sm:py-2 md:py-1.5 lg:py-2.5 text-left text-white transition hover:bg-white/20"
       >
-        <MapPinIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4 lg:h-5 lg:w-5 shrink-0 text-emerald-100" />
+        <MapPinIcon className="h-3 w-3 sm:h-4 sm:w-4 md:h-3.5 md:w-3.5 lg:h-5 lg:w-5 shrink-0 text-emerald-100" />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[11px] sm:text-xs lg:text-sm font-semibold leading-3 sm:leading-4 lg:leading-5">
+          <p className="truncate text-[10px] sm:text-xs md:text-[11px] lg:text-sm font-semibold leading-3 sm:leading-4 md:leading-3 lg:leading-5">
             {primaryLocationLine}
           </p>
-          <p className="truncate text-[9px] sm:text-[10px] lg:text-xs leading-2 sm:leading-3 lg:leading-4 text-emerald-50">
+          <p className="truncate text-[8px] sm:text-[10px] md:text-[9px] lg:text-xs leading-2 sm:leading-3 md:leading-2 lg:leading-4 text-emerald-50">
             {secondaryLocationLine}
           </p>
         </div>
@@ -122,8 +122,8 @@ export default function Header() {
   );
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-green-600 shadow-md w-full">
-      <div className="container mx-auto px-2 sm:px-3 md:px-4 lg:px-6">
+    <header className="fixed inset-x-0 top-0 z-50 bg-green-600 shadow-md">
+      <div className="container mx-auto max-w-7xl px-2 sm:px-3 md:px-4 lg:px-6">
         {/* Desktop & Tablet: Single Row (md and up) */}
         <div className="hidden md:flex w-full items-center gap-5 py-2.5 md:py-2.5 lg:py-3">
           {/* Logo */}

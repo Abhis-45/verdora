@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Pagination, Autoplay } from "swiper/modules";
 import { ArrowRightCircleIcon } from "@heroicons/react/24/solid";
-import ProductCard from "../home/ProductCard";
+import ProductCard from "../product/ProductCard";
 import ProductSkeleton from "../product/ProductSkeleton";
 
 interface RelatedProductsCarouselProps {

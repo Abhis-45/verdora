@@ -1,42 +1,74 @@
+"use client";
+import { useState, useEffect } from "react";
 import Layout from "../../components/common/layout";
-import servicesData from "../../data/services.json";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 import Head from "next/head";
 import Link from "next/link";
-
-interface Package {
-  id: string;
-  name: string;
-  desc: string;
-}
+import { useRouter } from "next/router";
+import ServicesList from "@/components/services/ServicesList";
+import Spinner from "@/components/shared/Spinner";
 
 interface Service {
+  _id?: string;
   slug: string;
   title: string;
   desc: string;
   details: string;
-  image: string;
-  packages: Package[];
+  image?: string;
+  packages: any[];
 }
 
-export async function getStaticPaths() {
-  const paths = servicesData.map((s: Service) => ({
-    params: { slug: s.slug },
-  }));
-  return { paths, fallback: false };
-}
+export default function ServiceDetail() {
+  const router = useRouter();
+  const { slug } = router.query;
+  const [service, setService] = useState<Service | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-export async function getStaticProps({ params }: { params: { slug: string } }) {
-  const service = servicesData.find((s: Service) => s.slug === params.slug);
-  return { props: { service } };
-}
+  useEffect(() => {
+    if (!slug) return;
 
-export default function ServiceDetail({ service }: { service: Service }) {
-  return (
-    <>
-      <Head>
-        <title>{service.title} | Verdora</title>
-      </Head>
+    const fetchService = async () => {
+      try {
+        setLoading(true);
+        const BACKEND_URL =
+          typeof window !== "undefined"
+            ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+            : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+
+        const response = await fetch(`${BACKEND_URL}/api/services/${slug}`);
+        
+        if (!response.ok) {
+          throw new Error("Service not found");
+        }
+
+        const data = await response.json();
+        setService(data);
+        setError(null);
+      } catch (err) {
+        console.error("Error fetching service:", err);
+        setError(err instanceof Error ? err.message : "Failed to load service");
+        setService(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchService();
+  }, [slug]);
+
+  if (loading) {
+    return (
+      <Layout>
+        <div className="flex justify-center items-center min-h-screen">
+          <Spinner />
+        </div>
+      </Layout>
+    );
+  }
+
+  if (error || !service) {
+    return (
       <Layout>
         <div className="max-w-4xl mx-auto px-4 py-8">
           <Link
@@ -44,31 +76,45 @@ export default function ServiceDetail({ service }: { service: Service }) {
             className="flex items-center gap-2 text-green-600 hover:text-green-700 font-semibold mb-6 transition"
           >
             <ArrowLeftIcon className="h-5 w-5" />
-            Back
+            Back to Services
+          </Link>
+          <div className="text-center py-12">
+            <h1 className="text-2xl font-bold text-gray-900">Service Not Found</h1>
+            <p className="text-gray-600 mt-2">{error || "The service you're looking for doesn't exist."}</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  return (
+    <>
+      <Head>
+        <title>{service.title} | Verdora</title>
+      </Head>
+      <Layout>
+        <div className="max-w-6xl mx-auto px-4 py-8">
+          <Link
+            href="/services"
+            className="flex items-center gap-2 text-green-600 hover:text-green-700 font-semibold mb-6 transition"
+          >
+            <ArrowLeftIcon className="h-5 w-5" />
+            Back to All Services
           </Link>
 
-          <h1 className="text-2xl sm:text-3xl font-bold text-green-900 mb-4">
-            {service.title}
-          </h1>
-          <p className="text-gray-700 mb-6">{service.details}</p>
+          <div className="mb-12">
+            <h1 className="text-3xl sm:text-4xl font-bold text-green-900 mb-4">
+              {service.title}
+            </h1>
+            <p className="text-lg text-gray-700">{service.details}</p>
+          </div>
 
-          <h2 className="text-lg font-semibold text-green-700 mb-3">
-            Packages
-          </h2>
-          <div className="space-y-4">
-            {service.packages.map((pkg) => (
-              <div
-                key={pkg.id}
-                className="border rounded-md p-4 shadow-sm hover:shadow-md transition"
-              >
-                <h3 className="text-md font-bold text-gray-900">{pkg.name}</h3>
-                <p className="text-sm text-gray-600 mb-2">{pkg.desc}</p>
-                <p className="text-xs text-gray-500 italic">
-                  Pricing depends on quality and quantity — contact us for a
-                  quote.
-                </p>
-              </div>
-            ))}
+          {/* Display the service using the reusable component */}
+          <div className="mb-12">
+            <h2 className="text-2xl font-bold text-green-700 mb-6">
+              Available Packages & Booking
+            </h2>
+            <ServicesList services={[service]} loading={false} showFullGrid={true} />
           </div>
         </div>
       </Layout>

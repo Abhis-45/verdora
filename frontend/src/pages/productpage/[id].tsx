@@ -8,6 +8,7 @@ import { useCart } from "../../context/CartContext";
 import { useWishlist } from "../../context/WishlistContext";
 import { useUser } from "../../context/UserContext";
 import { useDeliveryLocation } from "@/context/DeliveryLocationContext";
+import { useRecentlyViewed } from "@/context/RecentlyViewedContext";
 import { ArrowLeftIcon, MapPinIcon } from "@heroicons/react/24/outline";
 import RelatedProductsCarousel from "../../components/productpage/RelatedProductsCarousel";
 import { PincodeSuggestions } from "../../components/forms/PincodeSuggestions";
@@ -68,6 +69,7 @@ export default function ProductDetailPage() {
   const [locationEditorOpen, setLocationEditorOpen] = useState(false);
 
   const { cartItems, addToCart, updateQuantity, removeFromCart } = useCart();
+  const { addViewedProduct } = useRecentlyViewed();
   const { wishlist, addToWishlist, removeFromWishlist } = useWishlist();
 
   useEffect(() => {
@@ -91,6 +93,19 @@ export default function ProductDetailPage() {
         const normalizedProduct = data.product || data;
         normalizedProduct.id =
           normalizedProduct._id || normalizedProduct.id || id;
+        
+        // Track viewed product
+        addViewedProduct({
+          _id: normalizedProduct._id,
+          id: normalizedProduct.id,
+          name: normalizedProduct.name,
+          image: normalizedProduct.image,
+          price: normalizedProduct.price,
+          mrp: normalizedProduct.mrp,
+          category: normalizedProduct.category,
+          vendorName: normalizedProduct.vendorName,
+          plantSizes: normalizedProduct.plantSizes,
+        });
         setProduct(normalizedProduct);
       } catch {
         router.push("/products");
@@ -99,7 +114,7 @@ export default function ProductDetailPage() {
       }
     };
     fetchProduct();
-  }, [id, router]);
+  }, [id, router, addViewedProduct]);
 
   const plantSizes = useMemo(
     () =>

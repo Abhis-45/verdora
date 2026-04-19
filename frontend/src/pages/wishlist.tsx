@@ -9,7 +9,7 @@ import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 import Link from "next/link";
 import { ProductItem } from "@/types/ProductItem";
 import { useRouter } from "next/router";
-import ProductCard from "../components/home/ProductCard";
+import ProductCard from "../components/product/ProductCard";
 
 export default function WishlistPage() {
   const router = useRouter();

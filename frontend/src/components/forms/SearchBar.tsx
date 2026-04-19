@@ -20,17 +20,15 @@ export default function SearchBar({ mobile = false }: { mobile?: boolean }) {
       <title>Search Products | Verdora</title>
       <form
         onSubmit={handleSearch}
-        className={`flex items-center ${mobile ? "w-full" : ""}`}
+        className={`flex items-center ${mobile ? "w-full" : "w-full md:w-80 lg:w-[520px]"}`}
       >
-        <div className={`relative ${mobile ? "w-full" : ""}`}>
+        <div className={`relative ${mobile ? "w-full" : "w-full"}`}>
           <input
             type="text"
             placeholder="Search products..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className={`px-4 py-2 rounded-lg bg-white text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-400 ${
-              mobile ? "w-full" : "w-130"
-            }`}
+            className="w-full px-4 py-2 rounded-lg bg-white text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-400"
           />
           <button
             type="submit"

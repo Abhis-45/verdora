@@ -4,11 +4,12 @@ import Layout from "../components/common/layout";
 import Head from "next/head";
 import Toast from "../components/shared/Toast";
 import ErrorFallback from "../components/shared/ErrorFallback";
-import ProductCard from "../components/home/ProductCard";
+import ProductCard from "../components/product/ProductCard";
 import { useEffect, useMemo, useState, useRef } from "react";
 import { useRouter } from "next/router";
 import {
   ArrowLeftIcon,
+  ChevronDownIcon,
 } from "@heroicons/react/24/outline";
 import ProductSkeleton from "../components/product/ProductSkeleton";
 
@@ -49,6 +50,7 @@ export default function ProductsPages() {
   const [searchQuery, setSearchQuery] = useState("");
   const [displayedCount, setDisplayedCount] = useState(PRODUCTS_PER_PAGE);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const [toast, setToast] = useState<{
     message: string;
@@ -357,91 +359,142 @@ export default function ProductsPages() {
               </p>
             </div>
 
-            <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-5 lg:items-center">
-              <select
-                value={categoryFilter}
-                onChange={(event) => {
-                  setCategoryFilter(event.target.value);
-                  setTagFilter("All Tags");
-                  setDisplayedCount(PRODUCTS_PER_PAGE);
-                }}
-                className="w-full rounded px-3 py-2 text-green-600 border border-green-300 bg-white focus:outline-none focus:ring-2 focus:ring-green-400 sm:w-auto"
+            {/* Compact Filter Controls */}
+            <div className="mt-4 space-y-2">
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className="flex w-full items-center justify-between rounded-md border border-green-400 bg-gradient-to-r from-green-50 to-emerald-50 px-3 py-2.5 text-sm font-semibold text-green-700 transition hover:from-green-100 hover:to-emerald-100"
               >
-                {categories.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
+                <span>✨ Filters</span>
+                <ChevronDownIcon
+                  className={`h-4 w-4 transition-transform ${
+                    showFilters ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
 
-              <select
-                value={tagFilter}
-                onChange={(event) => {
-                  setTagFilter(event.target.value);
-                  setDisplayedCount(PRODUCTS_PER_PAGE);
-                }}
-                className="w-full rounded px-3 py-2 text-green-600 border border-green-300 bg-white focus:outline-none focus:ring-2 focus:ring-green-400 sm:w-auto"
-              >
-                {availableTags.map((option) => (
-                  <option key={option} value={option}>
-                    {option.charAt(0).toUpperCase() + option.slice(1)}
-                  </option>
-                ))}
-              </select>
+              {/* Filters Panel */}
+              {showFilters && (
+                <div className="rounded-md border border-green-300 bg-white p-3 shadow-sm">
+                  <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                    {/* Category Filter */}
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-bold uppercase tracking-wide text-green-700">
+                        Category
+                      </label>
+                      <select
+                        value={categoryFilter}
+                        onChange={(event) => {
+                          setCategoryFilter(event.target.value);
+                          setTagFilter("All Tags");
+                          setDisplayedCount(PRODUCTS_PER_PAGE);
+                        }}
+                        className="rounded border border-green-200 bg-green-50 px-2.5 py-1.5 text-xs text-green-700 transition hover:bg-green-100 focus:border-green-400 focus:outline-none focus:ring-1 focus:ring-green-400"
+                      >
+                        {categories.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-              <select
-                value={sizeFilter}
-                onChange={(event) => {
-                  setSizeFilter(event.target.value);
-                  setDisplayedCount(PRODUCTS_PER_PAGE);
-                }}
-                className="w-full rounded px-3 py-2 text-green-600 border border-green-300 bg-white focus:outline-none focus:ring-2 focus:ring-green-400 sm:w-auto"
-              >
-                {availableSizes.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
+                    {/* Tag Filter */}
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-bold uppercase tracking-wide text-green-700">
+                        Tags
+                      </label>
+                      <select
+                        value={tagFilter}
+                        onChange={(event) => {
+                          setTagFilter(event.target.value);
+                          setDisplayedCount(PRODUCTS_PER_PAGE);
+                        }}
+                        className="rounded border border-green-200 bg-green-50 px-2.5 py-1.5 text-xs text-green-700 transition hover:bg-green-100 focus:border-green-400 focus:outline-none focus:ring-1 focus:ring-green-400"
+                      >
+                        {availableTags.map((option) => (
+                          <option key={option} value={option}>
+                            {option.charAt(0).toUpperCase() + option.slice(1)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-              <select
-                value={priceRangeFilter}
-                onChange={(event) => {
-                  setPriceRangeFilter(event.target.value);
-                  setDisplayedCount(PRODUCTS_PER_PAGE);
-                }}
-                className="w-full rounded px-3 py-2 text-green-600 border border-green-300 bg-white focus:outline-none focus:ring-2 focus:ring-green-400 sm:w-auto"
-              >
-                {availablePriceRanges.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
+                    {/* Size Filter */}
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-bold uppercase tracking-wide text-green-700">
+                        Size
+                      </label>
+                      <select
+                        value={sizeFilter}
+                        onChange={(event) => {
+                          setSizeFilter(event.target.value);
+                          setDisplayedCount(PRODUCTS_PER_PAGE);
+                        }}
+                        className="rounded border border-green-200 bg-green-50 px-2.5 py-1.5 text-xs text-green-700 transition hover:bg-green-100 focus:border-green-400 focus:outline-none focus:ring-1 focus:ring-green-400"
+                      >
+                        {availableSizes.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-              <select
-                value={sortBy}
-                onChange={(event) => setSortBy(event.target.value)}
-                className="w-full rounded border border-green-300 bg-white px-3 py-2 text-green-600 focus:outline-none focus:ring-2 focus:ring-green-400 sm:w-auto"
-              >
-                <option value="featured">Sort: Featured</option>
-                <option value="price-low">Price: Low to High</option>
-                <option value="price-high">Price: High to Low</option>
-                <option value="name-asc">Name: A to Z</option>
-                <option value="name-desc">Name: Z to A</option>
-              </select>
+                    {/* Price Range Filter */}
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-bold uppercase tracking-wide text-green-700">
+                        Price
+                      </label>
+                      <select
+                        value={priceRangeFilter}
+                        onChange={(event) => {
+                          setPriceRangeFilter(event.target.value);
+                          setDisplayedCount(PRODUCTS_PER_PAGE);
+                        }}
+                        className="rounded border border-green-200 bg-green-50 px-2.5 py-1.5 text-xs text-green-700 transition hover:bg-green-100 focus:border-green-400 focus:outline-none focus:ring-1 focus:ring-green-400"
+                      >
+                        {availablePriceRanges.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-              {(categoryFilter !== "All Categories" ||
-                tagFilter !== "All Tags" ||
-                sizeFilter !== "All Sizes" ||
-                priceRangeFilter !== "All Prices" ||
-                sortBy !== "featured") && (
-                <button
-                  onClick={clearFilters}
-                  className="w-full rounded bg-linear-to-r from-gray-300 to-gray-400 px-4 py-2 text-black transition hover:scale-105 sm:w-auto"
-                >
-                  Clear Filters
-                </button>
+                    {/* Sort By */}
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-bold uppercase tracking-wide text-green-700">
+                        Sort
+                      </label>
+                      <select
+                        value={sortBy}
+                        onChange={(event) => setSortBy(event.target.value)}
+                        className="rounded border border-green-200 bg-green-50 px-2.5 py-1.5 text-xs text-green-700 transition hover:bg-green-100 focus:border-green-400 focus:outline-none focus:ring-1 focus:ring-green-400"
+                      >
+                        <option value="featured">Featured</option>
+                        <option value="price-low">Low to High</option>
+                        <option value="price-high">High to Low</option>
+                        <option value="name-asc">A to Z</option>
+                        <option value="name-desc">Z to A</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Clear Filters Button */}
+                  {(categoryFilter !== "All Categories" ||
+                    tagFilter !== "All Tags" ||
+                    sizeFilter !== "All Sizes" ||
+                    priceRangeFilter !== "All Prices" ||
+                    sortBy !== "featured") && (
+                    <button
+                      onClick={clearFilters}
+                      className="mt-2.5 w-full rounded bg-gradient-to-r from-red-400 to-red-500 px-3 py-1.5 text-xs font-bold text-white transition hover:from-red-500 hover:to-red-600"
+                    >
+                      ✕ Clear All
+                    </button>
+                  )}
+                </div>
               )}
             </div>
 

@@ -17,6 +17,7 @@ import ServicesPreview from "@/components/home/ServicesPreview";
 import DynamicTestimonials from "@/components/home/DynamicTestimonials";
 import TopCategories from "@/components/home/TopCategories";
 import TrendingProducts from "@/components/home/TrendingProducts";
+import RecentlyViewedProducts from "@/components/home/RecentlyViewedProducts";
 
 const promos = [
   {
@@ -64,6 +65,7 @@ export default function Home() {
           {/* Dynamic Product Sections - Each shows/hides based on product availability */}
           <TrendingProducts />
           <TopCategories />
+          <RecentlyViewedProducts />
           <HerbalCombos />
           <ProductsByCharacteristics />
           <ProductsByColor />

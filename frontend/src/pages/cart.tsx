@@ -14,6 +14,7 @@ import Spinner from "@/components/shared/Spinner";
 import Toast from "../components/shared/Toast";
 import CartItemsList from "../components/cart/CartItemsList";
 import CartSummary from "../components/cart/CartSummary";
+import RecentlyViewedProducts from "@/components/home/RecentlyViewedProducts";
 import {
   calculateDeliveryEstimate,
   formatDeliveryDate,
@@ -537,7 +538,10 @@ export default function CartPage() {
             </div>
           )}
         </div>
-
+{/* Recently Viewed Products Section */}
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <RecentlyViewedProducts />
+        </div>
         {cartItems.length > 0 && (
           <div className="fixed bottom-0 left-0 right-0 flex flex-col items-center gap-3 border-t border-green-200 bg-white p-3 shadow-lg lg:hidden sm:flex-row sm:justify-between sm:p-4">
             <div className="flex flex-1 flex-col">

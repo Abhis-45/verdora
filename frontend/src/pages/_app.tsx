@@ -5,6 +5,7 @@ import "../app/globals.css";
 import { WishlistProvider } from "../context/WishlistContext";
 import { DeliveryLocationProvider } from "@/context/DeliveryLocationContext";
 import { UserProvider } from "@/context/UserContext";
+import { RecentlyViewedProvider } from "@/context/RecentlyViewedContext";
 import ErrorBoundary from "@/components/shared/ErrorBoundary";
 import { useEffect } from "react";
 
@@ -60,7 +61,9 @@ export default function MyApp({ Component, pageProps }: AppProps) {
         <DeliveryLocationProvider>
           <CartProvider>
             <WishlistProvider>
-              <Component {...pageProps} />
+              <RecentlyViewedProvider>
+                <Component {...pageProps} />
+              </RecentlyViewedProvider>
             </WishlistProvider>
           </CartProvider>
         </DeliveryLocationProvider>
