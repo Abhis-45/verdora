@@ -12,7 +12,7 @@ interface AvailableCoupon {
   expiryDate?: string;
 }
 
-interface CouponValidation {
+export interface CouponValidation {
   code: string;
   discount: number;
   fixedDiscount: number;

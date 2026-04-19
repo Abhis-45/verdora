@@ -465,47 +465,10 @@ router.patch("/vendors/:vendorId/reject", async (req, res) => {
 });
 
 // ✅ Middleware to verify admin token (admin or vendor)
-export const adminAuthMiddleware = (req, res, next) => {
-  const token = req.headers.authorization?.split(" ")[1];
-  if (!token) {
-    return res.status(401).json({ message: "Admin token required" });
-  }
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    if (
-      !decoded.role ||
-      (decoded.role !== "admin" && decoded.role !== "vendor")
-    ) {
-      return res.status(403).json({ message: "Admin access required" });
-    }
-    req.userId = decoded.id;
-    req.userRole = decoded.role;
-    req.userName = decoded.vendorName || decoded.username;
-    next();
-  } catch (err) {
-    res.status(401).json({ message: "Invalid token" });
-  }
-};
+export { adminAuthMiddleware } from "../middleware/auth.js";
 
 // ✅ Middleware to verify vendor token (vendor only)
-export const vendorAuthMiddleware = (req, res, next) => {
-  const token = req.headers.authorization?.split(" ")[1];
-  if (!token) {
-    return res.status(401).json({ message: "Vendor token required" });
-  }
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    if (!decoded.role || decoded.role !== "vendor") {
-      return res.status(403).json({ message: "Vendor access required" });
-    }
-    req.vendorId = decoded.id;
-    req.vendorRole = decoded.role;
-    req.vendorName = decoded.vendorName;
-    next();
-  } catch (err) {
-    res.status(401).json({ message: "Invalid token" });
-  }
-};
+export { vendorAuthMiddleware } from "../middleware/auth.js";
 
 // ✅ PASSWORD RESET - REQUEST OTP (Public - no token required)
 router.post("/forgot-password", async (req, res) => {

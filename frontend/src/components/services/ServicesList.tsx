@@ -1,33 +1,15 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 import React, { useState } from "react";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import Image from "next/image";
 import Spinner from "@/components/shared/Spinner";
 import { useUser } from "@/context/UserContext";
-
-interface Package {
-  _id?: string;
-  id?: string;
-  name: string;
-  desc: string;
-  price: number;
-}
-
-interface Service {
-  _id?: string;
-  slug: string;
-  title: string;
-  desc: string;
-  details: string;
-  packages: Package[];
-  image?: string;
-}
+import type { ServicePackage, ServiceRecord } from "@/types/service";
 
 interface ServicesListProps {
-  services: Service[];
+  services: ServiceRecord[];
   loading?: boolean;
-  showFullGrid?: boolean; // true for full page, false for preview
+  showFullGrid?: boolean;
 }
 
 export default function ServicesList({
@@ -35,8 +17,12 @@ export default function ServicesList({
   loading = false,
   showFullGrid = true,
 }: ServicesListProps) {
-  const [selectedService, setSelectedService] = useState<Service | null>(null);
-  const [selectedPackage, setSelectedPackage] = useState<Package | null>(null);
+  const [selectedService, setSelectedService] = useState<ServiceRecord | null>(
+    null,
+  );
+  const [selectedPackage, setSelectedPackage] = useState<ServicePackage | null>(
+    null,
+  );
   const [bookingData, setBookingData] = useState({
     name: "",
     email: "",
@@ -52,7 +38,7 @@ export default function ServicesList({
   } | null>(null);
   const { user } = useUser();
 
-  const handleBookPackage = (pkg: Package) => {
+  const handleBookPackage = (pkg: ServicePackage) => {
     setSelectedPackage(pkg);
     setBookingData({
       name: user?.name || "",
@@ -174,7 +160,7 @@ export default function ServicesList({
     <>
       {/* Services Grid */}
       <div className={`grid ${gridColsClass} gap-5 sm:gap-6`}>
-        {services.map((service: Service) => (
+        {services.map((service) => (
           <div
             key={service.slug}
             className="bg-white rounded-lg shadow-md hover:shadow-xl transition transform hover:-translate-y-1 cursor-pointer overflow-hidden"
@@ -362,7 +348,7 @@ export default function ServicesList({
                 <select
                   name="selectedTime"
                   value={bookingData.selectedTime}
-                  onChange={handleBookingChange as any}
+                  onChange={handleBookingChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                   required
                 >

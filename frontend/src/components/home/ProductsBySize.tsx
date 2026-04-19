@@ -1,15 +1,5 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 import Link from "next/link";
-
-interface ProductItem {
-  id: number;
-  name: string;
-  price: number;
-  image: string;
-  quantity: number;
-  size?: string;
-}
 
 export default function ProductsBySize() {
   const sizes = ["S", "M", "L", "XL"];

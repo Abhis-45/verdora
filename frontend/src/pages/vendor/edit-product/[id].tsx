@@ -1,5 +1,4 @@
 /* eslint-disable @next/next/no-img-element */
-/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -12,30 +11,13 @@ import OriginAddressFields from "@/components/product/OriginAddressFields";
 import { DEFAULT_DELIVERY_LOCATION } from "@/utils/delivery";
 import { normalizePlantSizes, PlantSizeOption } from "@/utils/productOptions";
 
-interface Product {
-  _id: string;
-  name: string;
-  category: string;
-  price: number;
-  mrp: number;
-  description: string;
-  tags: string[];
-  image: string;
-  brand?: string;
-  plantSizes?: PlantSizeOption[];
-  originAddress?: {
-    address?: string;
-    city?: string;
-    state?: string;
-    pincode?: string;
-    country?: string;
-  };
+interface ProductTagSource {
+  tags?: string[];
 }
 
 export default function EditProduct() {
   const router = useRouter();
   const { id } = router.query;
-  const [product, setProduct] = useState<Product | null>(null);
   const [tagOptions, setTagOptions] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     name: "",
@@ -75,7 +57,6 @@ export default function EditProduct() {
 
         const data = await response.json();
         const productData = data.product || data;
-        setProduct(productData);
         setFormData({
           name: productData.name,
           category: productData.category,
@@ -136,7 +117,7 @@ export default function EditProduct() {
         const tags = Array.from(
           new Set(
             allProducts
-              .flatMap((product: any) => product.tags || [])
+              .flatMap((product: ProductTagSource) => product.tags || [])
               .map((tag: string) => String(tag).trim())
               .filter(Boolean),
           ),

@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   TrashIcon,
   MagnifyingGlassIcon,
   CheckIcon,
-  XMarkIcon,
   PencilIcon,
 } from "@heroicons/react/24/outline";
 
@@ -47,11 +46,7 @@ export default function ServiceRequests({ backendUrl, token }: ServiceRequestsPr
   const [updating, setUpdating] = useState(false);
   const [newStatus, setNewStatus] = useState<string>("");
 
-  useEffect(() => {
-    fetchServiceRequests();
-  }, [statusFilter]);
-
-  const fetchServiceRequests = async () => {
+  const fetchServiceRequests = useCallback(async () => {
     setLoading(true);
     try {
       const url =
@@ -77,7 +72,11 @@ export default function ServiceRequests({ backendUrl, token }: ServiceRequestsPr
     } finally {
       setLoading(false);
     }
-  };
+  }, [backendUrl, statusFilter, token]);
+
+  useEffect(() => {
+    void fetchServiceRequests();
+  }, [fetchServiceRequests]);
 
   const handleDelete = async (id: string) => {
     if (!window.confirm("⚠️ DELETE SERVICE REQUEST\n\nThis will permanently delete this service request.\n\nThis action CANNOT be undone!")) {
@@ -135,7 +134,7 @@ export default function ServiceRequests({ backendUrl, token }: ServiceRequestsPr
         return;
       }
 
-      const updated = await response.json();
+      await response.json();
       alert("✅ Service request updated successfully");
       setAdminNotes("");
       setNewStatus("");

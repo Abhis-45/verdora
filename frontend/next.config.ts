@@ -15,7 +15,16 @@ const nextConfig: NextConfig = {
   },
   images: {
     unoptimized: process.env.NODE_ENV === "production",
-    domains: ["images.unsplash.com", "res.cloudinary.com"],
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com",
+      },
+      {
+        protocol: "https",
+        hostname: "res.cloudinary.com",
+      },
+    ],
   },
   // Rewrites can have limitations on Vercel, so we call backend directly from client side
   // See: frontend/src/lib/api.ts where BACKEND_URL is used directly

@@ -1,20 +1,97 @@
 import jwt from "jsonwebtoken";
 
-// Protect routes by verifying JWT
-export const authMiddleware = (req, res, next) => {
-  const authHeader = req.header("Authorization");
-  if (!authHeader) {
-    return res.status(401).json({ message: "No token provided" });
+const getBearerToken = (req) => req.headers.authorization?.split(" ")[1] || "";
+
+const attachDecodedUser = (req, decoded) => {
+  req.user = decoded;
+  req.userId = decoded.id;
+  req.userRole = decoded.role;
+
+  if (decoded.role === "admin") {
+    req.adminId = decoded.id;
   }
 
-  const token = authHeader.replace("Bearer ", "");
+  if (decoded.role === "vendor") {
+    req.vendorId = decoded.id;
+    req.vendorRole = decoded.role;
+    req.vendorName = decoded.vendorName || decoded.username;
+  }
+
+  req.userName = decoded.vendorName || decoded.username || decoded.email;
+};
+
+const verifyJwt = (token) => jwt.verify(token, process.env.JWT_SECRET);
+
+export const authMiddleware = (req, res, next) => {
+  const token = getBearerToken(req);
+  if (!token) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded; // attach user payload (id, etc.)
-    req.userId = decoded.id; // attach userId for backward compatibility
-    next();
-  } catch (err) {
-    return res.status(401).json({ message: "Invalid or expired token" });
+    const decoded = verifyJwt(token);
+    attachDecodedUser(req, decoded);
+    return next();
+  } catch {
+    return res.status(401).json({ message: "Invalid token" });
   }
 };
+
+export const optionalAuthMiddleware = (req, _res, next) => {
+  const token = getBearerToken(req);
+  if (!token) {
+    req.userId = null;
+    return next();
+  }
+
+  try {
+    const decoded = verifyJwt(token);
+    attachDecodedUser(req, decoded);
+  } catch {
+    req.userId = null;
+  }
+
+  return next();
+};
+
+export const createRoleMiddleware =
+  (
+    allowedRoles,
+    {
+      missingMessage = "Token required",
+      invalidMessage = "Invalid token",
+      forbiddenMessage = "Forbidden",
+    } = {},
+  ) =>
+  (req, res, next) => {
+    const token = getBearerToken(req);
+    if (!token) {
+      return res.status(401).json({ message: missingMessage });
+    }
+
+    try {
+      const decoded = verifyJwt(token);
+      if (
+        Array.isArray(allowedRoles) &&
+        allowedRoles.length > 0 &&
+        !allowedRoles.includes(decoded.role)
+      ) {
+        return res.status(403).json({ message: forbiddenMessage });
+      }
+
+      attachDecodedUser(req, decoded);
+      return next();
+    } catch {
+      return res.status(401).json({ message: invalidMessage });
+    }
+  };
+
+export const adminAuthMiddleware = createRoleMiddleware(["admin"], {
+  missingMessage: "Admin token required",
+  forbiddenMessage: "Admin access required",
+});
+
+export const vendorAuthMiddleware = createRoleMiddleware(["vendor"], {
+  missingMessage: "Vendor token required",
+  forbiddenMessage: "Vendor access required",
+});

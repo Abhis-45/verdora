@@ -6,11 +6,6 @@ import Toast from "../components/shared/Toast";
 import { useRouter } from "next/router";
 import { ArrowLeftIcon } from "@heroicons/react/24/solid";
 
-interface User {
-  name?: string;
-  email?: string;
-}
-
 export default function Contact() {
   const router = useRouter();
   const [formData, setFormData] = useState({
@@ -71,7 +66,7 @@ ${prev.name || "Your Name"}`,
           }));
         }
       }
-    } catch (err) {
+    } catch {
       // Silent fail - allow anonymous submissions
     }
   }, []);
@@ -150,8 +145,7 @@ ${prev.name || "Your Name"}`,
                       package: "",
                     });
                   }
-                  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                } catch (err) {
+                } catch {
                   // Silently fail
                 } finally {
                   setIsLoading(false);
@@ -191,6 +185,7 @@ ${prev.name || "Your Name"}`,
                   onChange={(e) =>
                     setFormData({ ...formData, email: e.target.value })
                   }
+                  suppressHydrationWarning
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
                 />
               </div>

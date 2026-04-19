@@ -1,30 +1,9 @@
 import express from "express";
-import jwt from "jsonwebtoken";
 import { Coupon, CouponUsage } from "../models/Coupon.js";
 import User from "../models/User.js";
+import { adminAuthMiddleware } from "../middleware/auth.js";
 
 const router = express.Router();
-
-// Middleware to verify admin
-const adminAuthMiddleware = (req, res, next) => {
-  const token = req.headers.authorization?.split(" ")[1];
-  if (!token) {
-    return res.status(401).json({ message: "Token required" });
-  }
-
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    if (decoded.role !== "admin") {
-      return res.status(403).json({ message: "Admin access required" });
-    }
-    req.adminId = decoded.id;
-    next();
-  } catch (err) {
-    return res
-      .status(401)
-      .json({ message: "Invalid token", error: err.message });
-  }
-};
 
 // ✅ GET ALL COUPONS WITH SEARCH AND PAGINATION
 router.get("/", adminAuthMiddleware, async (req, res) => {

@@ -160,7 +160,7 @@ export default function PasswordResetModal({ isOpen, onClose, backendUrl }: Pass
         {step === "request" && (
           <form onSubmit={handleRequestOTP} className="space-y-4">
             <p className="text-gray-600 text-sm mb-4">
-              Enter your email address and we'll send you an OTP to reset your password.
+              Enter your email address and we&apos;ll send you an OTP to reset your password.
             </p>
 
             <div>
@@ -232,7 +232,7 @@ export default function PasswordResetModal({ isOpen, onClose, backendUrl }: Pass
         {step === "verify" && (
           <form onSubmit={handleVerifyOTP} className="space-y-4">
             <p className="text-gray-600 text-sm mb-4">
-              We've sent an OTP to <strong>{maskedEmail}</strong>
+              We&apos;ve sent an OTP to <strong>{maskedEmail}</strong>
             </p>
 
             <div>
@@ -362,7 +362,7 @@ export default function PasswordResetModal({ isOpen, onClose, backendUrl }: Pass
                 Password Reset Successful
               </h3>
               <p className="text-gray-600 text-sm">
-                Your password has been reset successfully. You can now login with your new password.
+                Your password has been reset successfully. You can now log in with your new password.
               </p>
             </div>
 

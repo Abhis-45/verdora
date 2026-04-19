@@ -123,6 +123,19 @@ interface AdminStats {
   totalAdmins: number;
   totalRevenue: number;
 }
+interface VendorPrefillData {
+  username?: string;
+  email?: string;
+  vendorName?: string;
+  mobileNumber?: string;
+  phone?: string;
+  businessName?: string;
+  shopName?: string;
+  businessPhone?: string;
+  businessLocation?: string;
+  address?: string;
+  businessWebsite?: string;
+}
 type Tab = "overview" | "orders" | "products" | "users" | "vendors" | "admins" | "service-requests" | "coupons";
 type DataTab = Exclude<Tab, "overview">;
 type ManageItem = Product | User | Vendor | Admin;
@@ -149,15 +162,12 @@ type ModalType =
 export default function AdminDashboard() {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("overview");
-  const [adminName, setAdminName] = useState<string>("Admin");
-  
-  // Hydration fix: Update adminName from localStorage only on client after hydration
-  useEffect(() => {
-    const storedName = localStorage.getItem("adminName");
-    if (storedName) {
-      setAdminName(storedName);
+  const [adminName] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("adminName") || "Admin";
     }
-  }, []);
+    return "Admin";
+  });
   const [stats, setStats] = useState<AdminStats>({
     totalProducts: 0,
     totalUsers: 0,
@@ -174,7 +184,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(false);
   const [activeModal, setActiveModal] = useState<ModalType>("none");
   const [selectedItem, setSelectedItem] = useState<
-    Product | User | Vendor | Admin | null
+    ManageItem | OrderItem | null
   >(null);
   const [token] = useState<string>(() => {
     if (typeof window !== "undefined") {
@@ -183,7 +193,7 @@ export default function AdminDashboard() {
     return "";
   });
   const [, setDeleteLoading] = useState(false);
-  const [vendorRequestData, setVendorRequestData] = useState<any>(null);
+  const [vendorRequestData, setVendorRequestData] = useState<VendorPrefillData | null>(null);
   const [vendorRequestId, setVendorRequestId] = useState<string | null>(null);
 
   const fetchStats = useCallback(async (authToken: string) => {
@@ -334,6 +344,7 @@ export default function AdminDashboard() {
     router,
     token,
     fetchStats,
+    fetchOrders,
     fetchProducts,
     fetchUsers,
     fetchVendors,
@@ -415,9 +426,12 @@ export default function AdminDashboard() {
       } else {
         let errMsg = res.statusText;
         try {
-          const errData = await res.json();
+          const errData = (await res.json()) as {
+            message?: string;
+            error?: string;
+          };
           errMsg = errData.message || errData.error || res.statusText;
-        } catch (e) {
+        } catch {
           // Response is not JSON, use statusText
         }
         alert(`❌ Delete failed: ${errMsg}`);
@@ -553,7 +567,7 @@ export default function AdminDashboard() {
                         <td className="px-4 py-3">
                           <button
                             onClick={() => {
-                              setSelectedItem(order as any);
+                              setSelectedItem(order);
                               setActiveModal("orderStatus");
                             }}
                             className="text-blue-600 hover:text-blue-900 font-semibold"
@@ -689,7 +703,8 @@ export default function AdminDashboard() {
       {activeModal === "editUser" &&
         selectedItem &&
         "mobile" in selectedItem &&
-        "email" in selectedItem && (
+        "email" in selectedItem &&
+        "_id" in selectedItem && (
           <Modal title="✏️ Edit User" onClose={() => setActiveModal("none")}>
             <EditUserForm
               user={selectedItem}
@@ -749,7 +764,7 @@ export default function AdminDashboard() {
           <CreateVendorForm
             token={token}
             vendorRequestId={vendorRequestId || undefined}
-            prefilledData={vendorRequestData}
+            prefilledData={vendorRequestData || undefined}
             onSuccess={() => {
               setActiveModal("none");
               setVendorRequestData(null);
@@ -773,7 +788,7 @@ export default function AdminDashboard() {
       {activeModal === "orderStatus" && selectedItem && "orderId" in selectedItem && (
         <Modal title="📦 Update Order Status" onClose={() => setActiveModal("none")}>
           <OrderStatusForm
-            order={selectedItem as unknown as OrderItem}
+            order={selectedItem}
             token={token}
             onSuccess={() => {
               setActiveModal("none");
@@ -1902,7 +1917,7 @@ function CreateVendorForm({
   token: string;
   onSuccess: () => void;
   vendorRequestId?: string;
-  prefilledData?: any;
+  prefilledData?: VendorPrefillData;
 }) {
   const [formData, setFormData] = useState({
     username: prefilledData?.username || "",

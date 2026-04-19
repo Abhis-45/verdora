@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -84,10 +85,11 @@ export default function ProductImageCarousel({
           />
         )}
 
-        <img
-          src={currentImage}
+        <Image
+          src={currentImage || "/placeholder.png"}
           alt={productName}
-          loading="lazy"
+          fill
+          sizes="(max-width: 1024px) 100vw, 60vw"
           onLoad={() => setLoading(false)}
           className={`h-full w-full object-cover transition-transform duration-300 ${
             loading ? "opacity-0" : "opacity-100"
@@ -147,11 +149,15 @@ export default function ProductImageCarousel({
               className={`h-16 w-16 rounded-md overflow-hidden border-2 transition 
                 ${idx === selectedImageIndex ? "border-green-600" : "border-transparent hover:border-gray-300"}`}
             >
-              <img
-                src={img.url}
-                alt={`${productName} thumbnail ${idx + 1}`}
-                className="h-full w-full object-cover"
-              />
+              <div className="relative h-full w-full">
+                <Image
+                  src={img.url}
+                  alt={`${productName} thumbnail ${idx + 1}`}
+                  fill
+                  sizes="64px"
+                  className="object-cover"
+                />
+              </div>
             </button>
           ))}
         </div>

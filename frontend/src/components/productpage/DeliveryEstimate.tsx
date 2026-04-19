@@ -1,8 +1,8 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { formatDeliveryDate } from "@/utils/delivery";
 import { PincodeSuggestions } from "@/components/forms/PincodeSuggestions";
-import { PincodeData, fetchLocationFromPincode } from "@/utils/pincodeApi";
+import { PincodeData } from "@/utils/pincodeApi";
 
 interface DeliveryEstimateProps {
   deliveryEstimate: {
@@ -18,13 +18,15 @@ interface DeliveryEstimateProps {
 export default function DeliveryEstimate({
   deliveryEstimate,
   deliveryLocationLabel,
-  onPincodeChange,
   onSuggestionSelect,
 }: DeliveryEstimateProps) {
   const [selectedLocation, setSelectedLocation] = useState(
     deliveryLocationLabel,
   );
-  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setSelectedLocation(deliveryLocationLabel);
+  }, [deliveryLocationLabel]);
 
   const handleSelect = (data: PincodeData) => {
     setSelectedLocation(`${data.city}, ${data.state}`);
@@ -59,9 +61,7 @@ export default function DeliveryEstimate({
             Delivering to
           </p>
           <p className="text-sm font-medium text-gray-900 truncate">
-            {loading
-              ? "Fetching location..."
-              : selectedLocation || "Enter pincode to fetch location"}
+            {selectedLocation || "Enter pincode to fetch location"}
           </p>
         </div>
       </div>

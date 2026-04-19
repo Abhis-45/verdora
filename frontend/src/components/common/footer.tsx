@@ -65,6 +65,7 @@ export default function Footer() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Enter your email"
+              suppressHydrationWarning
               className={`flex-1 w-full px-2 sm:px-3 py-1.5 sm:py-2 md:py-3 text-xs sm:text-sm rounded border focus:outline-none focus:ring-2 focus:ring-green-400 ${
                 feedback?.type === "error"
                   ? "border-red-500 bg-red-50"

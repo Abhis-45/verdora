@@ -57,7 +57,7 @@ export async function getFromBackend<T>(
 
 export async function postToBackend<T>(
   endpoint: string,
-  data?: any,
+  data?: unknown,
   headers?: Record<string, string>,
 ): Promise<T | null> {
   try {

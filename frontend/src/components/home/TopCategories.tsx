@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Swiper, SwiperSlide } from "swiper/react";
@@ -8,8 +7,22 @@ import CategoryCard from "./CategoryCard";
 import "swiper/css";
 import "swiper/css/pagination";
 
+interface CategoryResponse {
+  name: string;
+  count: number;
+  image?: string | null;
+}
+
+interface DisplayCategory {
+  title: string;
+  img: string | null;
+  desc: string;
+}
+
 export default function TopCategories() {
-  const [randomCategories, setRandomCategories] = useState<any[]>([]);
+  const [randomCategories, setRandomCategories] = useState<DisplayCategory[]>(
+    [],
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [isHydrated, setIsHydrated] = useState(false);
 
@@ -37,7 +50,7 @@ export default function TopCategories() {
         throw new Error(`Failed to fetch categories: ${response.status}`);
       }
 
-      const categoriesData = await response.json();
+      const categoriesData = (await response.json()) as CategoryResponse[];
 
       // Shuffle and select top categories
       const catCopy = [...categoriesData];
@@ -46,7 +59,7 @@ export default function TopCategories() {
         [catCopy[i], catCopy[j]] = [catCopy[j], catCopy[i]];
       }
 
-      const randomCats = catCopy.slice(0, 4).map((cat: any) => ({
+      const randomCats = catCopy.slice(0, 4).map((cat) => ({
         title: cat.name,
         img: cat.image || null,
         desc: `${cat.count} products in ${cat.name}`,
@@ -66,7 +79,7 @@ export default function TopCategories() {
   return (
     <section className="mb-8 sm:mb-10">
       <h2 className="text-lg sm:text-xl font-bold mb-4 sm:mb-6 text-green-700 flex items-center justify-between">
-        Today's Top Categories
+        Today&apos;s Top Categories
         <Link
           href={`/products`}
           className="text-green-600 hover:text-green-700 font-medium text-sm sm:text-base flex gap-1 items-center transition"

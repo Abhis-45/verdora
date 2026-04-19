@@ -5,7 +5,7 @@ import Admin from "../models/Admin.js";
 import Vendor from "../models/Vendor.js";
 import Product from "../models/Product.js";
 import User from "../models/User.js";
-import { vendorAuthMiddleware } from "./adminAuth.js";
+import { vendorAuthMiddleware } from "../middleware/auth.js";
 import {
   VENDOR_MANAGEABLE_STATUSES,
   ORDER_STATUSES,

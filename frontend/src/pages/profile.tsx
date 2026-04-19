@@ -1491,6 +1491,7 @@ export default function ProfilePage() {
                           placeholder="New Email"
                           value={newEmail}
                           onChange={(e) => setNewEmail(e.target.value)}
+                          suppressHydrationWarning
                           className="w-full p-3 sm:p-4 text-sm sm:text-base border-2 border-green-600 rounded-lg mb-5 text-white bg-green-950 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition"
                         />
                         <button

@@ -3,12 +3,22 @@ import { useRouter } from "next/router";
 import Link from "next/link";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 
+interface VendorRequestRecord {
+  vendorName?: string;
+  businessName?: string;
+  businessPhone?: string;
+  businessLocation?: string;
+  mobileNumber?: string;
+  email?: string;
+  status?: string;
+}
+
 export default function AdminVendorSignup() {
   const router = useRouter();
   const { requestId } = router.query;
   const [backendUrl, setBackendUrl] = useState("");
 
-  const [vendorRequest, setVendorRequest] = useState<any>(null);
+  const [vendorRequest, setVendorRequest] = useState<VendorRequestRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -67,8 +77,8 @@ export default function AdminVendorSignup() {
           businessLocation: data.businessLocation || "",
 
         }));
-      } catch (err: any) {
-        setError(err.message || "Failed to load vendor request");
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load vendor request");
       } finally {
         setLoading(false);
       }
@@ -146,8 +156,8 @@ export default function AdminVendorSignup() {
       setTimeout(() => {
         router.push("/admin/dashboard?tab=vendor-requests");
       }, 1500);
-    } catch (err: any) {
-      setError(err.message || "An error occurred");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setSubmitting(false);
     }

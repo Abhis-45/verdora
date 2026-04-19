@@ -1,6 +1,5 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { useRecentlyViewed } from "@/context/RecentlyViewedContext";
 import ProductCard from "./ProductCard";
 import Link from "next/link";
@@ -10,11 +9,11 @@ import { Pagination, Autoplay } from "swiper/modules";
 
 export default function RecentlyViewedProducts() {
   const { viewedProducts } = useRecentlyViewed();
-  const [isClient, setIsClient] = useState(false);
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
+  const isClient = useSyncExternalStore(
+    () => () => undefined,
+    () => true,
+    () => false,
+  );
 
   if (!isClient) return null;
 
@@ -31,7 +30,7 @@ export default function RecentlyViewedProducts() {
             Recently Viewed
           </h2>
           <p className="mt-1 text-sm text-gray-600">
-            Products you've been viewing
+            Products you&apos;ve been viewing
           </p>
         </div>
         {viewedProducts.length > 0 && (

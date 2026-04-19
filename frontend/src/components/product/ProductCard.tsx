@@ -6,12 +6,10 @@ import { HeartIcon as HeartSolid, BoltIcon, ShoppingCartIcon } from "@heroicons/
 import { HeartIcon as HeartOutline } from "@heroicons/react/24/outline";
 import { useCart } from "../../context/CartContext";
 import { useWishlist } from "../../context/WishlistContext";
-import { useDeliveryLocation } from "../../context/DeliveryLocationContext";
 import { ProductItem } from "../../types/ProductItem";
 import ProductRating from "../product/ProductRating";
 import Toast from "../shared/Toast";
 import { PlantSizeOption } from "@/utils/productOptions";
-import { calculateDeliveryEstimate, formatDeliveryDate } from "@/utils/delivery";
 
 type ProductCardProps = ProductItem & { _id?: string; discountBadge?: string };
 
@@ -40,7 +38,6 @@ export default function ProductCard({
   const router = useRouter();
   const { addToCart } = useCart();
   const { wishlist, addToWishlist, removeFromWishlist } = useWishlist();
-  const { deliveryLocation } = useDeliveryLocation();
 
   // Use _id (MongoDB ObjectId) for routing, fallback to id
   const productId = _id || id;
@@ -48,15 +45,6 @@ export default function ProductCard({
     (p) =>
       String(p.id) === String(productId) ||
       String(p.productId) === String(productId),
-  );
-
-  // Calculate estimated delivery date
-  const deliveryEstimate = calculateDeliveryEstimate({
-    origin: undefined, // Origin would be warehouse location
-    destination: deliveryLocation,
-  });
-  const estimatedDeliveryDate = formatDeliveryDate(
-    deliveryEstimate.estimatedDeliveryDate,
   );
 
   return (

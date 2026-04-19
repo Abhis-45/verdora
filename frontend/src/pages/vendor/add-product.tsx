@@ -23,6 +23,10 @@ interface ImagePreview {
   preview: string;
 }
 
+interface ProductTagSource {
+  tags?: string[];
+}
+
 const defaultSize: PlantSizeOption = {
   id: DEFAULT_PLANT_SIZE_ID,
   label: FREE_SIZE_LABEL,
@@ -33,6 +37,7 @@ const defaultSize: PlantSizeOption = {
 
 export default function AddProduct() {
   const router = useRouter();
+  const productIdQuery = router.query.productId;
   const [formData, setFormData] = useState({
     name: "",
     category: "Indoor Plants",
@@ -56,7 +61,6 @@ export default function AddProduct() {
   );
   const [tagOptions, setTagOptions] = useState<string[]>([]);
   const [customCategory, setCustomCategory] = useState("");
-  const [vendorProfile, setVendorProfile] = useState<{ username?: string; businessName?: string; vendorName?: string; businessLocation?: string } | null>(null);
   const [productId, setProductId] = useState<string | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
 
@@ -92,7 +96,7 @@ export default function AddProduct() {
         const collectedTags = Array.from(
           new Set(
             products
-              .flatMap((product: any) => product.tags || [])
+              .flatMap((product: ProductTagSource) => product.tags || [])
               .map((tag: string) => String(tag).trim())
               .filter(Boolean),
           ),
@@ -120,7 +124,6 @@ export default function AddProduct() {
         if (!response.ok) return;
         const profile = await response.json();
 
-        setVendorProfile(profile);
         setFormData((current) => ({
           ...current,
           brand:
@@ -143,13 +146,12 @@ export default function AddProduct() {
   useEffect(() => {
     if (!router.isReady) return;
 
-    const { productId: id } = router.query;
-    if (id && typeof id === "string") {
-      setProductId(id);
+    if (productIdQuery && typeof productIdQuery === "string") {
+      setProductId(productIdQuery);
       setIsEditMode(true);
-      fetchExistingProduct(id);
+      fetchExistingProduct(productIdQuery);
     }
-  }, [router.isReady]);
+  }, [productIdQuery, router.isReady]);
 
   const fetchExistingProduct = async (id: string) => {
     try {

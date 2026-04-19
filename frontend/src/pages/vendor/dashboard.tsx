@@ -1,5 +1,4 @@
 /* eslint-disable @next/next/no-img-element */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
@@ -118,7 +117,6 @@ export default function VendorDashboard() {
     trackingId: string;
   } | null>(null);
   const [showDeliveryOTPModal, setShowDeliveryOTPModal] = useState(false);
-  const [deliveryOTP, setDeliveryOTP] = useState("");
 
   useEffect(() => {
     const tok = localStorage.getItem("vendorToken");
@@ -230,7 +228,7 @@ export default function VendorDashboard() {
     }
   };
 
-  const handleUpdateProfile = async (e: any) => {
+  const handleUpdateProfile = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
       const BACKEND_URL =

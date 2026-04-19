@@ -190,17 +190,6 @@ export default function ProductsPages() {
     ];
   }, []);
 
-  // Helper to check if product price falls in range
-  const isPriceInRange = (price: number, range: string): boolean => {
-    if (range === "All Prices") return true;
-    if (range === "₹0 - ₹500") return price >= 0 && price <= 500;
-    if (range === "₹501 - ₹1000") return price >= 501 && price <= 1000;
-    if (range === "₹1001 - ₹2000") return price >= 1001 && price <= 2000;
-    if (range === "₹2001 - ₹5000") return price >= 2001 && price <= 5000;
-    if (range === "₹5001+") return price >= 5001;
-    return false;
-  };
-
   const categories = useMemo(
     () => [
       "All Categories",
@@ -287,6 +276,7 @@ export default function ProductsPages() {
   ]);
   // Infinite scroll with Intersection Observer
   useEffect(() => {
+    const loadMoreNode = loadMoreRef.current;
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && !isLoadingMore && displayedCount < filteredProducts.length) {
@@ -301,13 +291,13 @@ export default function ProductsPages() {
       { threshold: 0.1 }
     );
 
-    if (loadMoreRef.current) {
-      observer.observe(loadMoreRef.current);
+    if (loadMoreNode) {
+      observer.observe(loadMoreNode);
     }
 
     return () => {
-      if (loadMoreRef.current) {
-        observer.unobserve(loadMoreRef.current);
+      if (loadMoreNode) {
+        observer.unobserve(loadMoreNode);
       }
     };
   }, [displayedCount, filteredProducts.length, isLoadingMore]);

@@ -9,6 +9,15 @@ import Link from "next/link";
 import Layout from "@/components/common/layout";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 
+interface AdminLoginResponse {
+  token: string;
+  message?: string;
+  admin?: {
+    role?: string;
+    username?: string;
+  };
+}
+
 export default function AdminLogin() {
   const router = useRouter();
   const [formData, setFormData] = useState({ email: "", password: "" });
@@ -39,7 +48,7 @@ export default function AdminLogin() {
         body: JSON.stringify(formData),
       });
 
-      let data: any;
+      let data: AdminLoginResponse;
       try {
         data = await response.json();
       } catch (parseError) {
@@ -79,7 +88,7 @@ export default function AdminLogin() {
     } catch (error: unknown) {
       console.error("Login error:", error);
       setToast({
-        message: (error as any)?.message || "Failed to login",
+        message: error instanceof Error ? error.message : "Failed to login",
         type: "error",
       });
     } finally {

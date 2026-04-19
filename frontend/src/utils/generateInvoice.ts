@@ -1,6 +1,12 @@
 import jsPDF from "jspdf";
 import { Order, OrderItem } from "@/types/user";
 
+interface InvoiceServiceItem {
+  packageName?: string;
+  price?: number;
+  quantity?: number;
+}
+
 export const generateInvoicePDF = (order: Order) => {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -12,7 +18,7 @@ export const generateInvoicePDF = (order: Order) => {
     text: string,
     x: number,
     y: number,
-    options?: any
+    options?: Parameters<typeof doc.text>[3]
   ) => {
     doc.text(text, x, y, options);
   };
@@ -107,7 +113,7 @@ export const generateInvoicePDF = (order: Order) => {
 
   // Services if any
   if (order.services && order.services.length > 0) {
-    order.services.forEach((service: any) => {
+    order.services.forEach((service: InvoiceServiceItem) => {
       const serviceName = service.packageName || "Service";
       const price = service.price || 0;
       const quantity = service.quantity || 1;

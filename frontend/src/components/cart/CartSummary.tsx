@@ -1,7 +1,7 @@
 "use client";
 
 import { CartItem } from "../../types/types";
-import AvailableCoupons from "./AvailableCoupons";
+import AvailableCoupons, { type CouponValidation } from "./AvailableCoupons";
 
 export default function CartSummary({
   cartItems,
@@ -46,7 +46,7 @@ export default function CartSummary({
   } | null;
   token?: string;
   backendUrl?: string;
-  onApplyCouponFromList?: (coupon: any) => void;
+  onApplyCouponFromList?: (coupon: CouponValidation) => void;
 }) {
   const productTotal = cartItems.reduce(
     (sum, item) => sum + item.price * item.quantity,

@@ -1,7 +1,5 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable react-hooks/exhaustive-deps */
 "use client";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
   SparklesIcon,
@@ -10,7 +8,6 @@ import {
   BeakerIcon,
   CheckBadgeIcon,
   StarIcon,
-  PaintBrushIcon,
   Bars3Icon,
   ArrowRightCircleIcon,
 } from "@heroicons/react/24/solid";
@@ -25,6 +22,32 @@ interface Category {
   path: string;
   color: string;
 }
+
+interface ProductSummary {
+  category?: string;
+}
+
+const iconMap: Record<string, React.ReactNode> = {
+  "flowering plants": <SparklesIcon className="w-5 h-5" />,
+  "indoor plants": <HomeIcon className="w-5 h-5" />,
+  "seeds & bulbs": <CheckBadgeIcon className="w-5 h-5" />,
+  tools: <BeakerIcon className="w-5 h-5" />,
+  fertilizers: <StarIcon className="w-5 h-5" />,
+  pots: <BeakerIcon className="w-5 h-5" />,
+  pesticides: <CheckBadgeIcon className="w-5 h-5" />,
+  gifts: <ShoppingBagIcon className="w-5 h-5" />,
+};
+
+const colorMap: Record<string, string> = {
+  "flowering plants": "text-pink-600",
+  "indoor plants": "text-green-600",
+  "seeds & bulbs": "text-amber-600",
+  tools: "text-yellow-600",
+  fertilizers: "text-orange-600",
+  pots: "text-purple-600",
+  pesticides: "text-red-600",
+  gifts: "text-red-500",
+};
 
 interface Props {
   onToggle?: () => void;
@@ -58,43 +81,18 @@ export default function CategoryDropdown({
     }
   };
 
-  const iconMap: Record<string, React.ReactNode> = {
-    "flowering plants": <SparklesIcon className="w-5 h-5" />,
-    "indoor plants": <HomeIcon className="w-5 h-5" />,
-    "seeds & bulbs": <CheckBadgeIcon className="w-5 h-5" />,
-    tools: <BeakerIcon className="w-5 h-5" />,
-    fertilizers: <StarIcon className="w-5 h-5" />,
-    pots: <BeakerIcon className="w-5 h-5" />,
-    pesticides: <CheckBadgeIcon className="w-5 h-5" />,
-    gifts: <ShoppingBagIcon className="w-5 h-5" />,
-  };
-
-  const colorMap: Record<string, string> = {
-    "flowering plants": "text-pink-600",
-    "indoor plants": "text-green-600",
-    "seeds & bulbs": "text-amber-600",
-    tools: "text-yellow-600",
-    fertilizers: "text-orange-600",
-    pots: "text-purple-600",
-    pesticides: "text-red-600",
-    gifts: "text-red-500",
-  };
-
-  useEffect(() => {
-    fetchCategories();
-  }, []);
-
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     try {
       setLoading(true);
 
-      // Fetch from backend using wrapper
-      const data = await getFromBackend<any>("/api/products");
+      const data = await getFromBackend<
+        ProductSummary[] | { products?: ProductSummary[] }
+      >("/api/products");
       if (data) {
         const productsArray = Array.isArray(data) ? data : data.products || [];
 
         const uniqueCategories = [
-          ...new Set(productsArray.map((p: any) => p.category)),
+          ...new Set(productsArray.map((product) => product.category)),
         ];
 
         const categoryList: Category[] = (
@@ -117,7 +115,11 @@ export default function CategoryDropdown({
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    void fetchCategories();
+  }, [fetchCategories]);
 
   return (
     <div

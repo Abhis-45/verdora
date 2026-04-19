@@ -7,21 +7,15 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import ServicesList from "@/components/services/ServicesList";
 import Spinner from "@/components/shared/Spinner";
-
-interface Service {
-  _id?: string;
-  slug: string;
-  title: string;
-  desc: string;
-  details: string;
-  image?: string;
-  packages: any[];
-}
+import {
+  normalizeService,
+  type ServiceRecord,
+} from "@/types/service";
 
 export default function ServiceDetail() {
   const router = useRouter();
   const { slug } = router.query;
-  const [service, setService] = useState<Service | null>(null);
+  const [service, setService] = useState<ServiceRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,8 +36,8 @@ export default function ServiceDetail() {
           throw new Error("Service not found");
         }
 
-        const data = await response.json();
-        setService(data);
+        const data = (await response.json()) as ServiceRecord;
+        setService(normalizeService(data));
         setError(null);
       } catch (err) {
         console.error("Error fetching service:", err);

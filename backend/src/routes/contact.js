@@ -1,31 +1,12 @@
 import express from "express";
-import jwt from "jsonwebtoken";
 import Contact from "../models/Contact.js";
 import {
   sendContactEmail,
   sendAdminContactNotificationEmail,
 } from "../services/emailService.js";
+import { adminAuthMiddleware } from "../middleware/auth.js";
 
 const router = express.Router();
-
-// ✅ ADMIN AUTH MIDDLEWARE
-const adminAuthMiddleware = (req, res, next) => {
-  const token = req.headers.authorization?.split(" ")[1];
-  if (!token) {
-    return res.status(401).json({ message: "Token required" });
-  }
-
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    if (decoded.role !== "admin") {
-      return res.status(403).json({ message: "Admin access required" });
-    }
-    req.adminId = decoded.id;
-    next();
-  } catch (err) {
-    return res.status(401).json({ message: "Invalid token" });
-  }
-};
 
 // POST /api/contact - Submit contact/service request form
 router.post("/", async (req, res) => {

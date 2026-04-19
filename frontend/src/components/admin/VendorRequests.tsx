@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   CheckIcon,
   XMarkIcon,
@@ -41,11 +41,7 @@ export default function VendorRequests({ token, backendUrl, onAccept }: VendorRe
   const [actionLoading, setActionLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  useEffect(() => {
-    fetchVendorRequests();
-  }, []);
-
-  const fetchVendorRequests = async () => {
+  const fetchVendorRequests = useCallback(async () => {
     setLoading(true);
     try {
       const response = await fetch(`${backendUrl}/api/admin/vendor-requests`, {
@@ -67,7 +63,11 @@ export default function VendorRequests({ token, backendUrl, onAccept }: VendorRe
     } finally {
       setLoading(false);
     }
-  };
+  }, [backendUrl, token]);
+
+  useEffect(() => {
+    void fetchVendorRequests();
+  }, [fetchVendorRequests]);
 
   const handleApprove = async (id: string) => {
     if (!window.confirm("Are you sure you want to approve this vendor?")) {
@@ -95,14 +95,14 @@ export default function VendorRequests({ token, backendUrl, onAccept }: VendorRe
       alert("✅ Vendor request approved successfully");
       
       // Refresh vendor requests and keep the details panel open
-      const updatedRequests = await fetch(`${backendUrl}/api/admin/vendor-requests`, {
+      const updatedRequests = (await fetch(`${backendUrl}/api/admin/vendor-requests`, {
         headers: { Authorization: `Bearer ${token}` },
-      }).then((res) => res.json());
+      }).then((res) => res.json())) as VendorRequest[];
       
       setRequests(updatedRequests);
       
       // Update the selected request with new data
-      const updatedRequest = updatedRequests.find((r: any) => r._id === id);
+      const updatedRequest = updatedRequests.find((request) => request._id === id);
       if (updatedRequest) {
         setSelectedRequest(updatedRequest);
       }
@@ -150,14 +150,14 @@ export default function VendorRequests({ token, backendUrl, onAccept }: VendorRe
       alert("✅ Vendor request rejected");
       
       // Refresh vendor requests and keep the details panel open
-      const updatedRequests = await fetch(`${backendUrl}/api/admin/vendor-requests`, {
+      const updatedRequests = (await fetch(`${backendUrl}/api/admin/vendor-requests`, {
         headers: { Authorization: `Bearer ${token}` },
-      }).then((res) => res.json());
+      }).then((res) => res.json())) as VendorRequest[];
       
       setRequests(updatedRequests);
       
       // Update the selected request with new data
-      const updatedRequest = updatedRequests.find((r: any) => r._id === id);
+      const updatedRequest = updatedRequests.find((request) => request._id === id);
       if (updatedRequest) {
         setSelectedRequest(updatedRequest);
       }
@@ -212,10 +212,6 @@ export default function VendorRequests({ token, backendUrl, onAccept }: VendorRe
       req.shopName.toLowerCase().includes(search.toLowerCase()) ||
       req.email.toLowerCase().includes(search.toLowerCase())
   );
-
-  const pendingRequests = filteredRequests.filter((r) => r.status === "pending");
-  const approvedRequests = filteredRequests.filter((r) => r.status === "approved");
-  const rejectedRequests = filteredRequests.filter((r) => r.status === "rejected");
 
   if (showDetails && selectedRequest) {
     return (
@@ -439,7 +435,7 @@ export default function VendorRequests({ token, backendUrl, onAccept }: VendorRe
             <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
               <h3 className="font-semibold text-green-800 mb-2">✅ Request Approved</h3>
               <p className="text-green-700 text-sm">
-                This vendor request has been approved. Click "Create Vendor Account" above to complete the vendor setup.
+                This vendor request has been approved. Click Create Vendor Account above to complete the vendor setup.
               </p>
             </div>
           )}

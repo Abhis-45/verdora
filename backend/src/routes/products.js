@@ -2,7 +2,10 @@ import express from "express";
 import mongoose from "mongoose";
 import Product from "../models/Product.js";
 import User from "../models/User.js";
-import { adminAuthMiddleware, vendorAuthMiddleware } from "./adminAuth.js";
+import {
+  adminAuthMiddleware,
+  vendorAuthMiddleware,
+} from "../middleware/auth.js";
 import upload from "../middleware/multerConfig.js";
 import {
   uploadToCloudinary,
