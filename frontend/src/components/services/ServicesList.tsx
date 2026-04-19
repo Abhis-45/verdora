@@ -99,7 +99,7 @@ export default function ServicesList({
         message: bookingData.message,
       };
 
-      const response = await fetch(`${BACKEND_URL}/api/bookService`, {
+      const response = await fetch(`${BACKEND_URL}/api/profile/bookService`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

@@ -58,7 +58,7 @@ export default function ProductCard({
       )}
       
       {/* MOBILE: Horizontal Tile Layout */}
-      <div className="md:hidden border border-green-900 relative rounded-xl overflow-hidden group hover:shadow-lg transition-shadow duration-300 bg-white flex">
+      <div className="md:hidden relative rounded-xl overflow-hidden group hover:shadow-lg transition-shadow duration-300 bg-white flex">
         {/* Image Section - Left Side */}
         <Link
           href={`/productpage/${productId}`}
@@ -131,7 +131,7 @@ export default function ProductCard({
         <div className="flex-1 p-2 sm:p-3 flex flex-col justify-between">
           {/* Top Section: Product Info */}
           <div className="space-y-1">
-            <h2 className="text-sm sm:text-sm font-semibold text-green-600 line-clamp-2">
+            <h2 className="text-sm capitalize sm:text-sm font-semibold text-green-600 line-clamp-2">
               {name}
             </h2>
             
@@ -310,11 +310,11 @@ export default function ProductCard({
         </button>
 
         {/* Text + Actions - Bottom Overlay with Transparent Green Background */}
-        <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 text-white z-10 w-full bg-linear-to-t from-green-600/50 to-transparent space-y-2">
+        <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 text-white z-10 w-full space-y-2">
           {/* Top Section: Details */}
           <div className="space-y-1.5">
             {/* Line 1: Product Name */}
-            <h2 className="text-sm sm:text-base font-semibold drop-shadow-md line-clamp-1 text-green-400">
+            <h2 className="text-sm capitalize sm:text-base font-semibold drop-shadow-md line-clamp-1 text-green-400">
               {name}
             </h2>
 

@@ -27,7 +27,7 @@ export default function PromoBanner({
           className="absolute inset-0 w-full h-full object-cover"
         />
         {/* Content */}
-        <div className="relative z-10 flex flex-col items-start justify-center h-full p-6 text-white">
+        <div className="relative z-10 flex flex-col items-start justify-center h-full p-6 text-white bg-gradient-to-t from-black/60 to-transparent">
           <h3 className="ml-10 text-xl font-bold">{title}</h3>
           <p className="mt-2 ml-10 text-sm max-w-xs">{desc}</p>
         </div>

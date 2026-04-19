@@ -124,6 +124,7 @@ const userSchema = new mongoose.Schema(
             selectedDate: String,
             selectedTime: String,
             image: String,
+            message: String,
           },
         ],
         total: Number,

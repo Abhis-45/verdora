@@ -269,14 +269,14 @@ export default function Header() {
                 alt="Verdora Logo"
                 width={100}
                 height={60}
-                className="h-auto w-25 sm:w-16"
+                className="h-auto w-20 sm:w-16"
               />
             </Link>
 
             <div className="flex flex-shrink-0 items-center gap-1 sm:gap-2">
               {/* Wishlist Icon */}
               <Link href="/wishlist" className="relative inline-flex items-center justify-center rounded-lg p-1 transition hover:bg-white/10">
-                <HeartIcon className="h-8 w-8 sm:h-6 sm:w-6 text-white transition hover:text-pink-400" />
+                <HeartIcon className="h-6 w-6 sm:h-6 sm:w-6 text-white transition hover:text-pink-400" />
                 {wishlistCount > 0 && (
                   <span className="absolute -right-1 -top-1 flex h-4 w-4 sm:h-4.5 sm:w-4.5 items-center justify-center rounded-full bg-pink-500 text-[9px] sm:text-[10px] font-bold text-white">
                     {wishlistCount}
@@ -286,7 +286,7 @@ export default function Header() {
 
               {/* Cart Icon */}
               <Link href="/cart" className="relative inline-flex items-center justify-center rounded-lg p-1 transition hover:bg-white/10">
-                <ShoppingCartIcon className="h-8 w-8 sm:h-6 sm:w-6 text-white transition hover:text-green-900" />
+                <ShoppingCartIcon className="h-6 w-6 sm:h-6 sm:w-6 text-white transition hover:text-green-900" />
                 {itemCount > 0 && (
                   <span className="absolute -right-1 -top-1 flex h-4 w-4 sm:h-4.5 sm:w-4.5 items-center justify-center rounded-full bg-red-500 text-[9px] sm:text-[10px] font-bold text-white">
                     {itemCount}
@@ -302,7 +302,7 @@ export default function Header() {
                     className="flex items-center justify-center rounded-lg p-1 text-white transition hover:bg-white/10 hover:text-green-100"
                     onClick={() => setDropdownOpen(!dropdownOpen)}
                   >
-                    <UserCircleIcon className="h-8 w-8 sm:h-6 sm:w-6" />
+                    <UserCircleIcon className="h-6 w-6 sm:h-6 sm:w-6" />
                   </button>
                 ) : (
                   <button
@@ -310,7 +310,7 @@ export default function Header() {
                     className="flex items-center justify-center rounded-lg p-1 text-white transition hover:bg-white/10 hover:text-green-100"
                     onClick={() => setShowAuth(true)}
                   >
-                    <UserCircleIcon className="h-8 w-8 sm:h-6 sm:w-6" />
+                    <UserCircleIcon className="h-6 w-6 sm:h-6 sm:w-6" />
                   </button>
                 )}
 

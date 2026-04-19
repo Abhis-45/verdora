@@ -52,11 +52,9 @@ export default function RecentlyViewedProducts() {
         autoplay={{ delay: 5000, disableOnInteraction: false }}
         pagination={{ clickable: true }}
         breakpoints={{
-          480: { slidesPerView: 2.3, spaceBetween: 12 },
-          640: { slidesPerView: 2.5, spaceBetween: 16 },
-          768: { slidesPerView: 3, spaceBetween: 16 },
-          1024: { slidesPerView: 4, spaceBetween: 16 },
-          1280: { slidesPerView: 5, spaceBetween: 16 },
+            640: { slidesPerView: 2.3 },
+            768: { slidesPerView: 3 },
+            1024: { slidesPerView: 4 },
         }}
         className="-mx-4 px-4 custom-swiper"
       >

@@ -353,7 +353,7 @@ export default function ProductsPages() {
             <div className="mt-4 space-y-2">
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className="flex w-full items-center justify-between rounded-md border border-green-400 bg-gradient-to-r from-green-50 to-emerald-50 px-3 py-2.5 text-sm font-semibold text-green-700 transition hover:from-green-100 hover:to-emerald-100"
+                className="flex w-full/4 items-center justify-between rounded-md border border-green-400 bg-gradient-to-r from-green-50 to-emerald-50 px-3 py-2.5 text-sm font-semibold text-green-700 transition hover:from-green-100 hover:to-emerald-100"
               >
                 <span>✨ Filters</span>
                 <ChevronDownIcon

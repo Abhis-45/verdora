@@ -68,7 +68,7 @@ export default function TrendingProducts() {
 
   return (
     <section className="mb-8 sm:mb-10">
-      <h2 className="text-lg sm:text-xl font-bold mb-4 sm:mb-6 text-green-700 flex items-center justify-between">
+      <h2 className="text-lg sm:text-xl font-bold mb-4 sm:mb-6 text-green-600 flex items-center justify-between">
         Today&apos;s Trending Products
         <Link
           href={`/products`}

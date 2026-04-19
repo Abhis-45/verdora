@@ -130,11 +130,11 @@ export default function ProductCard({
         </button>
 
         {/* Text + Actions - Bottom Overlay with Transparent Green Background */}
-        <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 text-white z-10 w-full bg-linear-to-t from-green-600/50 to-transparent space-y-2">
+        <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 text-white z-10 w-full space-y-2">
           {/* Top Section: Details */}
           <div className="space-y-1.5">
             {/* Line 1: Product Name */}
-            <h2 className="text-sm sm:text-base font-semibold drop-shadow-md line-clamp-1 text-green-400">
+            <h2 className="text-sm capitalize sm:text-base font-semibold drop-shadow-md line-clamp-1 text-green-400">
               {name}
             </h2>
 

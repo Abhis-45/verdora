@@ -287,7 +287,12 @@ export default function OrdersPage() {
     if (!token) return;
 
     try {
-      const response = await fetch(`/api/profile/orders/${orderId}/cancel`, {
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+
+      const response = await fetch(`${BACKEND_URL}/api/profile/orders/${orderId}/cancel`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",

@@ -1,5 +1,7 @@
 // lib/api.ts
-// Centralized API service for all admin modules
+// Centralized API service for all admin modules with caching support
+
+import { apiCache, generateCacheKey, invalidateCachePattern, type CacheOptions } from "./apiCache";
 
 export interface Product {
   _id: string;
@@ -56,17 +58,42 @@ function withTimeout<T>(
   return Promise.race([promise, timeoutPromise]);
 }
 
-// Helper function for common fetch pattern
+// Helper function for common fetch pattern with caching support
 async function safeFetch<T>(
   url: string,
-  options: RequestInit = {},
+  options: RequestInit & CacheOptions = {},
 ): Promise<T | null> {
   try {
-    const response = await withTimeout(fetch(url, options));
+    const { skipCache = false, ttl, ...fetchOptions } = options;
+
+    // Check cache for GET requests
+    if (!skipCache && (!fetchOptions.method || fetchOptions.method === "GET")) {
+      const cacheKey = generateCacheKey(url);
+      const cached = apiCache.get<T>(cacheKey);
+      if (cached !== null) {
+        if (process.env.NODE_ENV === "development") {
+          console.log(`[Cache HIT] ${url}`);
+        }
+        return cached;
+      }
+    }
+
+    const response = await withTimeout(fetch(url, fetchOptions));
     if (!response.ok) {
       throw new Error(`Server error: ${response.status}`);
     }
-    return await response.json();
+    const data = await response.json();
+
+    // Cache the result for GET requests
+    if (!skipCache && (!fetchOptions.method || fetchOptions.method === "GET")) {
+      const cacheKey = generateCacheKey(url);
+      apiCache.set(cacheKey, data, { ttl });
+      if (process.env.NODE_ENV === "development") {
+        console.log(`[Cache SET] ${url} (TTL: ${ttl ? Math.round(ttl / 1000) : 300}s)`);
+      }
+    }
+
+    return data;
   } catch (err) {
     console.error(`Fetch error from ${url}:`, err);
     return null;
@@ -97,6 +124,10 @@ export async function deleteProduct(id: string): Promise<boolean> {
       }),
     );
     if (!response.ok) throw new Error("Failed to delete product");
+    
+    // Invalidate product-related caches
+    invalidateCachePattern("products");
+    
     return true;
   } catch (err) {
     console.error(err);
@@ -153,14 +184,22 @@ export async function addVendor(
   vendor: Omit<Vendor, "id">,
 ): Promise<Vendor | null> {
   try {
-    return await safeFetch<Vendor>(`${BASE_URL}/api/vendors`, {
+    const result = await safeFetch<Vendor>(`${BASE_URL}/api/vendors`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         ...getAuthHeaders(),
       } as HeadersInit,
       body: JSON.stringify(vendor),
+      skipCache: true, // Don't cache POST results
     });
+    
+    // Invalidate vendor cache
+    if (result) {
+      invalidateCachePattern("vendors");
+    }
+    
+    return result;
   } catch (err) {
     console.error("Failed to add vendor:", err);
     return null;
@@ -173,14 +212,22 @@ export async function updateVendor(
 ): Promise<Vendor | null> {
   try {
     const authHeaders = getAuthHeaders();
-    return await safeFetch<Vendor>(`${BASE_URL}/api/vendors/${id}`, {
+    const result = await safeFetch<Vendor>(`${BASE_URL}/api/vendors/${id}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
         ...authHeaders,
       } as HeadersInit,
       body: JSON.stringify(vendor),
+      skipCache: true, // Don't cache PUT results
     });
+    
+    // Invalidate vendor cache
+    if (result) {
+      invalidateCachePattern("vendors");
+    }
+    
+    return result;
   } catch (err) {
     console.error("Failed to update vendor:", err);
     return null;
@@ -196,6 +243,10 @@ export async function deleteVendor(id: string): Promise<boolean> {
       }),
     );
     if (!response.ok) throw new Error("Failed to delete vendor");
+    
+    // Invalidate vendor cache
+    invalidateCachePattern("vendors");
+    
     return true;
   } catch (err) {
     console.error(err);
