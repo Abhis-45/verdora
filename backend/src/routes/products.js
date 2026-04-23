@@ -5,6 +5,7 @@ import User from "../models/User.js";
 import {
   adminAuthMiddleware,
   vendorAuthMiddleware,
+  createRoleMiddleware,
 } from "../middleware/auth.js";
 import upload from "../middleware/multerConfig.js";
 import {
@@ -53,7 +54,9 @@ const normalizeProductPayload = (payload = {}) => {
 
 router.post(
   "/upload",
-  adminAuthMiddleware,
+  createRoleMiddleware(["admin", "vendor"], {
+    forbiddenMessage: "Admin or vendor access required",
+  }),
   upload.single("image"),
   async (req, res) => {
     try {

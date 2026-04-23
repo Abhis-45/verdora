@@ -3,13 +3,14 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { HeartIcon as HeartSolid, BoltIcon, ShoppingCartIcon } from "@heroicons/react/24/solid";
-import { HeartIcon as HeartOutline } from "@heroicons/react/24/outline";
+import { HeartIcon as HeartOutline, ShareIcon } from "@heroicons/react/24/outline";
 import { useCart } from "../../context/CartContext";
 import { useWishlist } from "../../context/WishlistContext";
 import { ProductItem } from "../../types/ProductItem";
 import ProductRating from "../product/ProductRating";
 import Toast from "../shared/Toast";
 import { PlantSizeOption } from "@/utils/productOptions";
+import { shareProduct } from "@/utils/shareProduct";
 
 type ProductCardProps = ProductItem & { _id?: string; discountBadge?: string };
 
@@ -31,6 +32,7 @@ export default function ProductCard({
   );
   const [showSizeModal, setShowSizeModal] = useState(false);
   const [isAddedToCart, setIsAddedToCart] = useState(false);
+  const [shareMessage, setShareMessage] = useState("");
   const [toast, setToast] = useState<{
     message: string;
     type: "success" | "error" | "info";
@@ -47,6 +49,21 @@ export default function ProductCard({
       String(p.productId) === String(productId),
   );
 
+  const handleShareProduct = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    await shareProduct({
+      productId: String(productId),
+      productName: name,
+      onSuccess: (message) => {
+        setShareMessage(message);
+        setTimeout(() => setShareMessage(""), 2000);
+      },
+      onError: (error) => {
+        console.error("Share error:", error);
+      },
+    });
+  };
+
   return (
     <>
       {toast && (
@@ -56,9 +73,8 @@ export default function ProductCard({
           onClose={() => setToast(null)}
         />
       )}
-
       {/* DESKTOP: Vertical Card Layout */}
-      <div className="relative rounded-xl overflow-hidden group h-96 hover:shadow-lg transition-shadow duration-300">
+      <div className="hidden md:block relative rounded-xl overflow-hidden group h-96 hover:shadow-lg transition-shadow duration-300">
         {/* Clickable Image Link Area */}
         <Link
           href={`/productpage/${productId}`}
@@ -129,6 +145,16 @@ export default function ProductCard({
           )}
         </button>
 
+        {/* Share Icon - Below Wishlist */}
+        <button
+          onClick={handleShareProduct}
+          aria-label="Share Product"
+          className="absolute top-12 right-2 z-10 transition-transform hover:scale-110"
+          title="Share product"
+        >
+          <ShareIcon className="h-6 w-6 text-green-500 hover:text-green-700" />
+        </button>
+
         {/* Text + Actions - Bottom Overlay with Transparent Green Background */}
         <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 text-white z-10 w-full space-y-2">
           {/* Top Section: Details */}
@@ -137,6 +163,13 @@ export default function ProductCard({
             <h2 className="text-sm capitalize sm:text-base font-semibold drop-shadow-md line-clamp-1 text-green-400">
               {name}
             </h2>
+
+            {/* Share Message */}
+            {shareMessage && (
+              <p className="text-xs text-green-200 font-medium">
+                {shareMessage}
+              </p>
+            )}
 
             {/* Line 2: Category + Rating */}
             <div className="flex items-center gap-2 justify-between ">
@@ -245,12 +278,12 @@ export default function ProductCard({
               {isAddedToCart ? (
                 <>
                   <BoltIcon className="h-3.5 w-3.5" />
-                  <span className="sm:inline">Buy</span>
+                  <span className="hidden sm:inline">Buy</span>
                 </>
               ) : (
                 <>
                   <ShoppingCartIcon className="h-3.5 w-3.5" />
-                  <span className="sm:inline">Cart</span>
+                  <span className="hidden sm:inline">Cart</span>
                 </>
               )}
             </button>

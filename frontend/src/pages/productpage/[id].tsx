@@ -31,6 +31,9 @@ import PlantSizeSelector from "../../components/productpage/PlantSizeSelector";
 import TabbedSection from "../../components/productpage/TabbedSection";
 import TrustBadges from "../../components/productpage/TrustBadges";
 import CartActions from "../../components/productpage/CartActions";
+import ProductRating from "@/components/product/ProductRating";
+import { ShareIcon } from "@heroicons/react/24/outline";
+import { shareProduct } from "@/utils/shareProduct";
 
 type ProductRecord = {
   _id?: string;
@@ -67,6 +70,7 @@ export default function ProductDetailPage() {
   );
   const [pincodeInput, setPincodeInput] = useState(deliveryLocation.pincode);
   const [locationEditorOpen, setLocationEditorOpen] = useState(false);
+  const [shareMessage, setShareMessage] = useState("");
 
   const { cartItems, addToCart, updateQuantity, removeFromCart } = useCart();
   const { addViewedProduct } = useRecentlyViewed();
@@ -82,8 +86,10 @@ export default function ProductDetailPage() {
       try {
         const BACKEND_URL =
           typeof window !== "undefined"
-            ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-            : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+            ? process.env.NEXT_PUBLIC_BACKEND_URL ||
+              "https://verdora.onrender.com"
+            : process.env.NEXT_PUBLIC_BACKEND_URL ||
+              "https://verdora.onrender.com";
         const response = await fetch(`${BACKEND_URL}/api/products/${id}`);
         if (!response.ok) {
           router.push("/products");
@@ -93,7 +99,7 @@ export default function ProductDetailPage() {
         const normalizedProduct = data.product || data;
         normalizedProduct.id =
           normalizedProduct._id || normalizedProduct.id || id;
-        
+
         // Track viewed product
         addViewedProduct({
           _id: normalizedProduct._id,
@@ -257,6 +263,20 @@ export default function ProductDetailPage() {
     setLocationEditorOpen(false);
   };
 
+  const handleShareProduct = async () => {
+    await shareProduct({
+      productId: String(product?._id || product?.id || id),
+      productName: product?.name || "Product",
+      onSuccess: (message) => {
+        setShareMessage(message);
+        setTimeout(() => setShareMessage(""), 2000);
+      },
+      onError: (error) => {
+        console.error("Share error:", error);
+      },
+    });
+  };
+
   return (
     <>
       <Head>
@@ -295,13 +315,37 @@ export default function ProductDetailPage() {
                 <div className="rounded-lg bg-white/80 backdrop-blur-md shadow-sm p-3 sm:p-4 space-y-3">
                   {/* Product Summary */}
                   <div className="space-y-1">
-                    <h1 className="relative inline-block text-3xl sm:text-4xl font-semibold tracking-tight text-green-600 capitalize group">
-                      {product.name}
-                      <span className="absolute left-0 -bottom-1 h-0.5 w-0 bg-linear-to-r from-green-500 to-green-700 transition-all duration-300 group-hover:w-full"></span>
-                    </h1>
+                    {/* Product Name with Share Button */}
+                    <div className="flex items-start justify-between gap-2">
+                      <h1 className="relative inline-block text-xl sm:text-xl font-semibold tracking-tight text-green-600 capitalize group flex-1">
+                        {product.name}
+                        <span className="absolute left-0 -bottom-1 h-0.5 w-0 bg-linear-to-r from-green-500 to-green-700 transition-all duration-300 group-hover:w-full"></span>
+                      </h1>
+                      <button
+                        onClick={handleShareProduct}
+                        className="flex items-center justify-center p-2 rounded-lg hover:bg-green-100 transition shrink-0"
+                        aria-label="Share product"
+                        title="Share product"
+                      >
+                        <ShareIcon className="h-5 w-5 text-green-600 hover:text-green-700" />
+                      </button>
+                    </div>
 
-                    <p className="text-sm sm:text-base text-gray-500 uppercase tracking-wide">
-                      {product.brand || "Verdora" }
+                    {/* Share Message */}
+                    {shareMessage && (
+                      <p className="text-xs text-green-600 font-medium">
+                        {shareMessage}
+                      </p>
+                    )}
+
+                    {/* Rating Below Product Name */}
+                    <ProductRating
+                      productId={productIdVal}
+                      className="text-xs"
+                    />
+
+                    <p className="text-sm sm:text-base text-gray-500 capitalize tracking-wide">
+                      Vendor : {product.brand || "Verdora"}
                     </p>
 
                     <p className="mt-1 text-sm sm:text-base text-gray-700">
@@ -312,7 +356,7 @@ export default function ProductDetailPage() {
                     </p>
 
                     <div className="mt-2 flex flex-wrap items-center gap-3">
-                      <span className="text-2xl sm:text-3xl text-green-700 font-bold">
+                      <span className="text-xl sm:text-xl text-green-700 font-bold">
                         ₹{selectedSize.price}
                       </span>
                       {discount > 0 && (
