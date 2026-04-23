@@ -74,7 +74,7 @@ export default function ProductCard({
         />
       )}
       {/* DESKTOP: Vertical Card Layout */}
-      <div className="hidden md:block relative rounded-xl overflow-hidden group h-96 hover:shadow-lg transition-shadow duration-300">
+      <div className="relative rounded-xl overflow-hidden group h-96 hover:shadow-lg transition-shadow duration-300">
         {/* Clickable Image Link Area */}
         <Link
           href={`/productpage/${productId}`}
@@ -278,12 +278,12 @@ export default function ProductCard({
               {isAddedToCart ? (
                 <>
                   <BoltIcon className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Buy</span>
+                  <span className="sm:inline">Buy</span>
                 </>
               ) : (
                 <>
                   <ShoppingCartIcon className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Cart</span>
+                  <span className="sm:inline">Cart</span>
                 </>
               )}
             </button>

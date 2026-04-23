@@ -56,7 +56,10 @@ export default function RecentlyViewedProducts() {
             768: { slidesPerView: 3 },
             1024: { slidesPerView: 4 },
         }}
-        className="-mx-4 px-4 custom-swiper"
+        className="-mx-4 px-4 custom-swiper pb-12"
+        style={{
+          '--swiper-pagination-bottom': '-10px',
+        } as React.CSSProperties}
       >
         {viewedProducts.map((product) => (
           <SwiperSlide key={String(product._id || product.id)}>
