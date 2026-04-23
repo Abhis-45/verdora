@@ -344,6 +344,11 @@ export default function AddProduct() {
       return;
     }
 
+    if (Number(formData.mrp) < Number(formData.price)) {
+      setError("MRP must be greater than or equal to Price");
+      return;
+    }
+
     if (
       formData.category === CUSTOM_CATEGORY_OPTION &&
       !customCategory.trim()

@@ -136,9 +136,18 @@ export default function PlantSizeEditor({
                   updateSize(index, "mrp", event.target.value)
                 }
                 placeholder="MRP"
-                className="w-[122px] md:w-[100px] rounded-md border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                className={`w-[122px] md:w-[100px] rounded-md border px-2 py-1 text-sm focus:outline-none focus:ring-1 ${
+                  size.mrp < size.price
+                    ? "border-red-400 focus:ring-red-500 bg-red-50"
+                    : "border-gray-300 focus:ring-green-500"
+                }`}
               />
             </div>
+            {size.mrp < size.price && (
+              <p className="text-xs text-red-600 font-medium -mt-2">
+                MRP must be ≥ Price
+              </p>
+            )}
 
             {/* Default + Delete */}
             <div className="flex items-center justify-between md:justify-start md:gap-4 flex-1">

@@ -446,6 +446,12 @@ router.post("/", vendorAuthMiddleware, async (req, res) => {
     });
   }
 
+  if (mrp < price) {
+    return res.status(400).json({
+      message: "MRP must be greater than or equal to Price",
+    });
+  }
+
   try {
     const product = new Product({
       id: Date.now().toString() + Math.random().toString(36).slice(2, 7),
@@ -479,9 +485,14 @@ router.post("/", vendorAuthMiddleware, async (req, res) => {
   }
 });
 
-router.patch("/:id", adminAuthMiddleware, async (req, res) => {
-  const payload = normalizeProductPayload(req.body);
-  const { id } = req.params;
+router.patch(
+  "/:id",
+  createRoleMiddleware(["admin", "vendor"], {
+    forbiddenMessage: "Admin or vendor access required",
+  }),
+  async (req, res) => {
+    const payload = normalizeProductPayload(req.body);
+    const { id } = req.params;
 
   try {
     // Validate the ID format
@@ -520,6 +531,16 @@ router.patch("/:id", adminAuthMiddleware, async (req, res) => {
       return res.status(403).json({ message: "Unauthorized" });
     }
 
+    // Validate MRP >= Price if either is being updated
+    const newPrice = payload.price !== undefined ? payload.price : product.price;
+    const newMrp = payload.mrp !== undefined ? payload.mrp : product.mrp;
+    
+    if (newMrp < newPrice) {
+      return res.status(400).json({
+        message: "MRP must be greater than or equal to Price",
+      });
+    }
+
     const allowedFields = [
       "name",
       "category",
@@ -555,8 +576,13 @@ router.patch("/:id", adminAuthMiddleware, async (req, res) => {
   }
 });
 
-router.delete("/:id", adminAuthMiddleware, async (req, res) => {
-  const { id } = req.params;
+router.delete(
+  "/:id",
+  createRoleMiddleware(["admin", "vendor"], {
+    forbiddenMessage: "Admin or vendor access required",
+  }),
+  async (req, res) => {
+    const { id } = req.params;
 
   try {
     // Validate the ID format

@@ -189,6 +189,11 @@ export default function EditProduct() {
       return;
     }
 
+    if (Number(formData.mrp) < Number(formData.price)) {
+      setError("MRP must be greater than or equal to Price");
+      return;
+    }
+
     setSaving(true);
     try {
       const token = localStorage.getItem("token");
