@@ -28,6 +28,7 @@ import {
 
 import ProductImageCarousel from "../../components/productpage/ProductImageCarousel";
 import PlantSizeSelector from "../../components/productpage/PlantSizeSelector";
+import PotToggleSelector from "../../components/productpage/PotToggleSelector";
 import TabbedSection from "../../components/productpage/TabbedSection";
 import TrustBadges from "../../components/productpage/TrustBadges";
 import CartActions from "../../components/productpage/CartActions";
@@ -71,6 +72,7 @@ export default function ProductDetailPage() {
   const [pincodeInput, setPincodeInput] = useState(deliveryLocation.pincode);
   const [locationEditorOpen, setLocationEditorOpen] = useState(false);
   const [shareMessage, setShareMessage] = useState("");
+  const [includePot, setIncludePot] = useState(false);
 
   const { cartItems, addToCart, updateQuantity, removeFromCart } = useCart();
   const { addViewedProduct } = useRecentlyViewed();
@@ -144,6 +146,8 @@ export default function ProductDetailPage() {
         product?.mrp || 0,
       );
     });
+    // Reset pot selection when size changes
+    setIncludePot(false);
   }, [plantSizes, product]);
 
   if (isLoading || !router.isReady) {
@@ -232,23 +236,35 @@ export default function ProductDetailPage() {
   };
 
   const addCurrentVariantToCart = () => {
+    const finalPrice = includePot && selectedSize.potPrice
+      ? selectedSize.price + selectedSize.potPrice
+      : selectedSize.price;
+    const finalMrp = includePot && selectedSize.potMrp
+      ? selectedSize.mrp + (selectedSize.potMrp || 0)
+      : selectedSize.mrp;
+
     addToCart({
-      cartKey,
+      cartKey: includePot ? `${cartKey}::with-pot` : cartKey,
       id: productIdVal,
       productId: productIdVal,
       name: product.name,
-      price: selectedSize.price,
-      mrp: selectedSize.mrp,
+      price: finalPrice,
+      mrp: finalMrp,
       quantity: 1,
       image: product.image,
       category: product.category,
       tags: product.tags,
       vendorName: product.vendorName,
-      selectedSize,
+      selectedSize: {
+        ...selectedSize,
+        price: finalPrice,
+        mrp: finalMrp,
+      },
       plantSizes,
       originAddress: product.originAddress,
       deliveryEstimate,
-    });
+      includePot,
+    } as any);
     removeFromWishlist(productIdVal as any);
   };
 
@@ -357,12 +373,21 @@ export default function ProductDetailPage() {
 
                     <div className="mt-2 flex flex-wrap items-center gap-3">
                       <span className="text-xl sm:text-xl text-green-700 font-bold">
-                        ₹{selectedSize.price}
+                        ₹{includePot && selectedSize.potPrice
+                          ? selectedSize.price + selectedSize.potPrice
+                          : selectedSize.price}
                       </span>
+                      {includePot && selectedSize.potPrice && (
+                        <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded font-medium">
+                          +₹{selectedSize.potPrice} (pot)
+                        </span>
+                      )}
                       {discount > 0 && (
                         <>
                           <span className="text-sm sm:text-base line-through text-red-500">
-                            ₹{selectedSize.mrp}
+                            ₹{includePot && selectedSize.potMrp
+                              ? selectedSize.mrp + (selectedSize.potMrp || 0)
+                              : selectedSize.mrp}
                           </span>
                           <span className="rounded-full bg-linear-to-r from-red-500 to-red-600 px-2 py-0.5 text-xs sm:text-sm text-white shadow-sm">
                             {discount}% OFF
@@ -377,6 +402,13 @@ export default function ProductDetailPage() {
                     sizes={plantSizes}
                     selectedSize={selectedSize}
                     onSelectSize={setSelectedSize}
+                  />
+
+                  {/* Pot Toggle Selector */}
+                  <PotToggleSelector
+                    selectedSize={selectedSize}
+                    includePot={includePot}
+                    onTogglePot={setIncludePot}
                   />
 
                   <div className="border-t border-gray-200" />

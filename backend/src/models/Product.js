@@ -8,6 +8,9 @@ const PlantSizeSchema = new mongoose.Schema(
     price: { type: Number, required: true, min: 0 },
     mrp: { type: Number, required: true, min: 0 },
     isDefault: { type: Boolean, default: false },
+    potPrice: { type: Number, default: 0, min: 0 },
+    potMrp: { type: Number, default: 0, min: 0 },
+    includePotByDefault: { type: Boolean, default: false },
   },
   { _id: false },
 );

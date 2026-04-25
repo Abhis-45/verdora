@@ -79,7 +79,7 @@ export default function TopCategories() {
   return (
     <section className="mb-8 sm:mb-10">
       <h2 className="text-lg sm:text-xl font-bold mb-4 sm:mb-6 text-green-700 flex items-center justify-between">
-        Today&apos;s Top Categories
+        Top Categories
         <Link
           href={`/products`}
           className="text-green-600 hover:text-green-700 font-medium text-sm sm:text-base flex gap-1 items-center transition"

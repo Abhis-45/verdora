@@ -431,7 +431,6 @@ router.post("/", vendorAuthMiddleware, async (req, res) => {
     cloudinaryPublicId,
     images,
     plantSizes,
-    originAddress,
   } = payload;
 
   if (
@@ -453,6 +452,21 @@ router.post("/", vendorAuthMiddleware, async (req, res) => {
   }
 
   try {
+    // Fetch vendor's profile to get their business location
+    const vendor = await Vendor.findById(req.vendorId);
+    
+    // Build originAddress from vendor's business location or use default
+    let originAddress = DEFAULT_ORIGIN_ADDRESS;
+    if (vendor && vendor.businessLocation) {
+      originAddress = {
+        address: vendor.businessLocation,
+        city: DEFAULT_ORIGIN_ADDRESS.city,
+        state: DEFAULT_ORIGIN_ADDRESS.state,
+        pincode: DEFAULT_ORIGIN_ADDRESS.pincode,
+        country: DEFAULT_ORIGIN_ADDRESS.country,
+      };
+    }
+
     const product = new Product({
       id: Date.now().toString() + Math.random().toString(36).slice(2, 7),
       name,
@@ -553,7 +567,6 @@ router.patch(
       "images",
       "cloudinaryPublicId",
       "plantSizes",
-      "originAddress",
     ];
 
     allowedFields.forEach((field) => {
@@ -561,6 +574,20 @@ router.patch(
         product[field] = payload[field];
       }
     });
+
+    // For vendors: auto-populate originAddress from their profile
+    if (req.userRole === "vendor") {
+      const vendor = await Vendor.findById(req.userId);
+      if (vendor && vendor.businessLocation) {
+        product.originAddress = {
+          address: vendor.businessLocation,
+          city: DEFAULT_ORIGIN_ADDRESS.city,
+          state: DEFAULT_ORIGIN_ADDRESS.state,
+          pincode: DEFAULT_ORIGIN_ADDRESS.pincode,
+          country: DEFAULT_ORIGIN_ADDRESS.country,
+        };
+      }
+    }
 
     product.updatedAt = new Date();
     await product.save();

@@ -4,6 +4,9 @@ export type PlantSizeOption = {
   price: number;
   mrp: number;
   isDefault?: boolean;
+  potPrice?: number;
+  potMrp?: number;
+  includePotByDefault?: boolean;
 };
 
 export const FREE_SIZE_LABEL = "FREE SIZE";
@@ -42,12 +45,16 @@ export const normalizePlantSizes = (
 
       const price = normalizeNumber(size.price || fallbackPrice);
       const mrp = Math.max(normalizeNumber(size.mrp || fallbackMrp), price);
+      const potPrice = normalizeNumber(size.potPrice || 0);
+      const potMrp = Math.max(normalizeNumber(size.potMrp || 0), potPrice);
 
       return {
         id: size.id || `${label.toLowerCase()}-${index + 1}`,
         label,
         price,
         mrp,
+        potPrice,
+        potMrp,
         isDefault: Boolean(size.isDefault),
       };
     })
@@ -60,6 +67,8 @@ export const normalizePlantSizes = (
         label: FREE_SIZE_LABEL,
         price: normalizeNumber(fallbackPrice),
         mrp: Math.max(normalizeNumber(fallbackMrp), normalizeNumber(fallbackPrice)),
+        potPrice: 0,
+        potMrp: 0,
         isDefault: true,
       },
     ];

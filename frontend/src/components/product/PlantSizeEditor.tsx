@@ -9,6 +9,8 @@ const emptySize = (label = ""): PlantSizeOption => ({
   label,
   price: 0,
   mrp: 0,
+  potPrice: 0,
+  potMrp: 0,
   isDefault: false,
 });
 
@@ -105,52 +107,103 @@ export default function PlantSizeEditor({
           <div
             key={size.id}
             className="rounded-xl border border-green-200 bg-white p-3 
-                       flex flex-col gap-2 md:flex-row md:items-center md:gap-3"
+                       flex flex-col gap-2"
           >
-            {/* Size */}
-            <input
-              type="text"
-              value={size.label}
-              onChange={(event) =>
-                updateSize(index, "label", event.target.value)
-              }
-              placeholder="Size"
-              className="flex-1 rounded-md border border-gray-300 px-2 py-1 text-sm uppercase focus:outline-none focus:ring-1 focus:ring-green-500"
-            />
-
-            {/* Price + MRP (inline on desktop, one row together on mobile) */}
-            <div className="flex gap-2 md:flex-row">
+            {/* First Row: Size Label */}
+            <div>
               <input
-                type="number"
-                value={size.price || ""}
+                type="text"
+                value={size.label}
                 onChange={(event) =>
-                  updateSize(index, "price", event.target.value)
+                  updateSize(index, "label", event.target.value)
                 }
-                placeholder="Price"
-                className="w-[122px] md:w-[100px] rounded-md border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
-              />
-              <input
-                type="number"
-                value={size.mrp || ""}
-                onChange={(event) =>
-                  updateSize(index, "mrp", event.target.value)
-                }
-                placeholder="MRP"
-                className={`w-[122px] md:w-[100px] rounded-md border px-2 py-1 text-sm focus:outline-none focus:ring-1 ${
-                  size.mrp < size.price
-                    ? "border-red-400 focus:ring-red-500 bg-red-50"
-                    : "border-gray-300 focus:ring-green-500"
-                }`}
+                placeholder="Size"
+                className="w-full rounded-md border border-gray-300 px-2 py-1 text-sm uppercase focus:outline-none focus:ring-1 focus:ring-green-500"
               />
             </div>
+
+            {/* Second Row: Plant Price + MRP */}
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <label className="text-xs text-gray-600 font-medium block mb-1">Plant Price</label>
+                <input
+                  type="number"
+                  value={size.price || ""}
+                  onChange={(event) =>
+                    updateSize(index, "price", event.target.value)
+                  }
+                  placeholder="Price"
+                  className="w-full rounded-md border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="text-xs text-gray-600 font-medium block mb-1">Plant MRP</label>
+                <input
+                  type="number"
+                  value={size.mrp || ""}
+                  onChange={(event) =>
+                    updateSize(index, "mrp", event.target.value)
+                  }
+                  placeholder="MRP"
+                  className={`w-full rounded-md border px-2 py-1 text-sm focus:outline-none focus:ring-1 ${
+                    size.mrp < size.price
+                      ? "border-red-400 focus:ring-red-500 bg-red-50"
+                      : "border-gray-300 focus:ring-green-500"
+                  }`}
+                />
+              </div>
+            </div>
             {size.mrp < size.price && (
-              <p className="text-xs text-red-600 font-medium -mt-2">
-                MRP must be ≥ Price
+              <p className="text-xs text-red-600 font-medium">
+                Plant MRP must be ≥ Plant Price
               </p>
             )}
 
-            {/* Default + Delete */}
-            <div className="flex items-center justify-between md:justify-start md:gap-4 flex-1">
+            {/* Third Row: Pot Price + Pot MRP (Optional) */}
+            <div className="flex gap-2 border-t pt-2">
+              <div className="flex-1">
+                <label className="text-xs text-amber-700 font-medium block mb-1">
+                  Pot Price (₹) <span className="text-gray-500 font-normal">optional</span>
+                </label>
+                <input
+                  type="number"
+                  value={(size.potPrice as number) || ""}
+                  onChange={(event) =>
+                    updateSize(index, "potPrice", event.target.value)
+                  }
+                  placeholder="Leave empty if no pot"
+                  min="0"
+                  className="w-full rounded-md border border-amber-300 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-amber-500 bg-amber-50"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="text-xs text-amber-700 font-medium block mb-1">
+                  Pot MRP (₹) <span className="text-gray-500 font-normal">optional</span>
+                </label>
+                <input
+                  type="number"
+                  value={(size.potMrp as number) || ""}
+                  onChange={(event) =>
+                    updateSize(index, "potMrp", event.target.value)
+                  }
+                  placeholder="Leave empty if no pot"
+                  min="0"
+                  className={`w-full rounded-md border px-2 py-1 text-sm focus:outline-none focus:ring-1 bg-amber-50 ${
+                    (size.potMrp as number) < (size.potPrice as number)
+                      ? "border-red-400 focus:ring-red-500"
+                      : "border-amber-300 focus:ring-amber-500"
+                  }`}
+                />
+              </div>
+            </div>
+            {(size.potMrp as number) > 0 && (size.potMrp as number) < (size.potPrice as number) && (
+              <p className="text-xs text-red-600 font-medium">
+                Pot MRP must be ≥ Pot Price
+              </p>
+            )}
+
+            {/* Fourth Row: Default + Delete */}
+            <div className="flex items-center justify-between border-t pt-2">
               <label className="flex items-center gap-1 text-xs font-medium text-green-800">
                 <input
                   type="radio"

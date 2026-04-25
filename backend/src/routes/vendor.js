@@ -184,7 +184,6 @@ router.put("/products/:id", vendorAuthMiddleware, async (req, res) => {
       brand,
       description,
       plantSizes,
-      originAddress,
     } = payload;
 
     const product = await Product.findOne({
@@ -206,7 +205,19 @@ router.put("/products/:id", vendorAuthMiddleware, async (req, res) => {
     if (brand) product.brand = brand;
     if (description) product.description = description;
     if (plantSizes) product.plantSizes = plantSizes;
-    if (originAddress) product.originAddress = originAddress;
+
+    // Auto-populate originAddress from vendor's profile
+    const vendor = await Vendor.findById(req.vendorId);
+    if (vendor && vendor.businessLocation) {
+      product.originAddress = {
+        address: vendor.businessLocation,
+        city: DEFAULT_ORIGIN_ADDRESS.city,
+        state: DEFAULT_ORIGIN_ADDRESS.state,
+        pincode: DEFAULT_ORIGIN_ADDRESS.pincode,
+        country: DEFAULT_ORIGIN_ADDRESS.country,
+      };
+    }
+
     product.updatedAt = new Date();
 
     await product.save();

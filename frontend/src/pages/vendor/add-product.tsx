@@ -6,8 +6,8 @@ import { useRouter } from "next/router";
 import Head from "next/head";
 import Link from "next/link";
 import { HomeIcon, XMarkIcon } from "@heroicons/react/24/solid";
+import ProductImageCarousel from "../../components/productpage/ProductImageCarousel";
 import PlantSizeEditor from "@/components/product/PlantSizeEditor";
-import OriginAddressFields from "@/components/product/OriginAddressFields";
 import { DEFAULT_DELIVERY_LOCATION } from "@/utils/delivery";
 import {
   CUSTOM_CATEGORY_OPTION,
@@ -46,7 +46,6 @@ export default function AddProduct() {
     brand: "",
     description: "",
     tags: "",
-    originAddress: { ...DEFAULT_DELIVERY_LOCATION, address: "" },
   });
   const [plantSizes, setPlantSizes] = useState<PlantSizeOption[]>([
     defaultSize,
@@ -128,11 +127,6 @@ export default function AddProduct() {
           ...current,
           brand:
             current.brand || profile.businessName || profile.vendorName || "",
-          originAddress: {
-            ...current.originAddress,
-            address:
-              current.originAddress.address || profile.businessLocation || "",
-          },
         }));
       } catch {
         // Let the vendor keep entering custom data if profile fetch fails.
@@ -183,10 +177,6 @@ export default function AddProduct() {
         brand: product.brand || "",
         description: product.description || "",
         tags: (product.tags || []).join(", "),
-        originAddress: product.originAddress || {
-          ...DEFAULT_DELIVERY_LOCATION,
-          address: "",
-        },
       });
 
       // Pre-fill plant sizes
@@ -413,7 +403,6 @@ export default function AddProduct() {
           ? formData.tags.split(",").map((tag) => tag.trim())
           : [],
         plantSizes,
-        originAddress: formData.originAddress,
       };
 
       const response = await fetch(endpoint, {
@@ -469,7 +458,7 @@ export default function AddProduct() {
           </div>
         </div>
       </div>
-        <div className="min-h-screen bg-gray-50 px-4 py-8">
+        <div className="min-h-screen bg-gray-50 px-4 pb-8">
           <div className="mx-auto max-w-3xl rounded-lg bg-white p-6 shadow-lg">
             <div className="mb-6 flex items-center justify-between">
               <h1 className="text-3xl font-bold text-green-700">
@@ -591,23 +580,6 @@ export default function AddProduct() {
                   </span>
                 </div>
                 <PlantSizeEditor sizes={plantSizes} onChange={setPlantSizes} />
-              </div>
-
-              <div>
-                <div className="mb-2 flex items-center justify-between">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Vendor Shop Dispatch Address
-                  </label>
-                  <span className="text-xs text-gray-500">
-                    Used for delivery estimates
-                  </span>
-                </div>
-                <OriginAddressFields
-                  value={formData.originAddress}
-                  onChange={(originAddress) =>
-                    setFormData((prev) => ({ ...prev, originAddress }))
-                  }
-                />
               </div>
 
               <div>
