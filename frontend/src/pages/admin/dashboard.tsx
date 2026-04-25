@@ -162,12 +162,14 @@ type ModalType =
 export default function AdminDashboard() {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("overview");
-  const [adminName] = useState<string>(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("adminName") || "Admin";
+  const [adminName, setAdminName] = useState<string>("Admin");
+
+  useEffect(() => {
+    const storedName = localStorage.getItem("adminName");
+    if (storedName) {
+      setAdminName(storedName);
     }
-    return "Admin";
-  });
+  }, []);
   const [stats, setStats] = useState<AdminStats>({
     totalProducts: 0,
     totalUsers: 0,
@@ -186,12 +188,20 @@ export default function AdminDashboard() {
   const [selectedItem, setSelectedItem] = useState<
     ManageItem | OrderItem | null
   >(null);
-  const [token] = useState<string>(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("adminToken") || "";
+  const [token, setToken] = useState<string>("");
+  const [authChecked, setAuthChecked] = useState<boolean>(false);
+
+  useEffect(() => {
+    const storedName = localStorage.getItem("adminName");
+    if (storedName) {
+      setAdminName(storedName);
     }
-    return "";
-  });
+    const storedToken = localStorage.getItem("adminToken");
+    if (storedToken) {
+      setToken(storedToken);
+    }
+    setAuthChecked(true);
+  }, []);
   const [, setDeleteLoading] = useState(false);
   const [vendorRequestData, setVendorRequestData] = useState<VendorPrefillData | null>(null);
   const [vendorRequestId, setVendorRequestId] = useState<string | null>(null);
@@ -324,6 +334,8 @@ export default function AdminDashboard() {
   }, []);
 
   useEffect(() => {
+    if (!authChecked) return;
+
     const role = localStorage.getItem("role");
     if (!token || role === "vendor") {
       router.push("/admin/login");
@@ -341,6 +353,7 @@ export default function AdminDashboard() {
 
     void loadManagementData();
   }, [
+    authChecked,
     router,
     token,
     fetchStats,
@@ -443,9 +456,9 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-linear-to-b from-emerald-50 to-teal-50">
+    <div className="min-h-screen bg-linear-to-b from-emerald-50 to-teal-50 pt-10 lg:pt-16">
       {/* HEADER */}
-      <header className="sticky top-0 z-40 bg-linear-to-r from-emerald-700 to-teal-600 text-white shadow-xl">
+      <header className="fixed top-0 left-0 right-0 z-40 bg-linear-to-r from-emerald-700 to-teal-600 text-white shadow-xl">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-5 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8 lg:py-8">
           <div>
             <h1 className="text-2xl font-bold sm:text-3xl lg:text-4xl">
@@ -473,7 +486,7 @@ export default function AdminDashboard() {
       </header>
 
       {/* TABS */}
-      <nav className="sticky top-20.5 z-30 border-b-2 border-emerald-200 bg-white shadow-md sm:top-19 lg:top-28">
+      <nav className="sticky top-10 z-30 border-b-2 border-emerald-200 bg-white shadow-md sm:top-10 lg:top-16">
         <div className="mx-auto flex max-w-7xl gap-0 overflow-x-auto px-4 sm:px-6 lg:px-8">
           {(
             ["overview", "orders", "products", "users", "vendors", "admins", "service-requests", "coupons"] as Tab[]

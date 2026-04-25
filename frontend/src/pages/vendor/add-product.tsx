@@ -32,6 +32,8 @@ const defaultSize: PlantSizeOption = {
   label: FREE_SIZE_LABEL,
   price: 0,
   mrp: 0,
+  potPrice: 0,
+  potMrp: 0,
   isDefault: true,
 };
 
@@ -441,7 +443,7 @@ export default function AddProduct() {
       <Head>
         <title>{isEditMode ? "Edit Product" : "Add Product"} | Verdora</title>
       </Head>
-            <div className="bg-linear-to-r from-emerald-700 to-teal-600 text-white shadow-lg">
+            <div className="fixed top-0 left-0 right-0 z-40 bg-linear-to-r from-emerald-700 to-teal-600 text-white shadow-lg">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-6 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h1 className="text-3xl font-bold">

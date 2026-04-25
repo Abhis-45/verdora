@@ -2,6 +2,7 @@ import express from "express";
 import mongoose from "mongoose";
 import Product from "../models/Product.js";
 import User from "../models/User.js";
+import Vendor from "../models/Vendor.js";
 import {
   adminAuthMiddleware,
   vendorAuthMiddleware,

@@ -83,13 +83,18 @@ export const normalizePlantSizes = (plantSizes = [], fallbackPrice = 0, fallback
 
       const price = Math.max(Number(size.price || fallbackPrice || 0), 0);
       const mrp = Math.max(Number(size.mrp || fallbackMrp || price || 0), price);
+      const potPrice = Math.max(Number(size.potPrice || 0), 0);
+      const potMrp = Math.max(Number(size.potMrp || 0), potPrice);
 
       return {
         id: size.id || `${label.toLowerCase()}-${index + 1}`,
         label,
         price,
         mrp,
+        potPrice,
+        potMrp,
         isDefault: Boolean(size.isDefault),
+        includePotByDefault: Boolean(size.includePotByDefault),
       };
     })
     .filter(Boolean);
@@ -101,7 +106,10 @@ export const normalizePlantSizes = (plantSizes = [], fallbackPrice = 0, fallback
         label: "FREE SIZE",
         price: Math.max(Number(fallbackPrice || 0), 0),
         mrp: Math.max(Number(fallbackMrp || fallbackPrice || 0), Number(fallbackPrice || 0)),
+        potPrice: 0,
+        potMrp: 0,
         isDefault: true,
+        includePotByDefault: false,
       },
     ];
   }

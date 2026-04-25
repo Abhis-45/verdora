@@ -422,9 +422,9 @@ export default function VendorDashboard() {
   }, [orderSort, vendorOrders]);
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-emerald-50 to-teal-50">
-      {/* Header */}
-      <div className="bg-linear-to-r from-emerald-700 to-teal-600 text-white shadow-lg">
+        <div className="min-h-screen bg-linear-to-b from-emerald-50 to-teal-50 pt-10 lg:pt-16">
+      {/* HEADER */}
+      <div className="fixed top-0 left-0 right-0 z-40 bg-linear-to-r from-emerald-700 to-teal-600 text-white shadow-xl">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-6 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h1 className="text-2xl font-bold sm:text-3xl">
