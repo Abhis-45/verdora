@@ -103,12 +103,16 @@ export default function ServiceDetail() {
             <p className="text-lg text-gray-700">{service.details}</p>
           </div>
 
-          {/* Display the service using the reusable component */}
           <div className="mb-12">
             <h2 className="text-2xl font-bold text-green-700 mb-6">
               Available Packages & Booking
             </h2>
-            <ServicesList services={[service]} loading={false} showFullGrid={true} />
+            <ServicesList
+              services={[service]}
+              loading={false}
+              showFullGrid={true}
+              variant="packages"
+            />
           </div>
         </div>
       </Layout>

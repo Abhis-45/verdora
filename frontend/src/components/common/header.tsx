@@ -13,7 +13,7 @@ import {
   ArrowLeftOnRectangleIcon,
   MapPinIcon,
 } from "@heroicons/react/24/solid";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import AuthPopup from "../auth/AuthPop";
 import CategoryDropdown from "../forms/CategoryDropdown";
 import { useCart } from "../../context/CartContext";
@@ -55,6 +55,33 @@ export default function Header() {
     ? `${deliveryLocation.city}, ${deliveryLocation.state} ${deliveryLocation.pincode}`
     : "Enter pincode to find area";
 
+  useEffect(() => {
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (!target) return;
+
+      if (browseOpen && !target.closest("[data-category-dropdown]")) {
+        setBrowseOpen(false);
+      }
+
+      if (
+        locationEditorOpen &&
+        !target.closest("[data-header-location-menu]")
+      ) {
+        setLocationEditorOpen(false);
+      }
+
+      if (dropdownOpen && !target.closest("[data-header-user-menu]")) {
+        setDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+    };
+  }, [browseOpen, dropdownOpen, locationEditorOpen]);
+
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -75,7 +102,10 @@ export default function Header() {
   };
 
   const renderLocationCard = () => (
-    <div className="relative w-full md:max-w-xs lg:max-w-sm">
+    <div
+      className="relative w-full md:max-w-xs lg:max-w-sm"
+      data-header-location-menu
+    >
       <button
         onClick={() => {
           setLocationEditorOpen((current) => !current);
@@ -183,7 +213,7 @@ export default function Header() {
             </Link>
 
             {/* User Menu */}
-            <div className="relative">
+            <div className="relative" data-header-user-menu>
               {user ? (
                 <button
                   type="button"
@@ -295,7 +325,7 @@ export default function Header() {
               </Link>
 
               {/* User Menu */}
-              <div className="relative">
+              <div className="relative" data-header-user-menu>
                 {user ? (
                   <button
                     type="button"

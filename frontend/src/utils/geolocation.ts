@@ -17,6 +17,14 @@ export type ReverseGeocodeResult = {
   pincode?: string;
 };
 
+const getBackendUrl = () =>
+  process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+
+const normalizeIndianPostcode = (value?: string) => {
+  const normalized = value?.replace(/\D/g, "").slice(0, 6) || "";
+  return /^\d{6}$/.test(normalized) ? normalized : undefined;
+};
+
 /**
  * Get user's current geolocation coordinates
  * Returns null if geolocation is not available or user denies permission
@@ -76,6 +84,7 @@ export const reverseGeocode = async (
       city: address.city || address.town || address.county || undefined,
       state: address.state || undefined,
       country: address.country || "India",
+      pincode: normalizeIndianPostcode(address.postcode),
     };
   } catch (error) {
     console.error("Error reverse geocoding:", error);
@@ -94,7 +103,7 @@ export const getPincodeFromCoordinates = async (
   try {
     // First, try the backend endpoint that can do advanced pincode lookup
     const response = await fetch(
-      `/api/pincode/from-coordinates?lat=${latitude}&lon=${longitude}`,
+      `${getBackendUrl()}/api/pincode/from-coordinates?lat=${latitude}&lon=${longitude}`,
     );
 
     if (response.ok) {

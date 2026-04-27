@@ -370,6 +370,7 @@ export default function ProfilePage() {
         const { address } = result;
         setAddressForm((current) => ({
           ...current,
+          pincode: address.pincode || current.pincode,
           city: address.city || current.city,
           state: address.state || current.state,
           address: address.area || current.address,
@@ -1363,8 +1364,15 @@ export default function ProfilePage() {
                     <div className="mb-4">
                       <PincodeSuggestions
                         onSelect={handleAddressPincodeSuggestionSelect}
+                        value={addressForm.pincode}
+                        onValueChange={(pincode) =>
+                          setAddressForm((current) => ({
+                            ...current,
+                            pincode,
+                          }))
+                        }
                         placeholder="Enter 6-digit pincode"
-                        inputClassName="bg-green-950 text-white border-green-600 focus:ring-green-400 border-2 rounded-lg placeholder-gray-400"
+                        inputClassName="bg-white text-gray-950 border-green-200 focus:ring-green-200 rounded-xl placeholder-gray-400"
                       />
                     </div>
                     <div className="mb-4">

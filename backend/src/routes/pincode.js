@@ -63,6 +63,11 @@ async function fetchFromPostalPincodeAPI(pincode) {
   }
 }
 
+function normalizePincode(value) {
+  const normalized = String(value || "").replace(/\D/g, "").slice(0, 6);
+  return /^\d{6}$/.test(normalized) ? normalized : null;
+}
+
 /**
  * Get pincode from coordinates (latitude/longitude) - MUST be BEFORE /:pincode route
  * GET /api/pincode/from-coordinates?lat=<latitude>&lon=<longitude>
@@ -103,6 +108,22 @@ router.get("/from-coordinates", async (req, res) => {
         const city =
           address.city || address.town || address.county || "Unknown";
         const state = address.state || "Unknown";
+        const detectedPincode = normalizePincode(address.postcode);
+
+        if (detectedPincode) {
+          const postalData = await fetchFromPostalPincodeAPI(detectedPincode);
+          return res.json({
+            data:
+              postalData || {
+                pincode: detectedPincode,
+                city,
+                state,
+                country: address.country || "India",
+                area: address.village || address.suburb,
+              },
+            fromApi: true,
+          });
+        }
 
         // Try to find a pincode for this city
         // This is a limitation - the postal API only accepts pincode, not city

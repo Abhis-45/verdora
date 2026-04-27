@@ -92,11 +92,16 @@ export const useAddressInput = (
       const result = await getCurrentLocationWithAddress();
       if (result) {
         const { address: locationAddress } = result;
+        const pincodeData = locationAddress.pincode
+          ? await fetchLocationFromPincode(locationAddress.pincode)
+          : null;
+
         updateAddress({
-          city: locationAddress.city || "Current location",
-          state: locationAddress.state || "",
-          address: locationAddress.area || "",
-          country: locationAddress.country || "India",
+          pincode: pincodeData?.pincode || locationAddress.pincode || "",
+          city: pincodeData?.city || locationAddress.city || "Current location",
+          state: pincodeData?.state || locationAddress.state || "",
+          address: pincodeData?.area || locationAddress.area || "",
+          country: pincodeData?.country || locationAddress.country || "India",
         });
       } else {
         setError(

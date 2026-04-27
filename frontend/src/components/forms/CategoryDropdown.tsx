@@ -1,13 +1,10 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import {
   SparklesIcon,
   ShoppingBagIcon,
-  HomeIcon,
-  BeakerIcon,
-  CheckBadgeIcon,
-  StarIcon,
   Bars3Icon,
   ArrowRightCircleIcon,
 } from "@heroicons/react/24/solid";
@@ -15,39 +12,20 @@ import { getFromBackend } from "../../lib/fetchWrapper";
 import { useServices } from "../../hooks/useServices";
 import ServicesList from "../services/ServicesList";
 import Spinner from "../shared/Spinner";
+import type { ServiceRecord } from "@/types/service";
 
 interface Category {
   name: string;
-  icon: React.ReactNode;
+  image: string;
+  count: number;
   path: string;
-  color: string;
 }
 
-interface ProductSummary {
-  category?: string;
+interface CategorySummary {
+  name: string;
+  count: number;
+  image?: string | null;
 }
-
-const iconMap: Record<string, React.ReactNode> = {
-  "flowering plants": <SparklesIcon className="w-5 h-5" />,
-  "indoor plants": <HomeIcon className="w-5 h-5" />,
-  "seeds & bulbs": <CheckBadgeIcon className="w-5 h-5" />,
-  tools: <BeakerIcon className="w-5 h-5" />,
-  fertilizers: <StarIcon className="w-5 h-5" />,
-  pots: <BeakerIcon className="w-5 h-5" />,
-  pesticides: <CheckBadgeIcon className="w-5 h-5" />,
-  gifts: <ShoppingBagIcon className="w-5 h-5" />,
-};
-
-const colorMap: Record<string, string> = {
-  "flowering plants": "text-pink-600",
-  "indoor plants": "text-green-600",
-  "seeds & bulbs": "text-amber-600",
-  tools: "text-yellow-600",
-  fertilizers: "text-orange-600",
-  pots: "text-purple-600",
-  pesticides: "text-red-600",
-  gifts: "text-red-500",
-};
 
 interface Props {
   onToggle?: () => void;
@@ -63,6 +41,9 @@ export default function CategoryDropdown({
   const [loading, setLoading] = useState(true);
   const { services, loading: servicesLoading } = useServices();
   const [showServicesList, setShowServicesList] = useState(false);
+  const [selectedService, setSelectedService] = useState<ServiceRecord | null>(
+    null,
+  );
 
   // Use controlled state if provided, otherwise use internal state
   const isOpen =
@@ -85,30 +66,22 @@ export default function CategoryDropdown({
     try {
       setLoading(true);
 
-      const data = await getFromBackend<
-        ProductSummary[] | { products?: ProductSummary[] }
-      >("/api/products");
+      const data = await getFromBackend<CategorySummary[]>(
+        "/api/products/featured/categories",
+      );
       if (data) {
-        const productsArray = Array.isArray(data) ? data : data.products || [];
-
-        const uniqueCategories = [
-          ...new Set(productsArray.map((product) => product.category)),
-        ];
-
-        const categoryList: Category[] = (
-          uniqueCategories.filter((cat) => cat) as string[]
-        ).map((cat: string) => ({
-          name: cat,
-          icon: iconMap[cat.toLowerCase()] || (
-            <ShoppingBagIcon className="w-5 h-5" />
-          ),
-          path: `/products?category=${encodeURIComponent(cat)}`,
-          color: colorMap[cat.toLowerCase()] || "text-green-600",
-        }));
+        const categoryList: Category[] = data
+          .filter((category) => category.name)
+          .map((category) => ({
+            name: category.name,
+            count: category.count,
+            image: category.image || "/placeholder.png",
+            path: `/products?category=${encodeURIComponent(category.name)}`,
+          }));
 
         setCategories(categoryList);
       } else {
-        throw new Error("Failed to fetch products");
+        throw new Error("Failed to fetch categories");
       }
     } catch {
       // Silently fail for CategoryDropdown
@@ -124,6 +97,7 @@ export default function CategoryDropdown({
   return (
     <div
       className="relative"
+      data-category-dropdown
       onMouseEnter={() => {
         // Only use hover on desktop (uncontrolled mode)
         if (controlledIsOpen === undefined) {
@@ -156,40 +130,51 @@ export default function CategoryDropdown({
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute left-0 top-full mt-0 w-screen max-w-6xl bg-white rounded-b-lg shadow-2xl z-50">
-          <div className="p-6">
+        <div className="absolute left-0 top-full z-50 mt-1 w-[calc(100vw-1rem)] max-w-4xl overflow-hidden rounded-lg border border-gray-100 bg-white shadow-2xl md:w-[46rem] lg:w-[52rem]">
+          <div className="max-h-[72vh] overflow-y-auto p-3 sm:p-4">
             {loading ? (
-              <div className="text-center py-8 text-gray-400">Loading...</div>
+              <div className="text-center py-6 text-sm text-gray-400">Loading...</div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-[1.25fr_0.9fr] md:gap-5">
                 {/* Categories Section */}
                 <div>
-                  <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <h3 className="mb-3 flex items-center gap-2 text-sm font-bold text-gray-900 sm:text-base">
                     <ShoppingBagIcon className="w-5 h-5 text-green-600" />
                     Categories
                     <Link
                       href={`/products`}
                       onClick={() => closeDropdown()}
-                      className="text-green-600 hover:text-green-700 font-medium text-sm sm:text-base flex gap-1 items-center transition"
+                      className="ml-auto flex items-center gap-1 text-xs font-semibold text-green-600 transition hover:text-green-700"
                     >
                       View All
-                      <ArrowRightCircleIcon className="h-5 w-5 sm:h-6 sm:w-6" />
+                      <ArrowRightCircleIcon className="h-4 w-4" />
                     </Link>
                   </h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                     {categories.map((category) => (
                       <Link
                         key={category.name}
                         href={category.path}
                         onClick={() => closeDropdown()}
-                        className="p-3 rounded-lg hover:bg-gray-50 transition group"
+                        className="group flex min-w-0 items-center gap-2 rounded-lg border border-gray-100 p-2 transition hover:border-green-200 hover:bg-green-50"
                       >
-                        <div className={`${category.color} mb-2`}>
-                          {category.icon}
+                        <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md bg-green-50">
+                          <Image
+                            src={category.image}
+                            alt={category.name}
+                            fill
+                            sizes="40px"
+                            className="object-cover"
+                          />
                         </div>
-                        <p className="text-sm font-medium text-gray-900 group-hover:text-green-600 transition line-clamp-2">
-                          {category.name}
-                        </p>
+                        <div className="min-w-0">
+                          <p className="truncate text-xs font-semibold text-gray-900 transition group-hover:text-green-700 sm:text-sm">
+                            {category.name}
+                          </p>
+                          <p className="text-[10px] font-medium text-gray-500">
+                            {category.count} items
+                          </p>
+                        </div>
                       </Link>
                     ))}
                   </div>
@@ -197,16 +182,16 @@ export default function CategoryDropdown({
 
                 {/* Services Section - Using Reusable Component */}
                 <div>
-                  <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <h3 className="mb-3 flex items-center gap-2 text-sm font-bold text-gray-900 sm:text-base">
                     <SparklesIcon className="w-5 h-5 text-blue-600" />
                     Services
                     <Link
                       href={`/services`}
                       onClick={() => closeDropdown()}
-                      className="text-green-600 hover:text-green-700 font-medium text-sm sm:text-base flex gap-1 items-center transition"
+                      className="ml-auto flex items-center gap-1 text-xs font-semibold text-green-600 transition hover:text-green-700"
                     >
                       View All
-                      <ArrowRightCircleIcon className="h-5 w-5 sm:h-6 sm:w-6" />
+                      <ArrowRightCircleIcon className="h-4 w-4" />
                     </Link>
                   </h3>
 
@@ -215,22 +200,24 @@ export default function CategoryDropdown({
                       <Spinner />
                     </div>
                   ) : (
-                    <div className="space-y-2 max-h-96 overflow-y-auto">
+                    <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
                       {services.map((service) => (
                         <button
                           key={service.slug}
+                          type="button"
                           onClick={() => {
+                            setSelectedService(service);
                             setShowServicesList(true);
                             closeDropdown();
                           }}
-                          className="w-full text-left p-3 rounded-lg hover:bg-blue-50 transition group block"
+                          className="group block w-full rounded-lg border border-gray-100 p-2 text-left transition hover:border-blue-100 hover:bg-blue-50"
                         >
-                          <div className="flex items-start gap-3">
-                            <div className="text-blue-600 mt-0.5">
-                              <SparklesIcon className="w-5 h-5" />
+                          <div className="flex items-center gap-2">
+                            <div className="mt-0.5 rounded-md bg-blue-50 p-2 text-blue-600">
+                              <SparklesIcon className="h-4 w-4" />
                             </div>
-                            <div>
-                              <p className="text-sm font-medium text-gray-900 group-hover:text-blue-600 transition">
+                            <div className="min-w-0">
+                              <p className="truncate text-xs font-semibold text-gray-900 transition group-hover:text-blue-600 sm:text-sm">
                                 {service.title}
                               </p>
                               <p className="text-xs text-gray-500 line-clamp-1">
@@ -250,23 +237,32 @@ export default function CategoryDropdown({
       )}
 
       {/* Services List Modal - Using Reusable Component */}
-      {showServicesList && (
+      {showServicesList && selectedService && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
-              <h2 className="text-2xl font-bold text-green-700">Our Services</h2>
+              <h2 className="text-2xl font-bold text-green-700">
+                {selectedService.title}
+              </h2>
               <button
-                onClick={() => setShowServicesList(false)}
+                onClick={() => {
+                  setShowServicesList(false);
+                  setSelectedService(null);
+                }}
                 className="text-gray-500 hover:text-red-600 text-2xl"
               >
                 ✕
               </button>
             </div>
             <div className="p-6">
+              <p className="mb-4 text-sm text-gray-600">
+                {selectedService.details}
+              </p>
               <ServicesList
-                services={services}
-                loading={servicesLoading}
-                showFullGrid={true}
+                services={[selectedService]}
+                loading={false}
+                showFullGrid={false}
+                variant="packages"
               />
             </div>
           </div>

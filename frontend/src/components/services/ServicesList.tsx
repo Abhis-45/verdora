@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import Image from "next/image";
 import Spinner from "@/components/shared/Spinner";
@@ -10,12 +10,16 @@ interface ServicesListProps {
   services: ServiceRecord[];
   loading?: boolean;
   showFullGrid?: boolean;
+  variant?: "cards" | "packages";
+  onBookingOpenChange?: (open: boolean) => void;
 }
 
 export default function ServicesList({
   services,
   loading = false,
   showFullGrid = true,
+  variant = "cards",
+  onBookingOpenChange,
 }: ServicesListProps) {
   const [selectedService, setSelectedService] = useState<ServiceRecord | null>(
     null,
@@ -37,6 +41,10 @@ export default function ServicesList({
     text: string;
   } | null>(null);
   const { user } = useUser();
+
+  useEffect(() => {
+    onBookingOpenChange?.(Boolean(selectedService || selectedPackage));
+  }, [onBookingOpenChange, selectedPackage, selectedService]);
 
   const handleBookPackage = (pkg: ServicePackage) => {
     setSelectedPackage(pkg);
@@ -158,43 +166,82 @@ export default function ServicesList({
 
   return (
     <>
-      {/* Services Grid */}
-      <div className={`grid ${gridColsClass} gap-5 sm:gap-6`}>
-        {services.map((service) => (
-          <div
-            key={service.slug}
-            className="bg-white rounded-lg shadow-md hover:shadow-xl transition transform hover:-translate-y-1 cursor-pointer overflow-hidden"
-            onClick={() => setSelectedService(service)}
-          >
-            {/* Elegant Image */}
-            <div className="relative h-28 sm:h-32 md:h-36 w-full">
-              <Image
-                src={service.image || "/images/placeholder.jpg"}
-                alt={service.title}
-                fill
-                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 50vw"
-                className="object-cover"
-              />
-            </div>
-
-            {/* Service Content */}
-            <div className="p-3 sm:p-4 flex flex-col h-full">
-              <h2 className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 mb-1 line-clamp-1">
+      {/* Services Grid/List */}
+      {variant === "packages" ? (
+        <div className="space-y-4">
+          {services.map((service) => (
+            <div key={service.slug} className="rounded-lg border border-gray-100 p-3">
+              <h4 className="mb-2 text-sm font-bold text-gray-900">
                 {service.title}
-              </h2>
-              <p className="text-xs sm:text-sm text-gray-600 mb-2 line-clamp-2">
-                {service.desc}
-              </p>
-              <p className="text-xs text-gray-700 mb-3 grow line-clamp-3">
-                {service.details}
-              </p>
+              </h4>
+              <div className="space-y-2">
+                {service.packages.map((pkg) => (
+                  <div
+                    key={pkg.id || pkg._id}
+                    className="flex items-center justify-between gap-3 rounded-md bg-gray-50 p-2"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-xs font-semibold text-gray-900">
+                        {pkg.name}
+                      </p>
+                      <p className="text-xs font-bold text-green-700">
+                        Rs. {pkg.price}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedService(service);
+                        handleBookPackage(pkg);
+                      }}
+                      className="shrink-0 rounded bg-green-600 px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-green-700"
+                    >
+                      Book Now
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      ) : (
+        <div className={`grid ${gridColsClass} gap-5 sm:gap-6`}>
+          {services.map((service) => (
+            <div
+              key={service.slug}
+              className="bg-white rounded-lg shadow-md hover:shadow-xl transition transform hover:-translate-y-1 cursor-pointer overflow-hidden"
+              onClick={() => setSelectedService(service)}
+            >
+              {/* Elegant Image */}
+              <div className="relative h-28 sm:h-32 md:h-36 w-full">
+                <Image
+                  src={service.image || "/images/placeholder.jpg"}
+                  alt={service.title}
+                  fill
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 50vw"
+                  className="object-cover"
+                />
+              </div>
+
+              {/* Service Content */}
+              <div className="p-3 sm:p-4 flex flex-col h-full">
+                <h2 className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 mb-1 line-clamp-1">
+                  {service.title}
+                </h2>
+                <p className="text-xs sm:text-sm text-gray-600 mb-2 line-clamp-2">
+                  {service.desc}
+                </p>
+                <p className="text-xs text-gray-700 mb-3 grow line-clamp-3">
+                  {service.details}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Service Details Modal */}
-      {selectedService && !selectedPackage && (
+      {variant === "cards" && selectedService && !selectedPackage && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-lg max-w-lg w-full p-6 relative max-h-[80vh] overflow-y-auto">
             <button
@@ -254,6 +301,9 @@ export default function ServicesList({
             <button
               onClick={() => {
                 setSelectedPackage(null);
+                if (variant === "packages") {
+                  setSelectedService(null);
+                }
                 setBookingMessage(null);
               }}
               className="absolute top-3 right-3 text-gray-500 hover:text-red-600"

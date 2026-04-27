@@ -1,8 +1,12 @@
 "use client";
 
 import React from "react";
+import {
+  CheckCircleIcon,
+  ExclamationTriangleIcon,
+  MapPinIcon,
+} from "@heroicons/react/24/outline";
 import { useAddressInput, AddressData } from "@/hooks/useAddressInput";
-import { MapPinIcon } from "@heroicons/react/24/outline";
 
 interface AddressInputProps {
   onAddressChange: (address: AddressData) => void;
@@ -30,30 +34,30 @@ export const AddressInput: React.FC<AddressInputProps> = ({
   } = useAddressInput(initialAddress);
 
   const handlePincodeChange = async (
-    e: React.ChangeEvent<HTMLInputElement>,
+    event: React.ChangeEvent<HTMLInputElement>,
   ) => {
-    const value = e.target.value;
+    const value = event.target.value;
     updateAddress({ pincode: value });
 
-    if (value.length === 6) {
+    if (value.replace(/\D/g, "").length === 6) {
       await updatePincodeAndFetch(value);
     }
   };
 
   const handleAddressChange = (
-    e: React.ChangeEvent<
+    event: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
     >,
     field: keyof AddressData,
   ) => {
-    const value = e.target.value;
+    const value = event.target.value;
     updateAddress({ [field]: value });
     onAddressChange({ ...address, [field]: value });
   };
 
   const handleGetCurrentLocation = async () => {
-    await getCurrentLocationAddress();
     setError(null);
+    await getCurrentLocationAddress();
   };
 
   React.useEffect(() => {
@@ -62,9 +66,8 @@ export const AddressInput: React.FC<AddressInputProps> = ({
 
   return (
     <div className={`space-y-4 ${className}`}>
-      {/* Pincode Input */}
-      <div className="form-group">
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+      <div className="rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm">
+        <label className="mb-2 block text-sm font-semibold text-gray-800">
           Pincode *
         </label>
         <div className="flex gap-2">
@@ -75,84 +78,88 @@ export const AddressInput: React.FC<AddressInputProps> = ({
             value={address.pincode}
             onChange={handlePincodeChange}
             maxLength={6}
+            autoComplete="postal-code"
             disabled={loading}
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100"
+            className="h-12 flex-1 rounded-xl border border-emerald-200 px-4 text-sm font-semibold text-gray-900 shadow-sm transition placeholder:text-gray-400 focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-100 disabled:bg-gray-100"
           />
           {includeCurrentLocation && (
             <button
               type="button"
               onClick={handleGetCurrentLocation}
               disabled={loading}
-              className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:bg-gray-400 flex items-center gap-2"
+              className="inline-flex h-12 items-center gap-2 rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:bg-gray-300"
               title="Use current location"
             >
-              <MapPinIcon className="w-5 h-5" />
-              {loading ? "📍" : ""}
+              {loading ? (
+                <span className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+              ) : (
+                <MapPinIcon className="h-5 w-5" />
+              )}
+              <span className="hidden sm:inline">Current</span>
             </button>
           )}
         </div>
         {loading && (
-          <p className="text-sm text-blue-500 mt-1">Fetching location...</p>
+          <p className="mt-2 text-xs font-medium text-emerald-700">
+            Fetching location details...
+          </p>
         )}
       </div>
 
-      {/* Auto-filled Fields */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="form-group">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div>
+          <label className="mb-2 block text-sm font-semibold text-gray-800">
             City *
           </label>
           <input
             type="text"
             value={address.city}
-            onChange={(e) => handleAddressChange(e, "city")}
+            onChange={(event) => handleAddressChange(event, "city")}
             placeholder="City"
             disabled={loading}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100"
+            className="h-11 w-full rounded-xl border border-gray-200 px-3 text-sm text-gray-900 focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-100 disabled:bg-gray-100"
           />
         </div>
 
-        <div className="form-group">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+        <div>
+          <label className="mb-2 block text-sm font-semibold text-gray-800">
             State *
           </label>
           <input
             type="text"
             value={address.state}
-            onChange={(e) => handleAddressChange(e, "state")}
+            onChange={(event) => handleAddressChange(event, "state")}
             placeholder="State"
             disabled={loading}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100"
+            className="h-11 w-full rounded-xl border border-gray-200 px-3 text-sm text-gray-900 focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-100 disabled:bg-gray-100"
           />
         </div>
       </div>
 
-      {/* Full Address */}
-      <div className="form-group">
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+      <div>
+        <label className="mb-2 block text-sm font-semibold text-gray-800">
           Full Address *
         </label>
         <textarea
           value={address.address}
-          onChange={(e) => handleAddressChange(e, "address")}
-          placeholder="Street address, house number, etc."
+          onChange={(event) => handleAddressChange(event, "address")}
+          placeholder="Street address, house number, landmark"
           disabled={loading}
           rows={3}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100"
+          className="w-full rounded-xl border border-gray-200 px-3 py-3 text-sm text-gray-900 focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-100 disabled:bg-gray-100"
         />
       </div>
 
-      {/* Label (Home, Office, etc.) */}
       {includeLabel && (
-        <div className="form-group">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+        <div>
+          <label className="mb-2 block text-sm font-semibold text-gray-800">
             Address Label
           </label>
           <select
             value={address.label || ""}
-            onChange={(e) => handleAddressChange(e, "label")}
+            onChange={(event) => handleAddressChange(event, "label")}
             disabled={loading}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100"
+            className="h-11 w-full rounded-xl border border-gray-200 px-3 text-sm text-gray-900 focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-100 disabled:bg-gray-100"
           >
             <option value="">Select label</option>
             <option value="Home">Home</option>
@@ -162,17 +169,19 @@ export const AddressInput: React.FC<AddressInputProps> = ({
         </div>
       )}
 
-      {/* Error Message */}
       {error && (
-        <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded-md text-sm">
-          {error}
+        <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700">
+          <ExclamationTriangleIcon className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{error}</span>
         </div>
       )}
 
-      {/* Success Message */}
       {address.city && address.state && !loading && !error && (
-        <div className="p-3 bg-green-100 border border-green-400 text-green-700 rounded-md text-sm">
-          ✓ Location verified: {address.city}, {address.state}
+        <div className="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-medium text-emerald-700">
+          <CheckCircleIcon className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>
+            Location verified: {address.city}, {address.state}
+          </span>
         </div>
       )}
     </div>

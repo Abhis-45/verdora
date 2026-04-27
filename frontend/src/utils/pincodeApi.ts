@@ -24,6 +24,9 @@ export type ApiPostalResponse = {
   }>;
 };
 
+const getBackendUrl = () =>
+  process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+
 /**
  * Fetch location details from pincode using Postal Pincode API
  * Also attempts to use backend endpoint for caching
@@ -32,7 +35,7 @@ const fetchFromBackendPincodeEndpoint = async (
   pincode: string,
 ): Promise<PincodeData | null> => {
   try {
-    const response = await fetch(`/api/pincode/${pincode}`, {
+    const response = await fetch(`${getBackendUrl()}/api/pincode/${pincode}`, {
       method: "GET",
       headers: { "Content-Type": "application/json" },
     });
@@ -56,45 +59,27 @@ export const fetchLocationFromPincode = async (
     const normalized = pincode.replace(/\D/g, "").slice(0, 6);
 
     if (!/^\d{6}$/.test(normalized)) {
-      console.warn("Invalid pincode format:", normalized);
       return null;
     }
 
-    console.log("fetchLocationFromPincode: Trying backend for:", normalized);
-    // Try backend endpoint first (has caching)
     const backendResult = await fetchFromBackendPincodeEndpoint(normalized);
     if (backendResult) {
-      console.log(
-        "fetchLocationFromPincode: Got result from backend:",
-        backendResult,
-      );
       return backendResult;
     }
 
-    console.log(
-      "fetchLocationFromPincode: Backend failed, trying direct API for:",
-      normalized,
-    );
-    // Fall back to direct API call
     const response = await fetch(
       `https://api.postalpincode.in/pincode/${normalized}`,
     );
 
     if (!response.ok) {
-      console.warn(
-        "fetchLocationFromPincode: Direct API returned non-ok status:",
-        response.status,
-      );
       return null;
     }
 
     let data: any = await response.json();
-    console.log("fetchLocationFromPincode: Direct API raw response:", data);
 
     // Handle array-wrapped response from API
     if (Array.isArray(data) && data.length > 0) {
       data = data[0];
-      console.log("fetchLocationFromPincode: Unwrapped array response:", data);
     }
 
     // API returns Status 0 for invalid pincode, 404 for not found
@@ -104,7 +89,6 @@ export const fetchLocationFromPincode = async (
       !data.PostOffice ||
       data.PostOffice.length === 0
     ) {
-      console.warn("fetchLocationFromPincode: Invalid response data:", data);
       return null;
     }
 
@@ -119,7 +103,6 @@ export const fetchLocationFromPincode = async (
       message: data.Message,
     };
 
-    console.log("fetchLocationFromPincode: Returning result:", result);
     return result;
   } catch (error) {
     console.error("Error fetching pincode data:", error);

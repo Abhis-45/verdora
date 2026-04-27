@@ -86,28 +86,9 @@ export default function ProductsPages() {
 
         let apiUrl = `${BACKEND_URL}/api/products`;
 
-        // Build API URL based on query parameters
+        // Discount and sale filters need backend-computed fields/order.
         if (filter && typeof filter === "string") {
-          // Use main products endpoint with filter
           apiUrl = `${BACKEND_URL}/api/products?filter=${encodeURIComponent(filter)}`;
-        } else if (category && typeof category === "string") {
-          apiUrl = `${BACKEND_URL}/api/products/featured/by-category/${encodeURIComponent(category)}`;
-        } else if (color && typeof color === "string") {
-          apiUrl = `${BACKEND_URL}/api/products/featured/by-color?color=${encodeURIComponent(color)}`;
-        } else if (size && typeof size === "string") {
-          apiUrl = `${BACKEND_URL}/api/products/featured/by-size?size=${encodeURIComponent(size)}`;
-        } else if (priceRange && typeof priceRange === "string") {
-          // Parse price range (e.g., "0-199", "1000-above")
-          const rangeParts = (priceRange as string).split("-");
-          const minPrice = parseInt(rangeParts[0]) || 0;
-          const maxPrice =
-            rangeParts[1] === "above"
-              ? 100000
-              : parseInt(rangeParts[1]) || 10000;
-          apiUrl = `${BACKEND_URL}/api/products/featured/by-price?min=${minPrice}&max=${maxPrice}`;
-        } else if (urlTag && typeof urlTag === "string") {
-          // For tags, use the characteristics endpoint
-          apiUrl = `${BACKEND_URL}/api/products/featured/by-characteristics?characteristics=${encodeURIComponent(urlTag)}`;
         }
 
         const response = (await Promise.race([
@@ -153,17 +134,38 @@ export default function ProductsPages() {
     if (category && typeof category === "string") {
       setCategoryFilter(category);
       setTagFilter("All Tags");
+    } else {
+      setCategoryFilter("All Categories");
     }
     if (urlTag && typeof urlTag === "string") {
       setTagFilter(urlTag);
       if (!category) setCategoryFilter("All Categories");
+    } else {
+      setTagFilter("All Tags");
+    }
+    if (size && typeof size === "string") {
+      setSizeFilter(size);
+    } else {
+      setSizeFilter("All Sizes");
+    }
+    if (priceRange && typeof priceRange === "string") {
+      const [min, max] = priceRange.split("-");
+      const label =
+        max === "above"
+          ? `â‚¹${min}+`
+          : `â‚¹${min} - â‚¹${max}`;
+      setPriceRangeFilter(label);
+    } else {
+      setPriceRangeFilter("All Prices");
     }
     if (search && typeof search === "string") {
       setSearchQuery(search);
+    } else {
+      setSearchQuery("");
     }
     // Reset pagination when filters change
     setDisplayedCount(PRODUCTS_PER_PAGE);
-  }, [category, urlTag, search]);
+  }, [category, priceRange, search, size, urlTag]);
 
   // Calculate available sizes
   const availableSizes = useMemo(() => {
@@ -201,6 +203,27 @@ export default function ProductsPages() {
     ],
     [products],
   );
+  const productCategories = useMemo(
+    () => categories.filter((option) => option !== "All Categories"),
+    [categories],
+  );
+
+  const handleCategorySelect = (nextCategory: string) => {
+    setCategoryFilter(nextCategory);
+    setTagFilter("All Tags");
+    setDisplayedCount(PRODUCTS_PER_PAGE);
+
+    if (nextCategory === "All Categories") {
+      router.push("/products", undefined, { shallow: true });
+      return;
+    }
+
+    router.push(
+      `/products?category=${encodeURIComponent(nextCategory)}`,
+      undefined,
+      { shallow: true },
+    );
+  };
 
   const availableTags = useMemo(
     () =>
@@ -237,6 +260,12 @@ export default function ProductsPages() {
         product.category === categoryFilter;
       const tagMatch =
         tagFilter === "All Tags" || (product.tags || []).includes(tagFilter);
+      const colorMatch =
+        !color ||
+        typeof color !== "string" ||
+        (product.tags || []).some((tag) =>
+          tag.toLowerCase().includes(color.toLowerCase()),
+        );
       const searchMatch =
         !searchQuery ||
         product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -258,7 +287,12 @@ export default function ProductsPages() {
       }
 
       return (
-        categoryMatch && tagMatch && searchMatch && priceMatch && sizeMatch
+        categoryMatch &&
+        tagMatch &&
+        colorMatch &&
+        searchMatch &&
+        priceMatch &&
+        sizeMatch
       );
     });
 
@@ -271,6 +305,7 @@ export default function ProductsPages() {
     });
   }, [
     categoryFilter,
+    color,
     products,
     searchQuery,
     sortBy,
@@ -353,6 +388,34 @@ export default function ProductsPages() {
               </p>
             </div>
 
+            <div className="mb-6 flex gap-2 overflow-x-auto pb-2">
+              <button
+                type="button"
+                onClick={() => handleCategorySelect("All Categories")}
+                className={`shrink-0 rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                  categoryFilter === "All Categories"
+                    ? "border-green-600 bg-green-600 text-white"
+                    : "border-green-200 bg-white text-green-700 hover:border-green-400 hover:bg-green-50"
+                }`}
+              >
+                All
+              </button>
+              {productCategories.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => handleCategorySelect(option)}
+                  className={`shrink-0 rounded-full border px-4 py-2 text-sm font-semibold capitalize transition ${
+                    categoryFilter === option
+                      ? "border-green-600 bg-green-600 text-white"
+                      : "border-green-200 bg-white text-green-700 hover:border-green-400 hover:bg-green-50"
+                  }`}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+
             {/* Compact Filter Controls */}
             <div className="mt-4 space-y-2">
               <button
@@ -379,9 +442,7 @@ export default function ProductsPages() {
                       <select
                         value={categoryFilter}
                         onChange={(event) => {
-                          setCategoryFilter(event.target.value);
-                          setTagFilter("All Tags");
-                          setDisplayedCount(PRODUCTS_PER_PAGE);
+                          handleCategorySelect(event.target.value);
                         }}
                         className="rounded border border-green-200 bg-green-50 px-2.5 py-1.5 text-xs text-green-700 transition hover:bg-green-100 focus:border-green-400 focus:outline-none focus:ring-1 focus:ring-green-400"
                       >

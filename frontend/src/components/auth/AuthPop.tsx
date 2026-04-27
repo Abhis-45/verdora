@@ -253,7 +253,14 @@ export default function AuthPopup({
   };
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-transparent bg-opacity-50 z-50 px-4 py-6">
+    <div
+      className="fixed inset-0 flex items-center justify-center bg-transparent bg-opacity-50 z-50 px-4 py-6"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose();
+        }
+      }}
+    >
       <div className="bg-green-900 p-6 sm:p-8 rounded-lg shadow-lg w-full sm:w-96 max-h-96 overflow-y-auto relative">
         {/* Close Button */}
         <button

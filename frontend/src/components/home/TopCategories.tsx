@@ -20,7 +20,7 @@ interface DisplayCategory {
 }
 
 export default function TopCategories() {
-  const [randomCategories, setRandomCategories] = useState<DisplayCategory[]>(
+  const [categories, setCategories] = useState<DisplayCategory[]>(
     [],
   );
   const [isLoading, setIsLoading] = useState(true);
@@ -52,29 +52,22 @@ export default function TopCategories() {
 
       const categoriesData = (await response.json()) as CategoryResponse[];
 
-      // Shuffle and select top categories
-      const catCopy = [...categoriesData];
-      for (let i = catCopy.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [catCopy[i], catCopy[j]] = [catCopy[j], catCopy[i]];
-      }
-
-      const randomCats = catCopy.slice(0, 4).map((cat) => ({
+      const allCategories = categoriesData.map((cat) => ({
         title: cat.name,
         img: cat.image || null,
         desc: `${cat.count} products in ${cat.name}`,
       }));
 
-      setRandomCategories(randomCats);
+      setCategories(allCategories);
     } catch {
-      setRandomCategories([]);
+      setCategories([]);
     } finally {
       setIsLoading(false);
       setIsHydrated(true);
     }
   };
 
-  if (!isHydrated || randomCategories.length === 0) return null;
+  if (!isHydrated || categories.length === 0) return null;
 
   return (
     <section className="mb-8 sm:mb-10">
@@ -107,7 +100,7 @@ export default function TopCategories() {
           }}
           className="-mx-4 px-4 custom-swiper"
         >
-          {randomCategories.map((c) => (
+          {categories.map((c) => (
             <SwiperSlide key={c.title} className="h-auto!">
               <div className="w-full">
                 <CategoryCard {...c} />
