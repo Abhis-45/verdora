@@ -53,6 +53,19 @@ const normalizeProductPayload = (payload = {}) => {
   };
 };
 
+const getDiscountPercentageExpression = () => ({
+  $cond: [
+    { $gt: ["$mrp", 0] },
+    {
+      $multiply: [
+        { $divide: [{ $subtract: ["$mrp", "$price"] }, "$mrp"] },
+        100,
+      ],
+    },
+    0,
+  ],
+});
+
 router.post(
   "/upload",
   createRoleMiddleware(["admin", "vendor"], {
@@ -311,8 +324,9 @@ router.get("/featured/premium", async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 8;
 
+    // Only include products that have the exact "premium" tag
     const products = await Product.find({
-      $or: [{ tags: { $in: ["premium", "rare"] } }, { mrp: { $gt: 500 } }],
+      tags: { $in: ["premium"] },
     })
       .select("-createdBy")
       .sort({ mrp: -1 })
@@ -374,9 +388,74 @@ router.get("/featured/corporate", async (req, res) => {
 
 router.get("/", async (req, res) => {
   try {
-    const products = await Product.find()
-      .select("-createdBy")
-      .sort({ createdAt: -1 });
+    let query = {};
+    let sortOption = { createdAt: -1 };
+    let useAggregation = false;
+
+    // Handle filter query parameter
+    if (req.query.filter) {
+      const filter = req.query.filter;
+
+      if (filter.includes('discountPercentage>')) {
+        // Filter for discount percentage greater than a value
+        const minDiscount = parseInt(filter.split('>')[1]);
+        query = {
+          $expr: {
+            $gt: [getDiscountPercentageExpression(), minDiscount],
+          },
+        };
+        // Also sort by discount percentage high to low
+        useAggregation = true;
+      } else if (filter === 'discountPercentagehigh-to-low') {
+        // Sort by discount percentage high to low - use aggregation
+        useAggregation = true;
+      }
+    }
+
+    // Handle tag filter
+    if (req.query.tag) {
+      query.tags = { $in: [req.query.tag] };
+    }
+
+    const limit = parseInt(req.query.limit) || 0; // 0 means no limit
+
+    let products;
+
+    if (useAggregation) {
+      // Use aggregation pipeline for sorting by discount percentage
+      const pipeline = [
+        { $match: query },
+        {
+          $addFields: {
+            discountSortValue: getDiscountPercentageExpression(),
+            discountPercentage: {
+              $round: [getDiscountPercentageExpression(), 0],
+            },
+          },
+        },
+        { $sort: { discountSortValue: -1, createdAt: -1 } },
+        { $project: { createdBy: 0, discountSortValue: 0 } } // Exclude private/internal fields
+      ];
+
+      if (limit > 0) {
+        pipeline.push({ $limit: limit });
+      }
+
+      products = await Product.aggregate(pipeline);
+    } else {
+      let productsQuery = Product.find(query).select("-createdBy");
+
+      if (Object.keys(sortOption).length > 0) {
+        productsQuery = productsQuery.sort(sortOption);
+      }
+
+      if (limit > 0) {
+        productsQuery = productsQuery.limit(limit);
+      }
+
+      products = await productsQuery;
+    }
+
     res.json(products);
   } catch (err) {
     res
@@ -455,7 +534,7 @@ router.post("/", vendorAuthMiddleware, async (req, res) => {
   try {
     // Fetch vendor's profile to get their business location
     const vendor = await Vendor.findById(req.vendorId);
-    
+
     // Build originAddress from vendor's business location or use default
     let originAddress = DEFAULT_ORIGIN_ADDRESS;
     if (vendor && vendor.businessLocation) {
@@ -509,100 +588,100 @@ router.patch(
     const payload = normalizeProductPayload(req.body);
     const { id } = req.params;
 
-  try {
-    // Validate the ID format
-    if (!id || id === "NaN" || id === "undefined") {
-      return res.status(400).json({ message: "Invalid product ID" });
-    }
-
-    let product = null;
-
-    // Try to find by MongoDB ObjectId first
-    if (isValidObjectId(id)) {
-      product = await Product.findById(id);
-    }
-
-    // If not found by ObjectId, try to find by custom 'id' field
-    if (!product) {
-      product = await Product.findOne({ id: id });
-    }
-
-    if (!product) {
-      return res.status(404).json({ message: "Product not found" });
-    }
-
-    // Authorization check
-    if (req.userRole === "vendor") {
-      // For vendors: verify they own this product
-      const productVendorId = product.vendorId?.toString() || product.vendorId;
-      const requestVendorId = req.userId?.toString() || req.userId;
-      
-      if (!product.vendorId || productVendorId !== requestVendorId) {
-        return res
-          .status(403)
-          .json({ message: "You can only update your own products" });
+    try {
+      // Validate the ID format
+      if (!id || id === "NaN" || id === "undefined") {
+        return res.status(400).json({ message: "Invalid product ID" });
       }
-    } else if (req.userRole !== "admin") {
-      return res.status(403).json({ message: "Unauthorized" });
-    }
 
-    // Validate MRP >= Price if either is being updated
-    const newPrice = payload.price !== undefined ? payload.price : product.price;
-    const newMrp = payload.mrp !== undefined ? payload.mrp : product.mrp;
-    
-    if (newMrp < newPrice) {
-      return res.status(400).json({
-        message: "MRP must be greater than or equal to Price",
+      let product = null;
+
+      // Try to find by MongoDB ObjectId first
+      if (isValidObjectId(id)) {
+        product = await Product.findById(id);
+      }
+
+      // If not found by ObjectId, try to find by custom 'id' field
+      if (!product) {
+        product = await Product.findOne({ id: id });
+      }
+
+      if (!product) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+
+      // Authorization check
+      if (req.userRole === "vendor") {
+        // For vendors: verify they own this product
+        const productVendorId = product.vendorId?.toString() || product.vendorId;
+        const requestVendorId = req.userId?.toString() || req.userId;
+
+        if (!product.vendorId || productVendorId !== requestVendorId) {
+          return res
+            .status(403)
+            .json({ message: "You can only update your own products" });
+        }
+      } else if (req.userRole !== "admin") {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      // Validate MRP >= Price if either is being updated
+      const newPrice = payload.price !== undefined ? payload.price : product.price;
+      const newMrp = payload.mrp !== undefined ? payload.mrp : product.mrp;
+
+      if (newMrp < newPrice) {
+        return res.status(400).json({
+          message: "MRP must be greater than or equal to Price",
+        });
+      }
+
+      const allowedFields = [
+        "name",
+        "category",
+        "price",
+        "mrp",
+        "image",
+        "description",
+        "tags",
+        "brand",
+        "images",
+        "cloudinaryPublicId",
+        "plantSizes",
+      ];
+
+      allowedFields.forEach((field) => {
+        if (payload[field] !== undefined) {
+          product[field] = payload[field];
+        }
       });
-    }
 
-    const allowedFields = [
-      "name",
-      "category",
-      "price",
-      "mrp",
-      "image",
-      "description",
-      "tags",
-      "brand",
-      "images",
-      "cloudinaryPublicId",
-      "plantSizes",
-    ];
-
-    allowedFields.forEach((field) => {
-      if (payload[field] !== undefined) {
-        product[field] = payload[field];
+      // For vendors: auto-populate originAddress from their profile
+      if (req.userRole === "vendor") {
+        const vendor = await Vendor.findById(req.userId);
+        if (vendor && vendor.businessLocation) {
+          product.originAddress = {
+            address: vendor.businessLocation,
+            city: DEFAULT_ORIGIN_ADDRESS.city,
+            state: DEFAULT_ORIGIN_ADDRESS.state,
+            pincode: DEFAULT_ORIGIN_ADDRESS.pincode,
+            country: DEFAULT_ORIGIN_ADDRESS.country,
+          };
+        }
       }
-    });
 
-    // For vendors: auto-populate originAddress from their profile
-    if (req.userRole === "vendor") {
-      const vendor = await Vendor.findById(req.userId);
-      if (vendor && vendor.businessLocation) {
-        product.originAddress = {
-          address: vendor.businessLocation,
-          city: DEFAULT_ORIGIN_ADDRESS.city,
-          state: DEFAULT_ORIGIN_ADDRESS.state,
-          pincode: DEFAULT_ORIGIN_ADDRESS.pincode,
-          country: DEFAULT_ORIGIN_ADDRESS.country,
-        };
-      }
+      product.updatedAt = new Date();
+      await product.save();
+
+      res.json({
+        message: "Product updated successfully",
+        product,
+      });
+    } catch (err) {
+      res
+        .status(500)
+        .json({ message: "Failed to update product", error: err.message });
     }
-
-    product.updatedAt = new Date();
-    await product.save();
-
-    res.json({
-      message: "Product updated successfully",
-      product,
-    });
-  } catch (err) {
-    res
-      .status(500)
-      .json({ message: "Failed to update product", error: err.message });
-  }
-});
+  });
 
 router.delete(
   "/:id",
@@ -612,64 +691,64 @@ router.delete(
   async (req, res) => {
     const { id } = req.params;
 
-  try {
-    // Validate the ID format
-    if (!id || id === "NaN" || id === "undefined") {
-      return res.status(400).json({ message: "Invalid product ID" });
-    }
-
-    let product = null;
-
-    // Try to find by MongoDB ObjectId first
-    if (isValidObjectId(id)) {
-      product = await Product.findById(id);
-    }
-
-    // If not found by ObjectId, try to find by custom 'id' field
-    if (!product) {
-      product = await Product.findOne({ id: id });
-    }
-
-    if (!product) {
-      return res.status(404).json({ message: "Product not found" });
-    }
-
-    let isAuthorized = req.userRole === "admin";
-    if (
-      req.userRole === "vendor" &&
-      product.vendorId &&
-      product.vendorId.toString() === req.userId
-    ) {
-      isAuthorized = true;
-    }
-
-    if (!isAuthorized) {
-      return res
-        .status(403)
-        .json({ message: "You can only delete your own products" });
-    }
-
     try {
-      if (product.cloudinaryPublicId) {
-        await deleteFromCloudinary(product.cloudinaryPublicId);
+      // Validate the ID format
+      if (!id || id === "NaN" || id === "undefined") {
+        return res.status(400).json({ message: "Invalid product ID" });
       }
 
-      if (product.images?.length) {
-        for (const image of product.images) {
-          if (image.publicId) {
-            await deleteFromCloudinary(image.publicId);
+      let product = null;
+
+      // Try to find by MongoDB ObjectId first
+      if (isValidObjectId(id)) {
+        product = await Product.findById(id);
+      }
+
+      // If not found by ObjectId, try to find by custom 'id' field
+      if (!product) {
+        product = await Product.findOne({ id: id });
+      }
+
+      if (!product) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+
+      let isAuthorized = req.userRole === "admin";
+      if (
+        req.userRole === "vendor" &&
+        product.vendorId &&
+        product.vendorId.toString() === req.userId
+      ) {
+        isAuthorized = true;
+      }
+
+      if (!isAuthorized) {
+        return res
+          .status(403)
+          .json({ message: "You can only delete your own products" });
+      }
+
+      try {
+        if (product.cloudinaryPublicId) {
+          await deleteFromCloudinary(product.cloudinaryPublicId);
+        }
+
+        if (product.images?.length) {
+          for (const image of product.images) {
+            if (image.publicId) {
+              await deleteFromCloudinary(image.publicId);
+            }
           }
         }
-      }
-    } catch (cloudinaryErr) {}
+      } catch (cloudinaryErr) { }
 
-    await product.deleteOne();
-    res.json({ message: "Product and images deleted successfully" });
-  } catch (err) {
-    res
-      .status(500)
-      .json({ message: "Failed to delete product", error: err.message });
-  }
-});
+      await product.deleteOne();
+      res.json({ message: "Product and images deleted successfully" });
+    } catch (err) {
+      res
+        .status(500)
+        .json({ message: "Failed to delete product", error: err.message });
+    }
+  });
 
 export default router;

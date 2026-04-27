@@ -65,6 +65,7 @@ export default function ProductsPages() {
     color,
     size,
     priceRange,
+    filter,
   } = router.query;
 
   useEffect(() => {
@@ -86,7 +87,10 @@ export default function ProductsPages() {
         let apiUrl = `${BACKEND_URL}/api/products`;
 
         // Build API URL based on query parameters
-        if (category && typeof category === "string") {
+        if (filter && typeof filter === "string") {
+          // Use main products endpoint with filter
+          apiUrl = `${BACKEND_URL}/api/products?filter=${encodeURIComponent(filter)}`;
+        } else if (category && typeof category === "string") {
           apiUrl = `${BACKEND_URL}/api/products/featured/by-category/${encodeURIComponent(category)}`;
         } else if (color && typeof color === "string") {
           apiUrl = `${BACKEND_URL}/api/products/featured/by-color?color=${encodeURIComponent(color)}`;
@@ -143,7 +147,7 @@ export default function ProductsPages() {
     if (router.isReady) {
       fetchProducts();
     }
-  }, [category, color, size, priceRange, urlTag, router.isReady]);
+  }, [category, color, size, priceRange, urlTag, filter, router.isReady]);
 
   useEffect(() => {
     if (category && typeof category === "string") {

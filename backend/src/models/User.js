@@ -55,6 +55,40 @@ const orderImageSchema = new mongoose.Schema(
   { _id: false },
 );
 
+const plantSizeWithPotSchema = new mongoose.Schema(
+  {
+    id: String,
+    label: String,
+    price: Number,
+    mrp: Number,
+    potPrice: Number,
+    potMrp: Number,
+    includePotByDefault: Boolean,
+  },
+  { _id: false },
+);
+
+const cartItemSchema = new mongoose.Schema(
+  {
+    productId: { type: String, required: true },
+    name: { type: String, required: true },
+    price: { type: Number, required: true },
+    mrp: { type: Number, required: true },
+    quantity: { type: Number, required: true, min: 1 },
+    image: { type: String },
+    category: { type: String },
+    tags: [{ type: String }],
+    vendorName: { type: String },
+    selectedSize: plantSizeWithPotSchema,
+    plantSizes: [plantSizeWithPotSchema],
+    originAddress: addressSnapshotSchema,
+    deliveryEstimate: deliveryEstimateSchema,
+    includePot: { type: Boolean, default: false },
+    cartKey: { type: String }
+  },
+  { _id: false },
+);
+
 const userSchema = new mongoose.Schema(
   {
     name: { type: String },
@@ -76,6 +110,7 @@ const userSchema = new mongoose.Schema(
     mobile: { type: String, unique: true, sparse: true },
     email: { type: String, unique: true, sparse: true },
     password: { type: String },
+    cart: [cartItemSchema],
     orders: [
       {
         items: [

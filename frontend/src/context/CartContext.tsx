@@ -6,11 +6,12 @@ import { buildCartKey, PlantSizeOption } from "@/utils/productOptions";
 
 type CartContextType = {
   cartItems: ProductItem[];
-  addToCart: (product: ProductItem) => void;
-  removeFromCart: (id: number | string) => void;
-  updateQuantity: (id: number | string, newQuantity: number) => void;
-  updateItemSize: (id: number | string, nextSize: PlantSizeOption) => void;
+  addToCart: (product: ProductItem) => Promise<void>;
+  removeFromCart: (id: number | string) => Promise<void>;
+  updateQuantity: (id: number | string, qty: number) => Promise<void>;
+  updateItemSize: (id: number | string, size: PlantSizeOption) => Promise<void>;
   clearCart: () => void;
+  syncCartFromBackend: () => Promise<void>;
 };
 
 const CartContext = createContext<CartContextType | null>(null);
@@ -38,7 +39,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
   }, [cartItems]);
 
   // ✅ Add product to cart
-  const addToCart = (product: ProductItem) => {
+  const addToCart = async (product: ProductItem) => {
     setCartItems((prev) => {
       const productKey = getItemKey(product);
       const existing = prev.find((item) => getItemKey(item) === productKey);
@@ -58,17 +59,51 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
         },
       ];
     });
+
+    // Sync with backend if user is logged in
+    try {
+      const token = localStorage.getItem("token");
+      if (token) {
+        const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+        await fetch(`${BACKEND_URL}/api/cart`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`,
+          },
+          body: JSON.stringify(product),
+        });
+      }
+    } catch (error) {
+      console.error("Failed to sync cart with backend:", error);
+    }
   };
 
   // ✅ Remove product from cart
-  const removeFromCart = (id: number | string) => {
+  const removeFromCart = async (id: number | string) => {
     setCartItems((prev) =>
       prev.filter((item) => getItemKey(item) !== String(id) && item.id !== id),
     );
+
+    // Sync with backend if user is logged in
+    try {
+      const token = localStorage.getItem("token");
+      if (token) {
+        const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+        await fetch(`${BACKEND_URL}/api/cart/${id}`, {
+          method: "DELETE",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+          },
+        });
+      }
+    } catch (error) {
+      console.error("Failed to sync cart removal with backend:", error);
+    }
   };
 
   // ✅ Update product quantity
-  const updateQuantity = (id: number | string, newQuantity: number) => {
+  const updateQuantity = async (id: number | string, newQuantity: number) => {
     setCartItems((prev) =>
       prev.map((item) =>
         getItemKey(item) === String(id) || item.id === id
@@ -76,9 +111,30 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
           : item,
       ),
     );
+
+    // Sync with backend if user is logged in
+    try {
+      const token = localStorage.getItem("token");
+      if (token) {
+        const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+        await fetch(`${BACKEND_URL}/api/cart/${id}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`,
+          },
+          body: JSON.stringify({ quantity: newQuantity }),
+        });
+      }
+    } catch (error) {
+      console.error("Failed to sync cart quantity with backend:", error);
+    }
   };
 
-  const updateItemSize = (id: number | string, nextSize: PlantSizeOption) => {
+  const updateItemSize = async (id: number | string, nextSize: PlantSizeOption) => {
+    let nextKey: string = "";
+    let includePot: boolean = false;
+
     setCartItems((prev) => {
       const currentItem = prev.find(
         (item) => getItemKey(item) === String(id) || item.id === id,
@@ -88,11 +144,20 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
         return prev;
       }
 
-      const nextKey = buildCartKey(
-        currentItem.productId || currentItem.id || "",
-        nextSize.id,
-        nextSize.label,
-      );
+      // If the item has pot selected but the new size doesn't support pot, disable pot
+      includePot = currentItem.includePot && nextSize.potPrice && nextSize.potPrice > 0 ? currentItem.includePot : false;
+
+      // Calculate final price including pot if applicable
+      const finalPrice = includePot && nextSize.potPrice
+        ? nextSize.price + nextSize.potPrice
+        : nextSize.price;
+      const finalMrp = includePot && nextSize.potMrp
+        ? nextSize.mrp + (nextSize.potMrp || 0)
+        : nextSize.mrp;
+
+      nextKey = includePot
+        ? buildCartKey(currentItem.productId || currentItem.id || "", nextSize.id, nextSize.label) + "::with-pot"
+        : buildCartKey(currentItem.productId || currentItem.id || "", nextSize.id, nextSize.label);
 
       const remainingItems = prev.filter(
         (item) => getItemKey(item) !== String(id) && item.id !== id,
@@ -115,11 +180,53 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
           ...currentItem,
           cartKey: nextKey,
           selectedSize: nextSize,
-          price: nextSize.price,
-          mrp: nextSize.mrp,
+          price: finalPrice,
+          mrp: finalMrp,
+          includePot,
         },
       ];
     });
+
+    // Sync with backend if user is logged in
+    try {
+      const token = localStorage.getItem("token");
+      if (token) {
+        const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+        await fetch(`${BACKEND_URL}/api/cart/${nextKey}/size`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`,
+          },
+          body: JSON.stringify({ nextSize, includePot }),
+        });
+      }
+    } catch (error) {
+      console.error("Failed to sync cart size update with backend:", error);
+    }
+  };
+
+  // ✅ Sync cart from backend
+  const syncCartFromBackend = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (token) {
+        const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+        const response = await fetch(`${BACKEND_URL}/api/cart`, {
+          headers: {
+            "Authorization": `Bearer ${token}`,
+          },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.cart) {
+            setCartItems(data.cart);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Failed to sync cart from backend:", error);
+    }
   };
 
   // ✅ Clear cart
@@ -136,6 +243,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
         updateQuantity,
         updateItemSize,
         clearCart,
+        syncCartFromBackend,
       }}
     >
       {children}

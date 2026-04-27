@@ -30,6 +30,7 @@ export type ProductItem = {
   plantSizes?: PlantSizeOption[];
   tags?: string[];
   vendorName?: string;
+  includePot?: boolean;
 };
 
 export type CartContextType = {

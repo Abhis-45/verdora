@@ -486,7 +486,7 @@ export default function AdminDashboard() {
       </header>
 
       {/* TABS */}
-      <nav className="sticky top-10 z-30 border-b-2 border-emerald-200 bg-white shadow-md sm:top-10 lg:top-16">
+      <nav className="sticky top-15 z-30 border-b-2 border-emerald-200 bg-white shadow-md sm:top-10 lg:top-16">
         <div className="mx-auto flex max-w-7xl gap-0 overflow-x-auto px-4 sm:px-6 lg:px-8">
           {(
             ["overview", "orders", "products", "users", "vendors", "admins", "service-requests", "coupons"] as Tab[]

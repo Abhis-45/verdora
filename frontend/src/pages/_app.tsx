@@ -57,17 +57,17 @@ export default function MyApp({ Component, pageProps }: AppProps) {
 
   return (
     <ErrorBoundary>
-      <UserProvider>
-        <DeliveryLocationProvider>
-          <CartProvider>
+      <CartProvider>
+        <UserProvider>
+          <DeliveryLocationProvider>
             <WishlistProvider>
               <RecentlyViewedProvider>
                 <Component {...pageProps} />
               </RecentlyViewedProvider>
             </WishlistProvider>
-          </CartProvider>
-        </DeliveryLocationProvider>
-      </UserProvider>
+          </DeliveryLocationProvider>
+        </UserProvider>
+      </CartProvider>
     </ErrorBoundary>
   );
 }

@@ -22,6 +22,9 @@ interface PremiumPlantsProps {
   products?: ProductItem[];
 }
 
+const hasPremiumTag = (product: ProductItem) =>
+  product.tags?.some((tag) => tag.trim().toLowerCase() === "premium") ?? false;
+
 export default function PremiumPlants({
   products: initialProducts,
 }: PremiumPlantsProps) {
@@ -38,7 +41,8 @@ export default function PremiumPlants({
             typeof window !== "undefined"
               ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
               : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
-          const res = await fetch(`${BACKEND_URL}/api/products/featured/premium?limit=8`);
+          const premiumTag = encodeURIComponent("premium");
+          const res = await fetch(`${BACKEND_URL}/api/products?tag=${premiumTag}&limit=8`);
 
           if (!res.ok) {
             throw new Error("Failed to fetch");
@@ -47,10 +51,12 @@ export default function PremiumPlants({
           const data = await res.json();
 
           // ✅ Normalize IDs to use _id
-          const normalized = data.map((p: any) => ({
-            ...p,
-            id: p._id || p.id,
-          }));
+          const normalized = data
+            .map((p: any) => ({
+              ...p,
+              id: p._id || p.id,
+            }))
+            .filter(hasPremiumTag);
 
           setProducts(normalized);
         } catch (err) {
@@ -64,7 +70,7 @@ export default function PremiumPlants({
     }
   }, [initialProducts]);
 
-  const visibleProducts = products.slice(0, 8);
+  const visibleProducts = products.filter(hasPremiumTag).slice(0, 8);
 
   // Hide section if no products available
   if (!loading && visibleProducts.length === 0) {
@@ -74,9 +80,9 @@ export default function PremiumPlants({
   return (
     <section className="mb-8 sm:mb-10">
       <h2 className="text-lg sm:text-xl font-bold mb-4 sm:mb-6 text-green-700 flex items-center justify-between">
-        Premium Plants
+        Premium Products
         <Link
-          href={`/products?tag=premium`}
+          href={`/products?tag=${encodeURIComponent("premium")}`}
           className="text-green-600 hover:text-green-700 font-medium text-sm sm:text-base flex gap-1 items-center transition"
         >
           View All
@@ -99,7 +105,7 @@ export default function PremiumPlants({
       ) : (
         <>
           {/* Mobile/Tablet Swiper */}
-          <div className="block lg:hidden">
+          <div className="">
             <Swiper
               modules={[Pagination, Autoplay]}
               slidesPerView={1.15}
@@ -119,13 +125,6 @@ export default function PremiumPlants({
                 </SwiperSlide>
               ))}
             </Swiper>
-          </div>
-
-          {/* Desktop Grid */}
-          <div className="hidden lg:grid grid-cols-4 gap-4 sm:gap-5">
-            {visibleProducts.map((p) => (
-              <ProductCard key={p.id} {...p} />
-            ))}
           </div>
         </>
       )}

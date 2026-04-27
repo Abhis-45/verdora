@@ -38,7 +38,7 @@ export default function PlantCareProducts({
             typeof window !== "undefined"
               ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
               : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
-          const res = await fetch(`${BACKEND_URL}/api/products/featured/plant-care?limit=8`);
+          const res = await fetch(`${BACKEND_URL}/api/products?category=fertilizers&limit=8`);
 
           if (!res.ok) {
             throw new Error("Failed to fetch");
@@ -74,7 +74,7 @@ export default function PlantCareProducts({
       <h2 className="text-lg sm:text-xl font-bold mb-4 sm:mb-6 text-green-700 flex items-center justify-between">
         Plant Care Essentials
         <Link
-          href={`/products?tag=care`}
+          href={`/products?category=Fertilizers`}
           className="text-green-600 hover:text-green-700 font-medium text-sm sm:text-base flex gap-1 items-center transition"
         >
           View All
@@ -93,7 +93,7 @@ export default function PlantCareProducts({
       ) : (
         <>
           {/* Mobile/Tablet Swiper */}
-          <div className="block lg:hidden">
+          <div className="">
             <Swiper
               modules={[Pagination, Autoplay]}
               slidesPerView={1.15}
@@ -113,13 +113,6 @@ export default function PlantCareProducts({
                 </SwiperSlide>
               ))}
             </Swiper>
-          </div>
-
-          {/* Desktop Grid */}
-          <div className="hidden lg:grid grid-cols-4 gap-4 sm:gap-5">
-            {visibleProducts.map((p) => (
-              <ProductCard key={p.id} {...p} />
-            ))}
           </div>
         </>
       )}

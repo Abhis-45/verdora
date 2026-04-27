@@ -43,7 +43,7 @@ export default function ErrorFallback({
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-linear-to-br from-red-50 to-orange-50 px-4">
+    <div className="top-0 flex items-center justify-center min-h-screen bg-linear-to-br from-red-50 to-orange-50 px-4">
       <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 text-center">
         {/* Error Icon */}
         <div className="flex justify-center mb-4">

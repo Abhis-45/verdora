@@ -8,6 +8,7 @@ import {
   useEffect,
   ReactNode,
 } from "react";
+import { useCart } from "./CartContext";
 
 interface User {
   _id: string;
@@ -28,6 +29,7 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const { syncCartFromBackend } = useCart();
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
@@ -36,10 +38,12 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  const login = (user: User, token: string) => {
+  const login = async (user: User, token: string) => {
     localStorage.setItem("token", token);
     localStorage.setItem("user", JSON.stringify(user));
     setUser(user);
+    // Sync cart from backend after login
+    await syncCartFromBackend();
   };
 
   const logout = () => {

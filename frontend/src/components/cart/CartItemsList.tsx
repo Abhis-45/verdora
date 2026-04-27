@@ -73,6 +73,11 @@ export default function CartItemsList({
                         Size: {item.selectedSize.label}
                       </span>
                     )}
+                    {item.includePot && (
+                      <span className="block text-xs font-semibold text-amber-700">
+                        With Premium Pot (+₹{item.selectedSize?.potPrice || 0})
+                      </span>
+                    )}
                     {item.plantSizes && item.plantSizes.length > 0 && (
                       <label className="mt-2 block text-xs text-gray-600">
                         <span className="mb-1 block font-semibold text-gray-700">
@@ -95,6 +100,7 @@ export default function CartItemsList({
                           {item.plantSizes.map((size) => (
                             <option key={size.id} value={size.id}>
                               {size.label} - ₹{size.price}
+                              {size.potPrice && size.potPrice > 0 && " (+pot available)"}
                             </option>
                           ))}
                         </select>

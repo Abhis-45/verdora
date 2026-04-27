@@ -146,9 +146,14 @@ export default function ProductDetailPage() {
         product?.mrp || 0,
       );
     });
-    // Reset pot selection when size changes
-    setIncludePot(false);
   }, [plantSizes, product]);
+
+  // Auto-reset pot selection when selected size doesn't support pot pricing
+  useEffect(() => {
+    if (selectedSize && (!selectedSize.potPrice || selectedSize.potPrice <= 0)) {
+      setIncludePot(false);
+    }
+  }, [selectedSize]);
 
   if (isLoading || !router.isReady) {
     return (
@@ -194,8 +199,9 @@ export default function ProductDetailPage() {
     selectedSize.id,
     selectedSize.label,
   );
+  const finalCartKey = includePot ? `${cartKey}::with-pot` : cartKey;
   const cartItem = cartItems.find(
-    (item) => (item.cartKey || String(item.id)) === cartKey,
+    (item) => (item.cartKey || String(item.id)) === finalCartKey,
   );
   const isInWishlist = wishlist.some(
     (entry) =>
@@ -523,7 +529,7 @@ export default function ProductDetailPage() {
                     <div className="hidden lg:block border-t border-gray-200 pt-3">
                       <CartActions
                         cartItem={cartItem}
-                        cartKey={cartKey}
+                        cartKey={finalCartKey}
                         onAddToCart={addCurrentVariantToCart}
                         onUpdateQuantity={updateQuantity}
                         onRemoveFromCart={removeFromCart}
@@ -541,7 +547,7 @@ export default function ProductDetailPage() {
                 <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md p-3 sm:p-4 shadow-lg">
                   <CartActions
                     cartItem={cartItem}
-                    cartKey={cartKey}
+                    cartKey={finalCartKey}
                     onAddToCart={addCurrentVariantToCart}
                     onUpdateQuantity={updateQuantity}
                     onRemoveFromCart={removeFromCart}

@@ -12,11 +12,30 @@ interface DiscountProduct {
   id: string;
   name: string;
   price: number;
+  mrp?: number;
   originalPrice?: number;
   discountPercentage?: number;
   image: string;
   [key: string]: any;
 }
+
+const getDiscountPercentage = (product: DiscountProduct) => {
+  const mrp = Number(product.mrp);
+  const price = Number(product.price);
+
+  if (Number.isFinite(mrp) && Number.isFinite(price) && mrp > 0) {
+    return ((mrp - price) / mrp) * 100;
+  }
+
+  if (
+    typeof product.discountPercentage === "number" &&
+    Number.isFinite(product.discountPercentage)
+  ) {
+    return product.discountPercentage;
+  }
+
+  return 0;
+};
 
 export default function DiscountSaleProducts() {
   const [discountProducts, setDiscountProducts] = useState<DiscountProduct[]>(
@@ -39,7 +58,8 @@ export default function DiscountSaleProducts() {
         typeof window !== "undefined"
           ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
           : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
-      const fetchPromise = fetch(`${BACKEND_URL}/api/products/featured/discount?limit=8`, {
+      const discountFilter = encodeURIComponent("discountPercentage>50");
+      const fetchPromise = fetch(`${BACKEND_URL}/api/products?filter=${discountFilter}&limit=8`, {
         method: "GET",
         headers: { "Content-Type": "application/json" },
       });
@@ -59,6 +79,15 @@ export default function DiscountSaleProducts() {
           .map((p: any) => ({
             ...p,
             id: p._id || p.id,
+            discountSortValue: getDiscountPercentage(p),
+          }))
+          .filter((p: any) => p.discountSortValue > 50)
+          .sort(
+            (a: any, b: any) => b.discountSortValue - a.discountSortValue,
+          )
+          .map((p: any) => ({
+            ...p,
+            discountPercentage: Math.round(p.discountSortValue),
           }));
 
         if (productsData.length > 0) {
@@ -85,9 +114,9 @@ export default function DiscountSaleProducts() {
   return (
     <section className="mb-8 sm:mb-10 bg-linear-to-r from-red-50 to-orange-50 rounded-lg p-4 sm:p-6">
       <h2 className="text-lg sm:text-xl font-bold mb-4 sm:mb-6 text-red-700 flex items-center justify-between">
-        🔥 Discount Sale Products
+        🔥 Summer Sale
         <Link
-          href={`/products?filter=discount`}
+          href={`/products?filter=${encodeURIComponent("discountPercentage>50")}`}
           className="text-red-600 hover:text-red-700 font-medium text-sm sm:text-base flex gap-1 items-center transition"
         >
           View All
