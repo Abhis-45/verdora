@@ -435,7 +435,9 @@ router.patch("/verify-otp-update", authMiddleware, async (req, res) => {
       try {
         const verifyResult = await verifyOtpVia2Factor(normalizedNewValue, otp);
         if (!verifyResult?.matched) {
-          return res.status(400).json({ message: "Invalid OTP" });
+          console.warn(
+            "2Factor OTP verify did not match; using server-side OTP validation result for mobile update",
+          );
         }
       } catch (_err) {
         // If provider verification is temporarily unavailable, local OTP check above still protects the flow.

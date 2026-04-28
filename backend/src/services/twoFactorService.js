@@ -141,12 +141,22 @@ const sendTransactionalSms = async (phoneNumber, text) => {
 
 export const sendOtpSMS = async (phoneNumber, otp) => {
   requireApiKey();
+  const otpValue = otp ? String(otp) : null;
+
+  // Prefer transactional SMS for OTP delivery so users receive an SMS message
+  // instead of provider-managed fallback channels like voice calls.
+  if (otpValue) {
+    return sendTransactionalSms(
+      phoneNumber,
+      `Your Verdora OTP is ${otpValue}. It is valid for 10 minutes. Do not share this code with anyone.`,
+    );
+  }
+
   const normalized = normalizePhoneNumber(phoneNumber);
-  const otpValue = otp ? String(otp) : "AUTOGEN";
 
   try {
     const response = await axios.post(
-      `${OTP_BASE_URL}/${API_KEY}/SMS/${normalized.withoutPlus}/${encodeURIComponent(otpValue)}`,
+      `${OTP_BASE_URL}/${API_KEY}/SMS/${normalized.withoutPlus}/AUTOGEN`,
     );
     const data = parseResponseData(response.data);
     assertSuccess(data, "Failed to send OTP");
