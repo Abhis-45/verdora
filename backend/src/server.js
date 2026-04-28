@@ -56,6 +56,7 @@ app.use("/api", publicRoutes);
 app.use("/api/admin", adminAuthRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/admin/manage", adminManagementRoutes);
+
 app.use("/api/vendor", vendorRoutes);
 app.use("/api/products", productsRoutes);
 app.use("/api/reviews", reviewsRoutes);
