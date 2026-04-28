@@ -34,7 +34,7 @@ import {
   sendVendorApprovedSMS,
   sendVendorRejectedSMS,
   sendVendorRegistrationReceivedSMS,
-} from "../services/twoFactorService.js";
+} from "../services/enhancedTwoFactorService.js";
 import { adminAuthMiddleware } from "../middleware/auth.js";
 
 const router = express.Router();

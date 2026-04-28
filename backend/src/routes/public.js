@@ -11,7 +11,7 @@ import {
 } from "../services/emailService.js";
 import {
   sendVendorRegistrationReceivedSMS,
-} from "../services/twoFactorService.js";
+} from "../services/enhancedTwoFactorService.js";
 
 const router = express.Router();
 

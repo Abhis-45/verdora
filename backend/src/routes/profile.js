@@ -6,12 +6,12 @@ import Product from "../models/Product.js";
 import ServiceRequest from "../models/ServiceRequest.js";
 import upload from "../middleware/multerConfig.js";
 import {
-  sendOtpSMS,
   sendOrderConfirmationSMS,
   sendOrderStatusUpdateSMS,
   sendOrderCancelledSMS,
-  verifyOtp as verifyOtpVia2Factor,
-} from "../services/twoFactorService.js";
+  sendTransactionalOtpSms,
+  verifyOtpVia2Factor,
+} from "../services/enhancedTwoFactorService.js";
 import {
   sendOtpEmail,
   sendAccountDeletedEmail,
@@ -366,7 +366,7 @@ router.post("/send-otp", authMiddleware, async (req, res) => {
       if (!validatePhone(targetMobile)) {
         return res.status(400).json({ message: "Invalid phone format" });
       }
-      sendPromises.push(sendOtpSMS(targetMobile, otp));
+      sendPromises.push(sendTransactionalOtpSms(targetMobile, otp));
       sentTo.push("mobile");
     }
 
@@ -376,7 +376,7 @@ router.post("/send-otp", authMiddleware, async (req, res) => {
         sentTo.push("email");
       }
       if (field === "password" && user.mobile) {
-        sendPromises.push(sendOtpSMS(normalizeMobileForOtp(user.mobile), otp));
+        sendPromises.push(sendTransactionalOtpSms(normalizeMobileForOtp(user.mobile), otp));
         sentTo.push("mobile");
       }
     }

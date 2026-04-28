@@ -3,10 +3,10 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import User from "../models/User.js";
 import {
-  sendOtpSMS,
   sendWelcomeSMS,
-  verifyOtp as verifyOtpVia2Factor,
-} from "../services/twoFactorService.js";
+  sendTransactionalOtpSms,
+  verifyOtpVia2Factor,
+} from "../services/enhancedTwoFactorService.js";
 import {
   sendOtpEmail,
   sendWelcomeEmail,
@@ -106,10 +106,13 @@ router.post("/send-otp", async (req, res) => {
     if (isEmail) {
       await sendOtpEmail(normalizedIdentifier, otp);
       createSession(normalizedIdentifier, "email", otp);
+      console.info(`OTP email sent to ${normalizedIdentifier}`);
       return res.json({ message: "OTP sent to email successfully" });
     }
 
-    await sendOtpSMS(normalizedIdentifier, otp);
+    await sendTransactionalOtpSms(normalizedIdentifier, otp);
+    // Log SMS delivery to help trace issues and confirm SMS path is used
+    console.info(`OTP SMS sent to ${normalizedIdentifier}`);
     createSession(normalizedIdentifier, "sms", otp);
     return res.json({ message: "OTP sent to mobile successfully" });
   } catch (err) {

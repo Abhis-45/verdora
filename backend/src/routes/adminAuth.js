@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 import Admin from "../models/Admin.js";
 import Vendor from "../models/Vendor.js";
 import { sendOtpEmail } from "../services/emailService.js";
-import { sendOtpSMS } from "../services/twoFactorService.js";
+import { sendTransactionalOtpSms } from "../services/enhancedTwoFactorService.js";
 
 const router = express.Router();
 
@@ -513,7 +513,7 @@ router.post("/forgot-password", async (req, res) => {
         const user = admin || vendor;
         const phoneNumber = user.mobileNumber || user.phone || user.businessPhone;
         if (phoneNumber) {
-          await sendOtpSMS(phoneNumber, otp);
+          await sendTransactionalOtpSms(phoneNumber, otp);
           const masked = String(phoneNumber)
             .replace(/\D/g, "")
             .replace(/(\d{2})\d+(\d{2})$/, "$1******$2");

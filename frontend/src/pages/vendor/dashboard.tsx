@@ -35,6 +35,7 @@ interface Product {
   description?: string;
   tags?: string[];
   image?: string;
+  images?: { url: string; publicId?: string }[];
   originAddress?: {
     address?: string;
     city?: string;
@@ -567,12 +568,19 @@ export default function VendorDashboard() {
                   >
                     <div className="flex flex-col gap-3">
                       <div className="flex items-start gap-3">
-                        {product.image && (
-                          <img
-                            src={product.image}
-                            alt={product.name}
-                            className="h-16 w-16 rounded-xl object-cover"
-                          />
+                        {(product.image || (product.images && product.images.length > 0)) && (
+                          <div className="relative">
+                            <img
+                              src={product.image || product.images?.[0]?.url || ""}
+                              alt={product.name}
+                              className="h-16 w-16 rounded-xl object-cover"
+                            />
+                            {((product.images && product.images.length > 1) || (product.image && product.images && product.images.length > 0)) && (
+                              <div className="absolute -bottom-1 -right-1 rounded-full bg-emerald-500 px-1.5 py-0.5 text-xs font-semibold text-white">
+                                {product.images ? product.images.length : (product.image ? 1 : 0)}
+                              </div>
+                            )}
+                          </div>
                         )}
                         <div>
                           <p className="text-base font-semibold text-gray-900">
@@ -661,16 +669,36 @@ export default function VendorDashboard() {
                         className="border-t border-emerald-100 hover:bg-emerald-50"
                       >
                         <td className="px-6 py-3">
-                          <div className="h-12 w-12 rounded-lg overflow-hidden bg-gray-100">
-                            {product.image ? (
-                              <img
-                                src={product.image}
-                                alt={product.name}
-                                className="h-full w-full object-cover"
-                              />
+                          <div className="flex gap-1">
+                            {product.images && product.images.length > 0 ? (
+                              product.images.slice(0, 3).map((img, index) => (
+                                <div
+                                  key={index}
+                                  className="h-12 w-12 rounded-lg overflow-hidden bg-gray-100"
+                                >
+                                  <img
+                                    src={img.url}
+                                    alt={`${product.name} ${index + 1}`}
+                                    className="h-full w-full object-cover"
+                                  />
+                                </div>
+                              ))
+                            ) : product.image ? (
+                              <div className="h-12 w-12 rounded-lg overflow-hidden bg-gray-100">
+                                <img
+                                  src={product.image}
+                                  alt={product.name}
+                                  className="h-full w-full object-cover"
+                                />
+                              </div>
                             ) : (
-                              <div className="flex h-full w-full items-center justify-center text-xs text-gray-400">
+                              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gray-100 text-xs text-gray-400">
                                 No image
+                              </div>
+                            )}
+                            {((product.images && product.images.length > 3) || (product.image && product.images && product.images.length > 0)) && (
+                              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-emerald-100 text-xs font-semibold text-emerald-700">
+                                +{product.images ? Math.max(0, product.images.length - 3) : (product.image ? 1 : 0)}
                               </div>
                             )}
                           </div>

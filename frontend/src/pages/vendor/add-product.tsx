@@ -191,7 +191,15 @@ export default function AddProduct() {
       }
 
       // Pre-fill images if available
-      if (product.image) {
+      if (product.images && product.images.length > 0) {
+        const existingImages = product.images.map((img, index) => ({
+          id: img.publicId || `existing-${index}`,
+          file: new File([], `existing-image-${index}`),
+          preview: img.url,
+        }));
+        setImages(existingImages);
+        setMainImageIndex(0);
+      } else if (product.image) {
         setImages([
           {
             id: product.cloudinaryPublicId || "existing",
@@ -287,7 +295,9 @@ export default function AddProduct() {
   };
 
   const uploadImagesToCloudinary = async () => {
-    if (images.length === 0) {
+    const newImages = images.filter((img) => img.file.size > 0);
+    
+    if (newImages.length === 0) {
       setError("Please select at least one image");
       return null;
     }
@@ -295,7 +305,7 @@ export default function AddProduct() {
     setUploading(true);
     try {
       const uploadedUrls = [];
-      for (const image of images) {
+      for (const image of newImages) {
         const formDataUpload = new FormData();
         formDataUpload.append("image", image.file);
 
@@ -362,25 +372,31 @@ export default function AddProduct() {
     try {
       let uploadedUrls: { url: string; publicId: string }[] = [];
       
-      // Only upload new images if we have files to upload (not just previews)
-      const hasNewImages = images.some((img) => img.file.size > 0);
-      if (hasNewImages) {
+      // Separate new images from existing ones
+      const newImages = images.filter((img) => img.file.size > 0);
+      const existingImages = images.filter((img) => img.file.size === 0);
+      
+      // Upload only new images
+      if (newImages.length > 0) {
         const result = await uploadImagesToCloudinary();
         if (!result?.length) {
           setLoading(false);
           return;
         }
         uploadedUrls = result;
-      } else if (isEditMode && images.length > 0) {
-        // Use existing image URLs if editing without new uploads
-        uploadedUrls = images.map((img) => ({
+      }
+      
+      // Combine existing and new images
+      const allImages = [
+        ...existingImages.map((img) => ({
           url: img.preview,
           publicId: img.id === "existing" ? "" : img.id,
-        }));
-      }
+        })),
+        ...uploadedUrls,
+      ];
 
       const token = localStorage.getItem("vendorToken");
-      const mainImage = uploadedUrls[mainImageIndex] || uploadedUrls[0];
+      const mainImage = allImages[mainImageIndex] || allImages[0];
 
       const BACKEND_URL =
         typeof window !== "undefined"
@@ -401,7 +417,7 @@ export default function AddProduct() {
             : formData.category,
         image: mainImage?.url,
         cloudinaryPublicId: mainImage?.publicId,
-        ...(uploadedUrls.length > 0 && { images: uploadedUrls }),
+        ...(allImages.length > 0 && { images: allImages }),
         price: Number(formData.price),
         mrp: Number(formData.mrp),
         brand: formData.brand || "Verdora",
