@@ -1,11 +1,15 @@
 /* eslint-disable @next/next/no-img-element */
 /* eslint-disable @next/next/no-head-element */
 // pages/about.tsx
+"use client";
 import Layout from "../components/common/layout";
-import router from "next/router";
+import { useRouter } from "next/router";
 import { ArrowLeftIcon } from "@heroicons/react/24/solid";
+import Breadcrumb from "../components/common/Breadcrumb";
 
 export default function About() {
+  const router = useRouter();
+
   return (
     <>
       <head>
@@ -13,14 +17,19 @@ export default function About() {
       </head>
       <Layout>
         <main className="max-w-6xl mx-auto px-6 py-16">
-          <button
-            onClick={() => router.back()}
-            className="flex items-center gap-2 text-green-600 hover:text-green-700 font-semibold mb-6 transition"
-            aria-label="Go back"
-          >
-            <ArrowLeftIcon className="h-5 w-5" />
-            <span className="hidden sm:inline">Back</span>
-          </button>
+          <div className="mb-6 flex flex-wrap items-center gap-2 sm:gap-4">
+            <button
+              onClick={() => router.back()}
+              className="flex items-center gap-1 sm:gap-2 text-green-600 hover:text-green-700 font-semibold transition whitespace-nowrap text-sm sm:text-base"
+              aria-label="Go back"
+            >
+              <ArrowLeftIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+              <span className="hidden sm:inline">Back</span>
+            </button>
+            <div className="text-xs sm:text-sm">
+              <Breadcrumb />
+            </div>
+          </div>
 
           {/* Hero Heading */}
           <h1 className="text-5xl font-extrabold text-transparent bg-clip-text bg-linear-to-r from-green-600 to-emerald-500 mb-10 text-center">

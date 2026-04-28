@@ -11,6 +11,7 @@ dotenv.config();
 const API_KEY = process.env.TWO_FACTOR_API_KEY;
 const SENDER_ID = process.env.TWO_FACTOR_SENDER_ID || "VERDOR";
 const BASE_URL = "https://2factor.in/API/R1";
+const SMS_SEND_URL = "https://2factor.in/API/R1/SEND";
 const VERIFY_BASE_URL = "https://2factor.in/API/V1";
 
 // ============================================================================
@@ -45,6 +46,9 @@ const formatPhoneNumber = (phoneNumber) => {
 
 /**
  * Send transactional OTP SMS via 2Factor.in
+ * 2Factor API Response Format:
+ * Success: {"Status":"Success","Details":"6 digit OTP: 123456"}
+ * Error: {"Status":"Error","Details":"error message"}
  */
 export const sendTransactionalOtpSms = async (phoneNumber, otp) => {
   validateApiConfiguration();
@@ -55,38 +59,62 @@ export const sendTransactionalOtpSms = async (phoneNumber, otp) => {
 
   const formattedPhone = formatPhoneNumber(phoneNumber);
   const message = `Your Verdora OTP is ${otp}. Valid for 10 minutes. Do not share with anyone.`;
+  const phoneWithoutPlus = formattedPhone.replace("+", "");
 
   try {
     console.log(`\n📲 Sending OTP SMS to ${formattedPhone}`);
+    console.log(`📌 Using 2Factor API: ${SMS_SEND_URL}`);
+    console.log(`📌 Phone (without +): ${phoneWithoutPlus}`);
 
-    const response = await axios.post(
-      `${BASE_URL}/`,
-      null,
-      {
-        params: {
-          module: "TRANS_SMS",
-          apikey: API_KEY,
-          to: formattedPhone.replace("+", ""),
-          from: SENDER_ID,
-          msg: message,
-        },
-        timeout: 10000,
-      }
-    );
+    // 2Factor.in API uses GET request with query parameters
+    const response = await axios.get(SMS_SEND_URL, {
+      params: {
+        apikey: API_KEY,
+        to: phoneWithoutPlus,
+        msg: message,
+      },
+      timeout: 10000,
+    });
 
-    if (response.data.Status === "Error" || response.data.Details?.includes("Error")) {
-      throw new Error(response.data.Details || "API returned error");
+    console.log(`📤 2Factor API Status: ${response.status}`);
+    console.log(`📤 2Factor API Response:`, JSON.stringify(response.data));
+
+    // Check for successful response
+    // 2Factor typically returns Status: "Success" for successful sends
+    if (response.data?.Status === "Success") {
+      console.log(`✅ OTP SMS sent successfully to ${formattedPhone}`);
+      return {
+        success: true,
+        message: "OTP sent successfully",
+        phoneNumber: formattedPhone,
+      };
+    }
+
+    // Handle error responses
+    if (response.data?.Status === "Error" || response.data?.error) {
+      const errorMsg = response.data?.Details || response.data?.error || "API returned error";
+      console.error(`❌ 2Factor API Error: ${errorMsg}`);
+      throw new Error(`SMS API Error: ${errorMsg}`);
+    }
+
+    // If status is unexpected, throw error
+    if (!response.data?.Status) {
+      throw new Error(
+        `Unexpected API response: ${JSON.stringify(response.data)}`
+      );
     }
 
     console.log(`✅ OTP SMS sent successfully to ${formattedPhone}`);
-
     return {
       success: true,
       message: "OTP sent successfully",
       phoneNumber: formattedPhone,
     };
   } catch (err) {
-    console.error(`❌ Failed to send OTP SMS: ${err.message}`);
+    console.error(`\n❌ Failed to send OTP SMS to ${formattedPhone}`);
+    console.error(`Error message: ${err.message}`);
+    console.error(`Error code: ${err.code}`);
+    console.error(`Full error:`, err.response?.data || err);
     throw err;
   }
 };
@@ -128,42 +156,55 @@ export const verifyOtpVia2Factor = async (phoneNumber, otp) => {
 
 /**
  * Generic transactional SMS sender for notifications
+ * Reuses 2Factor.in SEND endpoint for all transactional SMS
  */
 const sendTransactionalSms = async (phoneNumber, text) => {
   validateApiConfiguration();
 
   const normalized = formatPhoneNumber(phoneNumber);
+  const phoneWithoutPlus = normalized.replace("+", "");
 
   try {
-    const response = await axios.post(
-      `${BASE_URL}/Bulk/`,
-      {
-        module: "TRANS_SMS",
-        apikey: API_KEY,
-        messages: [
-          {
-            smsFrom: SENDER_ID,
-            smsTo: normalized,
-            smsText: String(text || "").slice(0, 1000),
-          },
-        ],
-      },
-      {
-        headers: {
-          "Content-Type": "application/json",
-        },
-        timeout: 10000,
-      }
-    );
+    console.log(`\n📨 Sending Transactional SMS to ${normalized}`);
 
-    const data = response.data;
-    if (data.Status === "Error" || data.success === false) {
-      throw new Error(data.Details || data.error || "Failed to send SMS");
+    // 2Factor.in API uses GET request with query parameters
+    const response = await axios.get(SMS_SEND_URL, {
+      params: {
+        apikey: API_KEY,
+        to: phoneWithoutPlus,
+        msg: String(text || "").slice(0, 1000),
+      },
+      timeout: 10000,
+    });
+
+    console.log(`📤 2Factor API Response:`, JSON.stringify(response.data));
+
+    // Check for successful response
+    if (response.data?.Status === "Success") {
+      console.log(`✅ Transactional SMS sent successfully to ${normalized}`);
+      return response.data;
     }
 
-    return data;
+    // Handle error responses
+    if (response.data?.Status === "Error" || response.data?.error) {
+      const errorMsg = response.data?.Details || response.data?.error || "Failed to send SMS";
+      console.error(`❌ SMS API Error: ${errorMsg}`);
+      throw new Error(errorMsg);
+    }
+
+    // If status is unexpected, throw error
+    if (!response.data?.Status) {
+      throw new Error(
+        `Unexpected API response: ${JSON.stringify(response.data)}`
+      );
+    }
+
+    console.log(`✅ Transactional SMS sent successfully to ${normalized}`);
+    return response.data;
   } catch (err) {
-    console.error(`❌ Failed to send SMS: ${err.message}`);
+    console.error(`❌ Failed to send SMS to ${normalized}`);
+    console.error(`Error: ${err.message}`);
+    console.error(`Full error:`, err.response?.data || err);
     throw new Error(err.message || "Unknown SMS API error");
   }
 };

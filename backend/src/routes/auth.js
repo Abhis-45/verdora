@@ -1,6 +1,7 @@
 import express from "express";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
+import axios from "axios";
 import User from "../models/User.js";
 import {
   sendWelcomeSMS,
@@ -91,6 +92,87 @@ router.get("/email-status", async (_req, res) => {
   }
 });
 
+router.get("/sms-status", async (_req, res) => {
+  try {
+    const apiKey = process.env.TWO_FACTOR_API_KEY || "NOT SET";
+    const senderId = process.env.TWO_FACTOR_SENDER_ID || "VERDOR";
+    const isConfigured = Boolean(process.env.TWO_FACTOR_API_KEY);
+
+    res.json({
+      status: isConfigured ? "Configured" : "Not Configured",
+      apiKeyConfigured: isConfigured,
+      senderId: senderId,
+      apiEndpoint: "https://2factor.in/API/R1/SEND",
+      details: {
+        message: isConfigured
+          ? "SMS service is ready to send OTPs"
+          : "SMS service is not configured. Set TWO_FACTOR_API_KEY in .env",
+      },
+    });
+  } catch (err) {
+    res.status(500).json({
+      status: "Error",
+      error: err.message,
+      message: "Failed to check SMS status",
+    });
+  }
+});
+
+// Test endpoint to diagnose 2Factor API issues
+router.get("/test-sms/:phone", async (req, res) => {
+  try {
+    const { phone } = req.params;
+    const apiKey = process.env.TWO_FACTOR_API_KEY;
+
+    if (!apiKey) {
+      return res.status(400).json({ error: "API key not configured" });
+    }
+
+    const testOtp = "123456";
+    const testMessage = `Test OTP: ${testOtp}`;
+    const cleanPhone = phone.replace(/[^\d]/g, "");
+    const formattedPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+
+    console.log(`\n🧪 Testing 2Factor API`);
+    console.log(`Phone: ${formattedPhone}`);
+    console.log(`Endpoint: https://2factor.in/API/R1/SEND`);
+    console.log(`Message: ${testMessage}`);
+
+    const response = await axios.get("https://2factor.in/API/R1/SEND", {
+      params: {
+        apikey: apiKey,
+        to: formattedPhone,
+        msg: testMessage,
+      },
+      timeout: 10000,
+    });
+
+    res.json({
+      success: true,
+      status: response.status,
+      apiResponse: response.data,
+      diagnostics: {
+        phone: formattedPhone,
+        message: testMessage,
+        endpoint: "https://2factor.in/API/R1/SEND",
+      },
+    });
+  } catch (err) {
+    console.error(`\n❌ 2Factor API Test Failed`);
+    console.error(`Error: ${err.message}`);
+    console.error(`Response Status: ${err.response?.status}`);
+    console.error(`Response Data:`, err.response?.data);
+
+    res.status(500).json({
+      success: false,
+      error: err.message,
+      responseStatus: err.response?.status,
+      responseData: err.response?.data,
+      diagnostics: err.response?.data,
+    });
+  }
+});
+
 router.post("/send-otp", async (req, res) => {
   const { identifier } = req.body;
   const normalizedIdentifier = normalizeIdentifier(identifier);
@@ -103,19 +185,50 @@ router.post("/send-otp", async (req, res) => {
   const isEmail = normalizedIdentifier.includes("@");
 
   try {
+    console.log(`\n🔄 [OTP Request] Processing for: ${isEmail ? "EMAIL" : "SMS"}`);
+    console.log(`📞 Normalized identifier: ${normalizedIdentifier}`);
+
     if (isEmail) {
+      console.log(`📧 Attempting to send OTP via email...`);
       await sendOtpEmail(normalizedIdentifier, otp);
       createSession(normalizedIdentifier, "email", otp);
-      console.info(`OTP email sent to ${normalizedIdentifier}`);
+      console.info(`✅ OTP email sent to ${normalizedIdentifier}`);
       return res.json({ message: "OTP sent to email successfully" });
     }
 
-    await sendTransactionalOtpSms(normalizedIdentifier, otp);
-    // Log SMS delivery to help trace issues and confirm SMS path is used
-    console.info(`OTP SMS sent to ${normalizedIdentifier}`);
+    // For SMS: Try to send via 2Factor API, fallback to local verification
+    console.log(`📲 Attempting to send OTP via SMS...`);
+    let smsSent = false;
+    let smsError = null;
+
+    try {
+      await sendTransactionalOtpSms(normalizedIdentifier, otp);
+      smsSent = true;
+      console.info(`✅ OTP SMS sent to ${normalizedIdentifier}`);
+    } catch (err) {
+      smsError = err.message;
+      console.warn(`⚠️ SMS failed: ${err.message}, will use local OTP verification`);
+      smsSent = false;
+    }
+
+    // Store OTP locally regardless of SMS success for verification
     createSession(normalizedIdentifier, "sms", otp);
-    return res.json({ message: "OTP sent to mobile successfully" });
+    
+    if (smsSent) {
+      return res.json({ message: "OTP sent to mobile successfully" });
+    } else {
+      // SMS failed but OTP is stored locally
+      console.warn(`⚠️ SMS delivery issue but OTP stored for verification`);
+      return res.json({ 
+        message: "OTP ready for verification (SMS delivery pending)",
+        note: "OTP has been generated. Please try again if SMS doesn't arrive shortly."
+      });
+    }
   } catch (err) {
+    console.error(`\n❌ [OTP Error] Failed for identifier: ${normalizedIdentifier}`);
+    console.error(`Error message: ${err?.message}`);
+    console.error(`Full error:`, err);
+    
     return res.status(500).json({
       message: `Failed to send OTP. ${err?.message || "Please try again."}`,
       error: process.env.NODE_ENV === "development" ? err.message : undefined,

@@ -13,6 +13,7 @@ import { ArrowLeftIcon, MapPinIcon } from "@heroicons/react/24/outline";
 import RelatedProductsCarousel from "../../components/productpage/RelatedProductsCarousel";
 import { PincodeSuggestions } from "../../components/forms/PincodeSuggestions";
 import { PincodeData } from "@/utils/pincodeApi";
+import Breadcrumb from "../../components/common/Breadcrumb";
 
 import {
   calculateDeliveryEstimate,
@@ -331,16 +332,19 @@ export default function ProductDetailPage() {
       <Layout>
         <div className="min-h-screen bg-linear-to-b from-white via-green-50 to-white">
           <div className="mx-auto max-w-7xl px-4 py-6">
-            {/* Back Link */}
-            <div className="mb-6">
+            {/* Back Link and Breadcrumb - Same Line */}
+            <div className="mb-6 flex flex-wrap items-center gap-2 sm:gap-4">
               <button
                 onClick={() => router.back()}
-                className="mb-6 flex items-center gap-2 font-semibold text-green-600 transition hover:text-green-700"
+                className="flex items-center gap-1 sm:gap-2 font-semibold text-green-600 transition hover:text-green-700 whitespace-nowrap text-sm sm:text-base"
                 aria-label="Go back"
               >
-                <ArrowLeftIcon className="h-5 w-5" />
+                <ArrowLeftIcon className="h-4 w-4 sm:h-5 sm:w-5" />
                 <span className="hidden sm:inline">Back</span>
               </button>
+              <div className="text-xs sm:text-sm">
+                <Breadcrumb productName={product.name} />
+              </div>
             </div>
 
             {/* Product Grid */}

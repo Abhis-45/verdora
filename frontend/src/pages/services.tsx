@@ -6,6 +6,7 @@ import Head from "next/head";
 import { useRouter } from "next/router";
 import { useServices } from "@/hooks/useServices";
 import ServicesList from "@/components/services/ServicesList";
+import Breadcrumb from "../components/common/Breadcrumb";
 
 export default function Services() {
   const router = useRouter();
@@ -19,14 +20,19 @@ export default function Services() {
       <Layout>
         <div className="min-h-screen bg-linear-to-b from-green-50 to-white">
           <div className="max-w-7xl mx-auto px-3 sm:px-5 py-6 sm:py-10 md:py-12">
-            {/* Back Button */}
-            <button
-              onClick={() => router.back()}
-              className="flex items-center gap-2 text-green-600 hover:text-green-700 font-semibold mb-4 transition text-sm"
-            >
-              <ArrowLeftIcon className="h-4 w-4" />
-              <span className="hidden sm:inline">Back</span>
-            </button>
+            {/* Back Button and Breadcrumb */}
+            <div className="mb-4 flex flex-wrap items-center gap-1 sm:gap-3">
+              <button
+                onClick={() => router.back()}
+                className="flex items-center gap-1 text-green-600 hover:text-green-700 font-semibold transition text-xs sm:text-sm whitespace-nowrap"
+              >
+                <ArrowLeftIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Back</span>
+              </button>
+              <div className="text-xs">
+                <Breadcrumb />
+              </div>
+            </div>
 
             {/* Hero Section */}
             <div className="text-center mb-10 sm:mb-12">

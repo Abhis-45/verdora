@@ -13,6 +13,7 @@ import Head from "next/head";
 import { Address, UserProfile } from "@/types/user";
 import Spinner from "@/components/shared/Spinner";
 import AuthPopup from "@/components/auth/AuthPop";
+import Breadcrumb from "../components/common/Breadcrumb";
 import { ensurePlus91 } from "@/utils/phone";
 import { useUser } from "@/context/UserContext";
 import { PincodeData } from "@/utils/pincodeApi";
@@ -619,16 +620,21 @@ export default function ProfilePage() {
       <Layout>
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-green-50">
           <div className="mx-auto max-w-6xl p-4 sm:p-6 lg:p-8">
-            {/* Back Button */}
-            <button
-              onClick={() => router.back()}
-              className="inline-flex items-center gap-2 text-green-700 hover:text-green-900 font-semibold mb-8 transition duration-200 hover:translate-x-1"
-            >
-              <ArrowLeftIcon className="h-5 w-5" />
-              <span>Back</span>
-            </button>
+            {/* Back Button and Breadcrumb */}
+            <div className="mb-8 flex flex-wrap items-center gap-2 sm:gap-4">
+              <button
+                onClick={() => router.back()}
+                className="inline-flex items-center gap-1 sm:gap-2 text-green-700 hover:text-green-900 font-semibold transition duration-200 hover:translate-x-1 whitespace-nowrap text-sm sm:text-base"
+              >
+                <ArrowLeftIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+                <span>Back</span>
+              </button>
+              <div className="text-xs sm:text-sm">
+                <Breadcrumb />
+              </div>
+            </div>
 
-          {/* Loading State - Only on initial load */}
+            {/* Loading State - Only on initial load */}
           {loading && !profile ? (
             <div className="flex items-center justify-center min-h-screen">
               <Spinner />

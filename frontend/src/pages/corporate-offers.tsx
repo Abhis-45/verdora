@@ -3,6 +3,7 @@ import Layout from "../components/common/layout";
 import ProductCard from "../components/home/ProductCard";
 import Link from "next/link";
 import BulkOrderForm from "../components/corporate/BulkOrderForm";
+import Breadcrumb from "../components/common/Breadcrumb";
 
 const corporateProducts = [
   {
@@ -75,14 +76,17 @@ export default function CorporateOffers() {
             </div>
           </section>
 
-          {/* Back Link just below banner, aligned left */}
-          <div className="mb-12 text-left">
+          {/* Back Link and Breadcrumb */}
+          <div className="mb-12 flex flex-wrap items-center gap-2 sm:gap-4">
             <Link
               href="/"
-              className="text-green-700 font-medium hover:underline"
+              className="text-green-700 font-medium hover:underline text-sm sm:text-base"
             >
-              ← Back to Home
+              ← Back
             </Link>
+            <div className="text-xs sm:text-sm">
+              <Breadcrumb />
+            </div>
           </div>
 
           {/* Corporate Products */}

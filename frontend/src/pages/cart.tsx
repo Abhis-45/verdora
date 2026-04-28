@@ -13,6 +13,7 @@ import AuthPopup from "@/components/auth/AuthPop";
 import Spinner from "@/components/shared/Spinner";
 import Toast from "../components/shared/Toast";
 import CartItemsList from "../components/cart/CartItemsList";
+import Breadcrumb from "../components/common/Breadcrumb";
 import CartSummary from "../components/cart/CartSummary";
 import RecentlyViewedProducts from "@/components/home/RecentlyViewedProducts";
 import {
@@ -348,14 +349,19 @@ export default function CartPage() {
       </Head>
       <Layout>
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 sm:py-12">
-          <button
-            onClick={() => router.back()}
-            className="mb-6 flex items-center gap-2 font-semibold text-green-600 transition hover:text-green-700"
-            aria-label="Go back"
-          >
-            <ArrowLeftIcon className="h-5 w-5" />
-            <span className="hidden sm:inline">Back</span>
-          </button>
+          <div className="mb-6 flex flex-wrap items-center gap-2 sm:gap-4">
+            <button
+              onClick={() => router.back()}
+              className="flex items-center gap-1 sm:gap-2 font-semibold text-green-600 transition hover:text-green-700 whitespace-nowrap text-sm sm:text-base"
+              aria-label="Go back"
+            >
+              <ArrowLeftIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+              <span className="hidden sm:inline">Back</span>
+            </button>
+            <div className="text-xs sm:text-sm">
+              <Breadcrumb />
+            </div>
+          </div>
 
           <h1 className="mb-8 text-center text-2xl font-extrabold tracking-tight text-green-900 sm:mb-10 sm:text-3xl lg:text-4xl">
             Cart

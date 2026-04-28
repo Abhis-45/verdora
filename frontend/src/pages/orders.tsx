@@ -13,6 +13,7 @@ import Spinner from "@/components/shared/Spinner";
 import RefreshButton from "@/components/shared/RefreshButton";
 import ReviewSubmitModal from "@/components/product/ReviewSubmitModal";
 import { Order, OrderItem } from "@/types/user";
+import Breadcrumb from "../components/common/Breadcrumb";
 import { buildCartKey } from "@/utils/productOptions";
 import { formatDeliveryDate } from "@/utils/delivery";
 import { uploadImages } from "@/utils/attachments";
@@ -366,14 +367,19 @@ export default function OrdersPage() {
       </Head>
       <Layout>
         <div className="mx-auto max-w-5xl p-4 sm:p-6">
-          <button
-            onClick={() => router.back()}
-            className="mb-6 flex items-center gap-2 font-semibold text-green-600 transition hover:text-green-700"
-            aria-label="Go back"
-          >
-            <ArrowLeftIcon className="h-5 w-5" />
-            <span className="hidden sm:inline">Back</span>
-          </button>
+          <div className="mb-6 flex flex-wrap items-center gap-2 sm:gap-4">
+            <button
+              onClick={() => router.back()}
+              className="flex items-center gap-1 sm:gap-2 font-semibold text-green-600 transition hover:text-green-700 whitespace-nowrap text-sm sm:text-base"
+              aria-label="Go back"
+            >
+              <ArrowLeftIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+              <span className="hidden sm:inline">Back</span>
+            </button>
+            <div className="text-xs sm:text-sm">
+              <Breadcrumb />
+            </div>
+          </div>
 
           <div className="mb-8 flex flex-wrap items-end justify-between gap-3">
             <div>

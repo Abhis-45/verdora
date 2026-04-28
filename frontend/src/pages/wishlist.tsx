@@ -9,6 +9,7 @@ import Link from "next/link";
 import { ProductItem } from "@/types/ProductItem";
 import { useRouter } from "next/router";
 import ProductCard from "../components/product/ProductCard";
+import Breadcrumb from "../components/common/Breadcrumb";
 
 export default function WishlistPage() {
   const router = useRouter();
@@ -25,14 +26,19 @@ export default function WishlistPage() {
       </Head>
       <Layout>
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
-          <button
-            onClick={() => router.back()}
-            className="mb-6 flex items-center gap-2 font-semibold text-green-600 transition hover:text-green-700"
-            aria-label="Go back"
-          >
-            <ArrowLeftIcon className="h-5 w-5" />
-            <span className="hidden sm:inline">Back</span>
-          </button>
+          <div className="mb-6 flex flex-wrap items-center gap-2 sm:gap-4">
+            <button
+              onClick={() => router.back()}
+              className="flex items-center gap-1 sm:gap-2 font-semibold text-green-600 transition hover:text-green-700 whitespace-nowrap text-sm sm:text-base"
+              aria-label="Go back"
+            >
+              <ArrowLeftIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+              <span className="hidden sm:inline">Back</span>
+            </button>
+            <div className="text-xs sm:text-sm">
+              <Breadcrumb />
+            </div>
+          </div>
 
           <div className="mb-8 rounded-3xl bg-linear-to-r from-green-200 to-emerald-400 p-6 text-left sm:mb-10 sm:p-8 sm:text-center lg:mb-12 lg:p-10">
             <h1 className="text-3xl font-bold text-gray-900 sm:text-4xl">

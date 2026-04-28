@@ -5,6 +5,7 @@ import Head from "next/head";
 import Toast from "../components/shared/Toast";
 import { useRouter } from "next/router";
 import { ArrowLeftIcon } from "@heroicons/react/24/solid";
+import Breadcrumb from "../components/common/Breadcrumb";
 
 export default function Contact() {
   const router = useRouter();
@@ -83,15 +84,20 @@ ${prev.name || "Your Name"}`,
       <Layout>
         <main className="min-h-screen bg-linear-to-b from-white to-green-50">
           <div className="max-w-2xl mx-auto px-4 sm:px-6 py-10">
-            {/* Back Button */}
-            <button
-              onClick={() => router.back()}
-              className="flex items-center gap-2 text-green-700 hover:text-green-800 font-medium mb-6 transition text-sm"
-              aria-label="Go back"
-            >
-              <ArrowLeftIcon className="h-4 w-4" />
-              <span className="hidden sm:inline">Back</span>
-            </button>
+            {/* Back Button and Breadcrumb */}
+            <div className="mb-6 flex flex-wrap items-center gap-1 sm:gap-3">
+              <button
+                onClick={() => router.back()}
+                className="flex items-center gap-1 text-green-700 hover:text-green-800 font-medium transition text-xs sm:text-sm whitespace-nowrap"
+                aria-label="Go back"
+              >
+                <ArrowLeftIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Back</span>
+              </button>
+              <div className="text-xs sm:text-sm">
+                <Breadcrumb />
+              </div>
+            </div>
 
             {/* Hero Heading */}
             <div className="text-center mb-8">
