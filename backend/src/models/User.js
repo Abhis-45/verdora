@@ -63,6 +63,16 @@ const plantSizeWithPotSchema = new mongoose.Schema(
     mrp: Number,
     potPrice: Number,
     potMrp: Number,
+    potName: String,
+    potImage: String,
+    potOptions: [
+      {
+        name: String,
+        price: Number,
+        mrp: Number,
+        image: String,
+      },
+    ],
     includePotByDefault: Boolean,
   },
   { _id: false },
@@ -84,7 +94,13 @@ const cartItemSchema = new mongoose.Schema(
     originAddress: addressSnapshotSchema,
     deliveryEstimate: deliveryEstimateSchema,
     includePot: { type: Boolean, default: false },
-    cartKey: { type: String }
+    selectedPotOption: {
+      name: String,
+      price: Number,
+      mrp: Number,
+      image: String,
+    },
+    cartKey: { type: String },
   },
   { _id: false },
 );

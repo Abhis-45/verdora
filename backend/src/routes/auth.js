@@ -114,7 +114,7 @@ router.post("/send-otp", async (req, res) => {
     return res.json({ message: "OTP sent to mobile successfully" });
   } catch (err) {
     return res.status(500).json({
-      message: "Failed to send OTP. Please try again.",
+      message: `Failed to send OTP. ${err?.message || "Please try again."}`,
       error: process.env.NODE_ENV === "development" ? err.message : undefined,
     });
   }

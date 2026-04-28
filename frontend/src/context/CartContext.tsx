@@ -2,7 +2,7 @@
 "use client";
 import { createContext, useContext, useState, useEffect } from "react";
 import { ProductItem } from "../types/ProductItem";
-import { buildCartKey, PlantSizeOption } from "@/utils/productOptions";
+import { buildCartKey, PlantSizeOption, PotOption } from "@/utils/productOptions";
 
 type CartContextType = {
   cartItems: ProductItem[];
@@ -10,6 +10,11 @@ type CartContextType = {
   removeFromCart: (id: number | string) => Promise<void>;
   updateQuantity: (id: number | string, qty: number) => Promise<void>;
   updateItemSize: (id: number | string, size: PlantSizeOption) => Promise<void>;
+  updateItemPot: (
+    id: number | string,
+    includePot: boolean,
+    selectedPotOption?: PotOption | null,
+  ) => Promise<void>;
   clearCart: () => void;
   syncCartFromBackend: () => Promise<void>;
 };
@@ -21,11 +26,78 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
 
   const getItemKey = (item: Partial<ProductItem>) =>
     item.cartKey ||
-    buildCartKey(
-      item.productId || item.id || "",
-      item.selectedSize?.id,
-      item.selectedSize?.label,
-    );
+    (() => {
+      const baseKey = buildCartKey(
+        item.productId || item.id || "",
+        item.selectedSize?.id,
+        item.selectedSize?.label,
+      );
+
+      if (!item.includePot) {
+        return baseKey;
+      }
+
+      const potToken = item.selectedPotOption?.name || "default";
+      return `${baseKey}::with-pot::${potToken}`;
+    })();
+
+  const getBaseVariantKey = (
+    productId: string | number,
+    size?: PlantSizeOption | null,
+  ) => buildCartKey(productId, size?.id, size?.label);
+
+  const resolvePotState = (
+    size: PlantSizeOption | null | undefined,
+    includePot: boolean,
+    selectedPotOption?: PotOption | null,
+  ) => {
+    const supportsPot = Boolean(size?.potPrice && size.potPrice > 0);
+    if (!size || !includePot || !supportsPot) {
+      return {
+        includePot: false,
+        selectedPotOption: null as PotOption | null,
+        potPrice: 0,
+        potMrp: 0,
+      };
+    }
+
+    if (selectedPotOption) {
+      return {
+        includePot: true,
+        selectedPotOption,
+        potPrice: Number(selectedPotOption.price || 0),
+        potMrp: Number(selectedPotOption.mrp || 0),
+      };
+    }
+
+    const fallbackOption: PotOption = {
+      name: String(size.potName || "Default Pot"),
+      price: Number(size.potPrice || 0),
+      mrp: Number(size.potMrp || 0),
+      image: size.potImage || "",
+    };
+
+    return {
+      includePot: true,
+      selectedPotOption: fallbackOption,
+      potPrice: Number(fallbackOption.price || 0),
+      potMrp: Number(fallbackOption.mrp || 0),
+    };
+  };
+
+  const getVariantKey = (
+    productId: string | number,
+    size: PlantSizeOption | null | undefined,
+    includePot: boolean,
+    selectedPotOption?: PotOption | null,
+  ) => {
+    const baseKey = getBaseVariantKey(productId, size);
+    if (!includePot) {
+      return baseKey;
+    }
+    const potToken = selectedPotOption?.name || "default";
+    return `${baseKey}::with-pot::${potToken}`;
+  };
 
   // ✅ Load cart from localStorage
   useEffect(() => {
@@ -90,7 +162,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
       const token = localStorage.getItem("token");
       if (token) {
         const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
-        await fetch(`${BACKEND_URL}/api/cart/${id}`, {
+        await fetch(`${BACKEND_URL}/api/cart/${encodeURIComponent(String(id))}`, {
           method: "DELETE",
           headers: {
             "Authorization": `Bearer ${token}`,
@@ -117,7 +189,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
       const token = localStorage.getItem("token");
       if (token) {
         const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
-        await fetch(`${BACKEND_URL}/api/cart/${id}`, {
+        await fetch(`${BACKEND_URL}/api/cart/${encodeURIComponent(String(id))}`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
@@ -132,35 +204,47 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const updateItemSize = async (id: number | string, nextSize: PlantSizeOption) => {
-    let nextKey: string = "";
-    let includePot: boolean = false;
+    const previousKey = String(id);
+    let nextKey = previousKey;
+    let includePot = false;
+    let selectedPotOption: PotOption | null = null;
 
     setCartItems((prev) => {
       const currentItem = prev.find(
-        (item) => getItemKey(item) === String(id) || item.id === id,
+        (item) => getItemKey(item) === previousKey || item.id === id,
       );
 
       if (!currentItem) {
         return prev;
       }
 
-      // If the item has pot selected but the new size doesn't support pot, disable pot
-      includePot = currentItem.includePot && nextSize.potPrice && nextSize.potPrice > 0 ? currentItem.includePot : false;
+      const supportsPot = Boolean(nextSize.potPrice && nextSize.potPrice > 0);
+      const keepPotEnabled = Boolean(currentItem.includePot && supportsPot);
+      const validPotOption =
+        keepPotEnabled &&
+        currentItem.selectedPotOption &&
+        Array.isArray(nextSize.potOptions) &&
+        nextSize.potOptions.some(
+          (option) => option.name === currentItem.selectedPotOption?.name,
+        )
+          ? currentItem.selectedPotOption
+          : null;
 
-      // Calculate final price including pot if applicable
-      const finalPrice = includePot && nextSize.potPrice
-        ? nextSize.price + nextSize.potPrice
-        : nextSize.price;
-      const finalMrp = includePot && nextSize.potMrp
-        ? nextSize.mrp + (nextSize.potMrp || 0)
-        : nextSize.mrp;
+      const potState = resolvePotState(nextSize, keepPotEnabled, validPotOption);
+      includePot = potState.includePot;
+      selectedPotOption = potState.selectedPotOption;
 
-      nextKey = includePot
-        ? buildCartKey(currentItem.productId || currentItem.id || "", nextSize.id, nextSize.label) + "::with-pot"
-        : buildCartKey(currentItem.productId || currentItem.id || "", nextSize.id, nextSize.label);
+      const finalPrice = Number(nextSize.price || 0) + potState.potPrice;
+      const finalMrp = Number(nextSize.mrp || 0) + potState.potMrp;
+      nextKey = getVariantKey(
+        currentItem.productId || currentItem.id || "",
+        nextSize,
+        includePot,
+        selectedPotOption,
+      );
 
       const remainingItems = prev.filter(
-        (item) => getItemKey(item) !== String(id) && item.id !== id,
+        (item) => getItemKey(item) !== previousKey && item.id !== id,
       );
       const existingVariant = remainingItems.find(
         (item) => getItemKey(item) === nextKey,
@@ -183,6 +267,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
           price: finalPrice,
           mrp: finalMrp,
           includePot,
+          selectedPotOption,
         },
       ];
     });
@@ -192,17 +277,104 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
       const token = localStorage.getItem("token");
       if (token) {
         const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
-        await fetch(`${BACKEND_URL}/api/cart/${nextKey}/size`, {
+        await fetch(`${BACKEND_URL}/api/cart/${encodeURIComponent(previousKey)}/size`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
             "Authorization": `Bearer ${token}`,
           },
-          body: JSON.stringify({ nextSize, includePot }),
+          body: JSON.stringify({ nextSize, includePot, selectedPotOption }),
         });
       }
     } catch (error) {
       console.error("Failed to sync cart size update with backend:", error);
+    }
+  };
+
+  const updateItemPot = async (
+    id: number | string,
+    includePot: boolean,
+    selectedPotOption?: PotOption | null,
+  ) => {
+    const previousKey = String(id);
+    let nextKey = previousKey;
+    let nextIncludePot = includePot;
+    let nextSelectedPotOption: PotOption | null = selectedPotOption || null;
+
+    setCartItems((prev) => {
+      const currentItem = prev.find(
+        (item) => getItemKey(item) === previousKey || item.id === id,
+      );
+      if (!currentItem || !currentItem.selectedSize) {
+        return prev;
+      }
+
+      const size = currentItem.selectedSize;
+      const potState = resolvePotState(
+        size,
+        includePot,
+        selectedPotOption ?? currentItem.selectedPotOption ?? null,
+      );
+
+      nextIncludePot = potState.includePot;
+      nextSelectedPotOption = potState.selectedPotOption;
+
+      const finalPrice = Number(size.price || 0) + potState.potPrice;
+      const finalMrp = Number(size.mrp || 0) + potState.potMrp;
+      nextKey = getVariantKey(
+        currentItem.productId || currentItem.id || "",
+        size,
+        nextIncludePot,
+        nextSelectedPotOption,
+      );
+
+      const remainingItems = prev.filter(
+        (item) => getItemKey(item) !== previousKey && item.id !== id,
+      );
+      const existingVariant = remainingItems.find(
+        (item) => getItemKey(item) === nextKey,
+      );
+
+      if (existingVariant) {
+        return remainingItems.map((item) =>
+          getItemKey(item) === nextKey
+            ? { ...item, quantity: item.quantity + currentItem.quantity }
+            : item,
+        );
+      }
+
+      return [
+        ...remainingItems,
+        {
+          ...currentItem,
+          cartKey: nextKey,
+          includePot: nextIncludePot,
+          selectedPotOption: nextSelectedPotOption,
+          price: finalPrice,
+          mrp: finalMrp,
+        },
+      ];
+    });
+
+    try {
+      const token = localStorage.getItem("token");
+      if (token) {
+        const BACKEND_URL =
+          process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+        await fetch(`${BACKEND_URL}/api/cart/${encodeURIComponent(previousKey)}/pot`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            includePot: nextIncludePot,
+            selectedPotOption: nextSelectedPotOption,
+          }),
+        });
+      }
+    } catch (error) {
+      console.error("Failed to sync cart pot update with backend:", error);
     }
   };
 
@@ -242,6 +414,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
         removeFromCart,
         updateQuantity,
         updateItemSize,
+        updateItemPot,
         clearCart,
         syncCartFromBackend,
       }}

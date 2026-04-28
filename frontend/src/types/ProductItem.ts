@@ -1,5 +1,5 @@
 import { DeliveryEstimate, DeliveryLocation } from "@/utils/delivery";
-import { PlantSizeOption } from "@/utils/productOptions";
+import { PlantSizeOption, PotOption } from "@/utils/productOptions";
 
 export type NestedProduct = {
   id: number | string;
@@ -31,7 +31,7 @@ export type ProductItem = {
   tags?: string[];
   vendorName?: string;
   includePot?: boolean;
-  selectedPotOption?: { name: string; price: number; mrp: number; image?: string } | null;
+  selectedPotOption?: PotOption | null;
 };
 
 export type CartContextType = {
@@ -39,6 +39,11 @@ export type CartContextType = {
   addToCart: (product: Omit<ProductItem, "quantity">) => void;
   updateQuantity: (id: number | string, qty: number) => void;
   updateItemSize: (id: number | string, size: PlantSizeOption) => void;
+  updateItemPot: (
+    id: number | string,
+    includePot: boolean,
+    selectedPotOption?: PotOption | null,
+  ) => void;
   removeFromCart: (id: number | string) => void;
   clearCart: () => void;
   getCartCount: () => number;

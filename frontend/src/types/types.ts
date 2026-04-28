@@ -1,5 +1,5 @@
 import { DeliveryEstimate, DeliveryLocation } from "@/utils/delivery";
-import { PlantSizeOption } from "@/utils/productOptions";
+import { PlantSizeOption, PotOption } from "@/utils/productOptions";
 
 export interface Product {
   id: number | string;
@@ -52,6 +52,8 @@ export interface CartItem {
   originAddress?: Partial<DeliveryLocation>;
   selectedSize?: PlantSizeOption | null;
   plantSizes?: PlantSizeOption[];
+  includePot?: boolean;
+  selectedPotOption?: PotOption | null;
   mrp?: number;
   quantity: number;
 }

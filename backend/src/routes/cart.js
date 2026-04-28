@@ -1,66 +1,75 @@
 import express from "express";
-import mongoose from "mongoose";
 import User from "../models/User.js";
-import Product from "../models/Product.js";
 import { authMiddleware } from "../middleware/auth.js";
 
 const router = express.Router();
 
-// Cart Item Schema (for validation)
-const cartItemSchema = {
-  productId: { type: String, required: true },
-  name: { type: String, required: true },
-  price: { type: Number, required: true },
-  mrp: { type: Number, required: true },
-  quantity: { type: Number, required: true, min: 1 },
-  image: { type: String },
-  category: { type: String },
-  tags: [{ type: String }],
-  vendorName: { type: String },
-  selectedSize: {
-    id: { type: String, required: true },
-    label: { type: String, required: true },
-    price: { type: Number, required: true },
-    mrp: { type: Number, required: true },
-    potPrice: { type: Number },
-    potMrp: { type: Number },
-    includePotByDefault: { type: Boolean }
-  },
-  plantSizes: [{
-    id: { type: String, required: true },
-    label: { type: String, required: true },
-    price: { type: Number, required: true },
-    mrp: { type: Number, required: true },
-    potPrice: { type: Number },
-    potMrp: { type: Number },
-    includePotByDefault: { type: Boolean }
-  }],
-  originAddress: {
-    address: { type: String },
-    city: { type: String },
-    state: { type: String },
-    pincode: { type: String },
-    country: { type: String }
-  },
-  deliveryEstimate: {
-    origin: {
-      city: { type: String },
-      state: { type: String }
-    },
-    destination: {
-      city: { type: String },
-      state: { type: String },
-      pincode: { type: String }
-    },
-    distance: { type: Number },
-    estimatedDeliveryDate: { type: Date },
-    deliveryCharge: { type: Number }
-  },
-  includePot: { type: Boolean, default: false },
-  cartKey: { type: String }
+const getItemKey = (item = {}) => item.cartKey || item.productId;
+
+const buildBaseCartKey = (item = {}, size = {}) =>
+  `${item.productId}::${size.id || size.label || "default"}::${size.label || "default"}`;
+
+const normalizePotSelection = (size = {}, includePot = false, selectedPotOption = null) => {
+  const supportsPot = Number(size?.potPrice || 0) > 0;
+  if (!supportsPot || !includePot) {
+    return {
+      includePot: false,
+      selectedPotOption: null,
+      potPrice: 0,
+      potMrp: 0,
+    };
+  }
+
+  if (selectedPotOption?.name) {
+    return {
+      includePot: true,
+      selectedPotOption: {
+        name: String(selectedPotOption.name),
+        price: Number(selectedPotOption.price || 0),
+        mrp: Number(selectedPotOption.mrp || 0),
+        image: String(selectedPotOption.image || ""),
+      },
+      potPrice: Number(selectedPotOption.price || 0),
+      potMrp: Number(selectedPotOption.mrp || 0),
+    };
+  }
+
+  const fallback = {
+    name: String(size.potName || "Default Pot"),
+    price: Number(size.potPrice || 0),
+    mrp: Number(size.potMrp || 0),
+    image: String(size.potImage || ""),
+  };
+
+  return {
+    includePot: true,
+    selectedPotOption: fallback,
+    potPrice: fallback.price,
+    potMrp: fallback.mrp,
+  };
 };
 
-// GET /api/cart - Get user's cart
+const buildVariantCartKey = (item = {}, size = {}, includePot = false, selectedPotOption = null) => {
+  const baseKey = buildBaseCartKey(item, size);
+  if (!includePot) {
+    return baseKey;
+  }
+  const potToken = selectedPotOption?.name || "default";
+  return `${baseKey}::with-pot::${potToken}`;
+};
+
+const mergeOrReplaceCartItem = (cart = [], currentIndex, nextItem, nextKey) => {
+  const withoutCurrent = cart.filter((_, index) => index !== currentIndex);
+  const existingIndex = withoutCurrent.findIndex((item) => getItemKey(item) === nextKey);
+
+  if (existingIndex >= 0) {
+    withoutCurrent[existingIndex].quantity += Number(nextItem.quantity || 1);
+    return withoutCurrent;
+  }
+
+  return [...withoutCurrent, nextItem];
+};
+
 router.get("/", authMiddleware, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
@@ -70,7 +79,7 @@ router.get("/", authMiddleware, async (req, res) => {
 
     res.json({
       success: true,
-      cart: user.cart || []
+      cart: user.cart || [],
     });
   } catch (error) {
     console.error("Error fetching cart:", error);
@@ -78,7 +87,6 @@ router.get("/", authMiddleware, async (req, res) => {
   }
 });
 
-// POST /api/cart - Add item to cart
 router.post("/", authMiddleware, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
@@ -86,23 +94,23 @@ router.post("/", authMiddleware, async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    const cartItem = req.body;
-    const cartKey = cartItem.cartKey || cartItem.productId;
+    const cartItem = req.body || {};
+    const cartKey = String(cartItem.cartKey || cartItem.productId || "");
+    if (!cartKey) {
+      return res.status(400).json({ message: "Invalid cart item key" });
+    }
 
-    // Check if item already exists in cart
-    const existingItemIndex = user.cart.findIndex(item =>
-      (item.cartKey || item.productId) === cartKey
+    const existingItemIndex = user.cart.findIndex(
+      (item) => getItemKey(item) === cartKey,
     );
 
     if (existingItemIndex >= 0) {
-      // Update quantity of existing item
-      user.cart[existingItemIndex].quantity += cartItem.quantity || 1;
+      user.cart[existingItemIndex].quantity += Number(cartItem.quantity || 1);
     } else {
-      // Add new item to cart
       user.cart.push({
         ...cartItem,
-        cartKey: cartKey,
-        quantity: cartItem.quantity || 1
+        cartKey,
+        quantity: Number(cartItem.quantity || 1),
       });
     }
 
@@ -111,7 +119,7 @@ router.post("/", authMiddleware, async (req, res) => {
     res.json({
       success: true,
       message: "Item added to cart",
-      cart: user.cart
+      cart: user.cart,
     });
   } catch (error) {
     console.error("Error adding to cart:", error);
@@ -119,7 +127,6 @@ router.post("/", authMiddleware, async (req, res) => {
   }
 });
 
-// PUT /api/cart/:cartKey - Update cart item quantity
 router.put("/:cartKey", authMiddleware, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
@@ -130,19 +137,18 @@ router.put("/:cartKey", authMiddleware, async (req, res) => {
     const { cartKey } = req.params;
     const { quantity } = req.body;
 
-    const itemIndex = user.cart.findIndex(item =>
-      (item.cartKey || item.productId) === cartKey
+    const itemIndex = user.cart.findIndex(
+      (item) => getItemKey(item) === cartKey,
     );
 
     if (itemIndex === -1) {
       return res.status(404).json({ message: "Item not found in cart" });
     }
 
-    if (quantity <= 0) {
-      // Remove item if quantity is 0 or less
+    if (Number(quantity) <= 0) {
       user.cart.splice(itemIndex, 1);
     } else {
-      user.cart[itemIndex].quantity = quantity;
+      user.cart[itemIndex].quantity = Number(quantity);
     }
 
     await user.save();
@@ -150,7 +156,7 @@ router.put("/:cartKey", authMiddleware, async (req, res) => {
     res.json({
       success: true,
       message: "Cart updated",
-      cart: user.cart
+      cart: user.cart,
     });
   } catch (error) {
     console.error("Error updating cart:", error);
@@ -158,7 +164,6 @@ router.put("/:cartKey", authMiddleware, async (req, res) => {
   }
 });
 
-// PUT /api/cart/:cartKey/size - Update cart item size
 router.put("/:cartKey/size", authMiddleware, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
@@ -167,54 +172,101 @@ router.put("/:cartKey/size", authMiddleware, async (req, res) => {
     }
 
     const { cartKey } = req.params;
-    const { nextSize, includePot } = req.body;
+    const { nextSize, includePot, selectedPotOption } = req.body || {};
+    if (!nextSize?.id && !nextSize?.label) {
+      return res.status(400).json({ message: "Invalid size payload" });
+    }
 
-    const itemIndex = user.cart.findIndex(item =>
-      (item.cartKey || item.productId) === cartKey
-    );
-
-    if (itemIndex === -1) {
+    const currentIndex = user.cart.findIndex((item) => getItemKey(item) === cartKey);
+    if (currentIndex === -1) {
       return res.status(404).json({ message: "Item not found in cart" });
     }
 
-    const item = user.cart[itemIndex];
+    const currentItem = user.cart[currentIndex].toObject
+      ? user.cart[currentIndex].toObject()
+      : user.cart[currentIndex];
+    const potState = normalizePotSelection(nextSize, includePot, selectedPotOption);
+    const nextKey = buildVariantCartKey(
+      currentItem,
+      nextSize,
+      potState.includePot,
+      potState.selectedPotOption,
+    );
 
-    // Update size and pot selection
-    item.selectedSize = nextSize;
-    item.includePot = includePot;
+    const updatedItem = {
+      ...currentItem,
+      cartKey: nextKey,
+      selectedSize: nextSize,
+      includePot: potState.includePot,
+      selectedPotOption: potState.selectedPotOption,
+      price: Number(nextSize.price || 0) + potState.potPrice,
+      mrp: Number(nextSize.mrp || 0) + potState.potMrp,
+    };
 
-    // Recalculate price based on new size and pot selection
-    const finalPrice = includePot && nextSize.potPrice
-      ? nextSize.price + nextSize.potPrice
-      : nextSize.price;
-    const finalMrp = includePot && nextSize.potMrp
-      ? nextSize.mrp + (nextSize.potMrp || 0)
-      : nextSize.mrp;
-
-    item.price = finalPrice;
-    item.mrp = finalMrp;
-
-    // Update cart key to reflect new size and pot selection
-    const newCartKey = includePot
-      ? `${item.productId}::${nextSize.id}::${nextSize.label}::with-pot`
-      : `${item.productId}::${nextSize.id}::${nextSize.label}`;
-
-    item.cartKey = newCartKey;
-
+    user.cart = mergeOrReplaceCartItem(user.cart, currentIndex, updatedItem, nextKey);
     await user.save();
 
     res.json({
       success: true,
-      message: "Cart item size updated",
-      cart: user.cart
+      message: "Item size updated",
+      cart: user.cart,
     });
   } catch (error) {
-    console.error("Error updating cart item size:", error);
+    console.error("Error updating item size:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 });
 
-// DELETE /api/cart/:cartKey - Remove item from cart
+router.put("/:cartKey/pot", authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const { cartKey } = req.params;
+    const { includePot, selectedPotOption } = req.body || {};
+    const currentIndex = user.cart.findIndex((item) => getItemKey(item) === cartKey);
+
+    if (currentIndex === -1) {
+      return res.status(404).json({ message: "Item not found in cart" });
+    }
+
+    const currentItem = user.cart[currentIndex].toObject
+      ? user.cart[currentIndex].toObject()
+      : user.cart[currentIndex];
+    const size = currentItem.selectedSize || {};
+    const potState = normalizePotSelection(size, includePot, selectedPotOption);
+    const nextKey = buildVariantCartKey(
+      currentItem,
+      size,
+      potState.includePot,
+      potState.selectedPotOption,
+    );
+
+    const updatedItem = {
+      ...currentItem,
+      cartKey: nextKey,
+      includePot: potState.includePot,
+      selectedPotOption: potState.selectedPotOption,
+      price: Number(size.price || 0) + potState.potPrice,
+      mrp: Number(size.mrp || 0) + potState.potMrp,
+    };
+
+    user.cart = mergeOrReplaceCartItem(user.cart, currentIndex, updatedItem, nextKey);
+    await user.save();
+
+    res.json({
+      success: true,
+      message: "Item pot selection updated",
+      cart: user.cart,
+    });
+  } catch (error) {
+    console.error("Error updating pot selection:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
 router.delete("/:cartKey", authMiddleware, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
@@ -223,17 +275,13 @@ router.delete("/:cartKey", authMiddleware, async (req, res) => {
     }
 
     const { cartKey } = req.params;
-
-    user.cart = user.cart.filter(item =>
-      (item.cartKey || item.productId) !== cartKey
-    );
-
+    user.cart = user.cart.filter((item) => getItemKey(item) !== cartKey);
     await user.save();
 
     res.json({
       success: true,
       message: "Item removed from cart",
-      cart: user.cart
+      cart: user.cart,
     });
   } catch (error) {
     console.error("Error removing from cart:", error);
@@ -241,7 +289,6 @@ router.delete("/:cartKey", authMiddleware, async (req, res) => {
   }
 });
 
-// DELETE /api/cart - Clear entire cart
 router.delete("/", authMiddleware, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
@@ -255,77 +302,10 @@ router.delete("/", authMiddleware, async (req, res) => {
     res.json({
       success: true,
       message: "Cart cleared",
-      cart: user.cart
+      cart: user.cart,
     });
   } catch (error) {
     console.error("Error clearing cart:", error);
-    res.status(500).json({ message: "Internal server error" });
-  }
-});
-
-// PUT /api/cart/:cartKey/size - Update item size (with pot support)
-router.put("/:cartKey/size", authMiddleware, async (req, res) => {
-  try {
-    const user = await User.findById(req.user.id);
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    const { cartKey } = req.params;
-    const { nextSize, includePot } = req.body;
-
-    const currentItemIndex = user.cart.findIndex(item =>
-      (item.cartKey || item.productId) === cartKey
-    );
-
-    if (currentItemIndex === -1) {
-      return res.status(404).json({ message: "Item not found in cart" });
-    }
-
-    const currentItem = user.cart[currentItemIndex];
-
-    // Calculate final price including pot if applicable
-    const finalPrice = includePot && nextSize.potPrice
-      ? nextSize.price + nextSize.potPrice
-      : nextSize.price;
-    const finalMrp = includePot && nextSize.potMrp
-      ? nextSize.mrp + (nextSize.potMrp || 0)
-      : nextSize.mrp;
-
-    const newCartKey = includePot
-      ? `${currentItem.productId}::${nextSize.id}::with-pot`
-      : `${currentItem.productId}::${nextSize.id}`;
-
-    // Check if the new variant already exists
-    const existingVariantIndex = user.cart.findIndex(item =>
-      (item.cartKey || item.productId) === newCartKey && item !== currentItem
-    );
-
-    if (existingVariantIndex >= 0) {
-      // Merge quantities
-      user.cart[existingVariantIndex].quantity += currentItem.quantity;
-      user.cart.splice(currentItemIndex, 1);
-    } else {
-      // Update the current item
-      user.cart[currentItemIndex] = {
-        ...currentItem,
-        cartKey: newCartKey,
-        selectedSize: nextSize,
-        price: finalPrice,
-        mrp: finalMrp,
-        includePot: includePot || false
-      };
-    }
-
-    await user.save();
-
-    res.json({
-      success: true,
-      message: "Item size updated",
-      cart: user.cart
-    });
-  } catch (error) {
-    console.error("Error updating item size:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 });

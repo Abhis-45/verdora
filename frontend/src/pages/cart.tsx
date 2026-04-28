@@ -27,6 +27,7 @@ export default function CartPage() {
     cartItems,
     updateQuantity,
     updateItemSize,
+    updateItemPot,
     removeFromCart,
     clearCart,
   } = useCart();
@@ -421,6 +422,7 @@ export default function CartPage() {
                   cartItems={cartItemsWithEstimate}
                   onUpdate={updateQuantity}
                   onChangeSize={updateItemSize}
+                  onTogglePot={updateItemPot}
                   onRemove={removeFromCart}
                   onClear={clearCart}
                 />

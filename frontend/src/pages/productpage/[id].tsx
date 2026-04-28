@@ -24,6 +24,7 @@ import {
   getDefaultPlantSize,
   normalizePlantSizes,
   PlantSizeOption,
+  PotOption,
 } from "@/utils/productOptions";
 
 import ProductImageCarousel from "../../components/productpage/ProductImageCarousel";
@@ -74,7 +75,9 @@ export default function ProductDetailPage() {
   const [locationEditorOpen, setLocationEditorOpen] = useState(false);
   const [shareMessage, setShareMessage] = useState("");
   const [includePot, setIncludePot] = useState(false);
-  const [selectedPotOption, setSelectedPotOption] = useState<any>(null);
+  const [selectedPotOption, setSelectedPotOption] = useState<PotOption | null>(
+    null,
+  );
 
   const { cartItems, addToCart, updateQuantity, removeFromCart } = useCart();
   const { addViewedProduct } = useRecentlyViewed();
@@ -154,8 +157,13 @@ export default function ProductDetailPage() {
   useEffect(() => {
     if (selectedSize && (!selectedSize.potPrice || selectedSize.potPrice <= 0)) {
       setIncludePot(false);
+      setSelectedPotOption(null);
     }
   }, [selectedSize]);
+
+  useEffect(() => {
+    setSelectedPotOption(null);
+  }, [selectedSize?.id]);
 
   if (isLoading || !router.isReady) {
     return (
@@ -196,12 +204,30 @@ export default function ProductDetailPage() {
           ((selectedSize.mrp - selectedSize.price) / selectedSize.mrp) * 100,
         )
       : 0;
+  const activePotOption =
+    includePot
+      ? selectedPotOption ||
+        (selectedSize.potPrice && selectedSize.potPrice > 0
+          ? {
+              name: selectedSize.potName || "Default Pot",
+              price: Number(selectedSize.potPrice || 0),
+              mrp: Number(selectedSize.potMrp || 0),
+              image: selectedSize.potImage || "",
+            }
+          : null)
+      : null;
+  const activePotPrice = Number(activePotOption?.price || 0);
+  const activePotMrp = Number(activePotOption?.mrp || 0);
+  const activePotName = activePotOption?.name || "";
+
   const cartKey = buildCartKey(
     productIdVal,
     selectedSize.id,
     selectedSize.label,
   );
-  const finalCartKey = includePot ? `${cartKey}::with-pot` : cartKey;
+  const finalCartKey = includePot
+    ? `${cartKey}::with-pot::${activePotName || "default"}`
+    : cartKey;
   const cartItem = cartItems.find(
     (item) => (item.cartKey || String(item.id)) === finalCartKey,
   );
@@ -244,28 +270,11 @@ export default function ProductDetailPage() {
   };
 
   const addCurrentVariantToCart = () => {
-    // Calculate price with selected pot option or default pot
-    let potPrice = 0;
-    let potMrp = 0;
-    let potName = "";
-    
-    if (includePot) {
-      if (selectedPotOption) {
-        potPrice = selectedPotOption.price;
-        potMrp = selectedPotOption.mrp;
-        potName = selectedPotOption.name;
-      } else if (selectedSize.potPrice) {
-        potPrice = selectedSize.potPrice;
-        potMrp = selectedSize.potMrp || 0;
-        potName = selectedSize.potName || "";
-      }
-    }
-
-    const finalPrice = selectedSize.price + potPrice;
-    const finalMrp = selectedSize.mrp + potMrp;
-    const cartKeySuffix = includePot 
-      ? `::with-pot::${potName || 'default'}`
-      : '';
+    const finalPrice = selectedSize.price + activePotPrice;
+    const finalMrp = selectedSize.mrp + activePotMrp;
+    const cartKeySuffix = includePot
+      ? `::with-pot::${activePotName || "default"}`
+      : "";
 
     addToCart({
       cartKey: `${cartKey}${cartKeySuffix}`,
@@ -279,12 +288,8 @@ export default function ProductDetailPage() {
       category: product.category,
       tags: product.tags,
       vendorName: product.vendorName,
-      selectedSize: {
-        ...selectedSize,
-        price: finalPrice,
-        mrp: finalMrp,
-      },
-      selectedPotOption: includePot ? (selectedPotOption || { name: selectedSize.potName, price: selectedSize.potPrice, mrp: selectedSize.potMrp }) : null,
+      selectedSize,
+      selectedPotOption: includePot ? activePotOption : null,
       plantSizes,
       originAddress: product.originAddress,
       deliveryEstimate,
@@ -413,21 +418,17 @@ export default function ProductDetailPage() {
 
                     <div className="mt-2 flex flex-wrap items-center gap-3">
                       <span className="text-xl sm:text-xl text-green-700 font-bold">
-                        ₹{includePot && selectedSize.potPrice
-                          ? selectedSize.price + selectedSize.potPrice
-                          : selectedSize.price}
+                        ₹{selectedSize.price + activePotPrice}
                       </span>
-                      {includePot && selectedSize.potPrice && (
+                      {includePot && activePotPrice > 0 && (
                         <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded font-medium">
-                          +₹{selectedSize.potPrice} (pot)
+                          +₹{activePotPrice} ({activePotName || "pot"})
                         </span>
                       )}
                       {discount > 0 && (
                         <>
                           <span className="text-sm sm:text-base line-through text-red-500">
-                            ₹{includePot && selectedSize.potMrp
-                              ? selectedSize.mrp + (selectedSize.potMrp || 0)
-                              : selectedSize.mrp}
+                            ₹{selectedSize.mrp + activePotMrp}
                           </span>
                           <span className="rounded-full bg-linear-to-r from-red-500 to-red-600 px-2 py-0.5 text-xs sm:text-sm text-white shadow-sm">
                             {discount}% OFF

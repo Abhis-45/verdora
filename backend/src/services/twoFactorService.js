@@ -77,8 +77,8 @@ const parseAxiosError = (err) => {
     : null;
   return (
     data?.Details ||
-    data?.error ||
     detailsMessage ||
+    data?.error ||
     data?.message ||
     err?.message ||
     "Unknown SMS API error"
@@ -142,21 +142,33 @@ const sendTransactionalSms = async (phoneNumber, text) => {
 export const sendOtpSMS = async (phoneNumber, otp) => {
   requireApiKey();
   const otpValue = otp ? String(otp) : null;
+  const normalized = normalizePhoneNumber(phoneNumber);
 
   // Prefer transactional SMS for OTP delivery so users receive an SMS message
   // instead of provider-managed fallback channels like voice calls.
   if (otpValue) {
-    return sendTransactionalSms(
-      phoneNumber,
-      `Your Verdora OTP is ${otpValue}. It is valid for 10 minutes. Do not share this code with anyone.`,
-    );
-  }
+    try {
+      return await sendTransactionalSms(
+        phoneNumber,
+        `Your Verdora OTP is ${otpValue}. It is valid for 10 minutes. Do not share this code with anyone.`,
+      );
+    } catch (err) {
+      const message = String(err?.message || "").toLowerCase();
+      const shouldFallbackToOtpApi =
+        message.includes("sender id configuration not found") ||
+        message.includes("invalid api key") ||
+        message.includes("transactional_sms service is inactive") ||
+        message.includes("validation failed");
 
-  const normalized = normalizePhoneNumber(phoneNumber);
+      if (!shouldFallbackToOtpApi) {
+        throw err;
+      }
+    }
+  }
 
   try {
     const response = await axios.post(
-      `${OTP_BASE_URL}/${API_KEY}/SMS/${normalized.withoutPlus}/AUTOGEN`,
+      `${OTP_BASE_URL}/${API_KEY}/SMS/${normalized.withoutPlus}/${encodeURIComponent(otpValue || "AUTOGEN")}`,
     );
     const data = parseResponseData(response.data);
     assertSuccess(data, "Failed to send OTP");

@@ -39,7 +39,7 @@ export default function CartActions({
           title={!isAvailable ? "Product is out of stock" : "Add to Cart"}
         >
           <ShoppingCartIcon className="h-4 w-4 shrink-0" />
-          <span className="hidden sm:inline">Add to Cart</span>
+          <span>Add to Cart</span>
         </button>
       ) : (
         <>
@@ -77,7 +77,7 @@ export default function CartActions({
             className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-green-900 px-2 py-2 text-xs font-semibold text-white shadow transition hover:bg-green-700 min-h-10 sm:px-4 sm:py-2.5 sm:text-sm sm:gap-2"
           >
             <ShoppingCartIcon className="h-4 w-4 shrink-0" />
-            <span className="hidden sm:inline">Go to Cart</span>
+            <span>Go to Cart</span>
           </button>
         </>
       )}
@@ -89,7 +89,7 @@ export default function CartActions({
         title={!isAvailable ? "Product is out of stock" : "Buy Now"}
       >
         <BoltIcon className="h-4 w-4 shrink-0" />
-        <span className="hidden sm:inline">Buy Now</span>
+        <span>Buy Now</span>
       </button>
     </>
   );
@@ -98,7 +98,7 @@ export default function CartActions({
     <>
       {/* Mobile fixed bar */}
       <div className="lg:hidden">
-        <div className="flex flex-row gap-2">
+        <div className="flex flex-row gap-4 items-center justify-center fixed bottom-0 left-0 right-0 bg-white p-4 border-t border-gray-200 shadow-lg">
           {renderButtons()}
         </div>
       </div>
