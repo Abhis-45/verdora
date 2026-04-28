@@ -11,7 +11,7 @@ import {
 } from "../services/emailService.js";
 import {
   sendVendorRegistrationReceivedSMS,
-} from "../services/twilioService.js";
+} from "../services/twoFactorService.js";
 
 const router = express.Router();
 

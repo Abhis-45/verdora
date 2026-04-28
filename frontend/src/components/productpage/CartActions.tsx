@@ -16,6 +16,7 @@ interface CartActionsProps {
   onRemoveFromCart: (cartKey: string) => void;
   onGoToCart: () => void;
   onBuyNow: () => void;
+  isAvailable?: boolean;
 }
 
 export default function CartActions({
@@ -26,16 +27,19 @@ export default function CartActions({
   onRemoveFromCart,
   onGoToCart,
   onBuyNow,
+  isAvailable = true,
 }: CartActionsProps) {
   const renderButtons = () => (
     <>
       {!cartItem ? (
         <button
           onClick={onAddToCart}
-          className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-green-600 px-2 py-2 text-xs font-semibold text-white shadow transition hover:bg-green-700 min-h-10 sm:px-4 sm:py-2.5 sm:text-sm sm:gap-2"
+          disabled={!isAvailable}
+          className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-green-600 px-2 py-2 text-xs font-semibold text-white shadow transition hover:bg-green-700 min-h-10 sm:px-4 sm:py-2.5 sm:text-sm sm:gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          title={!isAvailable ? "Product is out of stock" : "Add to Cart"}
         >
           <ShoppingCartIcon className="h-4 w-4 shrink-0" />
-          <span>Add to Cart</span>
+          <span className="hidden sm:inline">Add to Cart</span>
         </button>
       ) : (
         <>
@@ -73,17 +77,19 @@ export default function CartActions({
             className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-green-900 px-2 py-2 text-xs font-semibold text-white shadow transition hover:bg-green-700 min-h-10 sm:px-4 sm:py-2.5 sm:text-sm sm:gap-2"
           >
             <ShoppingCartIcon className="h-4 w-4 shrink-0" />
-            <span>Go to Cart</span>
+            <span className="hidden sm:inline">Go to Cart</span>
           </button>
         </>
       )}
 
       <button
         onClick={onBuyNow}
-        className="flex items-center justify-center gap-1 rounded-lg bg-emerald-900 px-2 py-2 text-xs font-semibold text-white shadow transition hover:bg-emerald-950 min-h-10 sm:px-4 sm:py-2.5 sm:text-sm sm:gap-2"
+        disabled={!isAvailable}
+        className="flex items-center justify-center gap-1 rounded-lg bg-emerald-900 px-2 py-2 text-xs font-semibold text-white shadow transition hover:bg-emerald-950 min-h-10 sm:px-4 sm:py-2.5 sm:text-sm sm:gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+        title={!isAvailable ? "Product is out of stock" : "Buy Now"}
       >
         <BoltIcon className="h-4 w-4 shrink-0" />
-        <span>Buy Now</span>
+        <span className="hidden sm:inline">Buy Now</span>
       </button>
     </>
   );

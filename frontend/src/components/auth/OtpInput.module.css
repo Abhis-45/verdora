@@ -1,0 +1,59 @@
+/* OTP Input Component Styles */
+
+.otpContainer {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin: 20px 0;
+  flex-wrap: wrap;
+}
+
+.otpInput {
+  width: 50px;
+  height: 50px;
+  font-size: 24px;
+  font-weight: 600;
+  text-align: center;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  background-color: #f9f9f9;
+  color: #333;
+  font-family: "Courier New", monospace;
+
+  &:focus {
+    outline: none;
+    border-color: #4caf50;
+    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+    background-color: #fff;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: #bbb;
+  }
+
+  &.filled {
+    border-color: #4caf50;
+    background-color: #f0f7f0;
+    color: #2e7d32;
+  }
+
+  &.disabled {
+    background-color: #f5f5f5;
+    color: #999;
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  /* Mobile responsive */
+  @media (max-width: 480px) {
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+    gap: 8px;
+  }
+}
+
+.otpContainer:has(.otpInput:focus) .otpInput {
+  border-color: #ddd;
+}

@@ -21,7 +21,7 @@ export default function PasswordResetModal({ isOpen, onClose, backendUrl }: Pass
   const [method, setMethod] = useState<"email" | "sms">("email");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [maskedEmail, setMaskedEmail] = useState("");
+  const [deliveryTarget, setDeliveryTarget] = useState("");
 
   if (!isOpen) return null;
 
@@ -41,7 +41,8 @@ export default function PasswordResetModal({ isOpen, onClose, backendUrl }: Pass
       const data = await response.json();
 
       if (response.ok) {
-        setMaskedEmail(data.maskedEmail || email.replace(/(.{2})(.*)(.{2})/, "$1***$3"));
+        const fallbackMaskedEmail = email.replace(/(.{2})(.*)(.{2})/, "$1***$3");
+        setDeliveryTarget(data.maskedPhone || data.maskedEmail || fallbackMaskedEmail);
         setStep("verify");
       } else {
         setError(data.message || "Failed to send OTP");
@@ -135,7 +136,7 @@ export default function PasswordResetModal({ isOpen, onClose, backendUrl }: Pass
     setConfirmPassword("");
     setResetToken("");
     setError("");
-    setMaskedEmail("");
+    setDeliveryTarget("");
     onClose();
   };
 
@@ -232,7 +233,7 @@ export default function PasswordResetModal({ isOpen, onClose, backendUrl }: Pass
         {step === "verify" && (
           <form onSubmit={handleVerifyOTP} className="space-y-4">
             <p className="text-gray-600 text-sm mb-4">
-              We&apos;ve sent an OTP to <strong>{maskedEmail}</strong>
+              We&apos;ve sent an OTP to <strong>{deliveryTarget}</strong>
             </p>
 
             <div>

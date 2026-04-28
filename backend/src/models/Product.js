@@ -10,7 +10,18 @@ const PlantSizeSchema = new mongoose.Schema(
     isDefault: { type: Boolean, default: false },
     potPrice: { type: Number, default: 0, min: 0 },
     potMrp: { type: Number, default: 0, min: 0 },
+    potName: { type: String, default: "" },
+    potImage: { type: String, default: "" },
     includePotByDefault: { type: Boolean, default: false },
+    potOptions: [
+      {
+        name: { type: String, required: true },
+        price: { type: Number, required: true, min: 0 },
+        mrp: { type: Number, required: true, min: 0 },
+        image: { type: String, default: "" },
+        _id: false,
+      },
+    ],
   },
   { _id: false },
 );
@@ -68,6 +79,7 @@ const ProductSchema = new mongoose.Schema({
   vendorId: { type: mongoose.Schema.Types.ObjectId, ref: "Vendor" },
   vendorName: { type: String, default: "" },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "Admin" },
+  isAvailable: { type: Boolean, default: true },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 });

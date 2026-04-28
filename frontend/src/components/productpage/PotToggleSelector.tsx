@@ -20,6 +20,8 @@ export default function PotToggleSelector({
 
   const potPrice = selectedSize.potPrice;
   const potMrp = selectedSize.potMrp || 0;
+  const potName = selectedSize.potName || "Premium Ceramic Pot";
+  const potImage = selectedSize.potImage;
 
   const plantOnlyPrice = selectedSize.price;
   const withPotPrice = plantOnlyPrice + potPrice;
@@ -28,7 +30,16 @@ export default function PotToggleSelector({
     <div className="rounded-lg bg-gradient-to-r from-amber-50 to-amber-100 p-2.5 border border-amber-200">
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
-        <p className="text-xs font-bold text-amber-900">✨ Premium Pot Add-on</p>
+        <div className="flex items-center gap-2">
+          {potImage && (
+            <img
+              src={potImage}
+              alt={potName}
+              className="w-6 h-6 rounded object-cover border border-amber-300"
+            />
+          )}
+          <p className="text-xs font-bold text-amber-900">✨ {potName}</p>
+        </div>
         <span className="text-[10px] bg-amber-600 text-white px-1.5 py-0.5 rounded font-semibold">
           +₹{potPrice}
         </span>
@@ -58,14 +69,14 @@ export default function PotToggleSelector({
               : "bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200"
           }`}
         >
-          With Pot
+          With {potName.split(' ')[0]}
           <div className="text-[10px] font-normal opacity-90">₹{withPotPrice}</div>
         </button>
       </div>
 
       {/* Info Text */}
       <p className="text-[10px] text-amber-800 mt-1.5 italic">
-        🏺 Premium ceramic pot with drainage holes
+        🏺 {potName}
       </p>
     </div>
   );

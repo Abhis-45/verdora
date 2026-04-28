@@ -37,27 +37,43 @@ const getOrderStatusFromItems = (items = [], fallbackStatus = "accepted") => {
   return "accepted";
 };
 
-const normalizeProductPayload = (payload = {}) => {
-  const plantSizes = normalizePlantSizes(
-    payload.plantSizes,
-    payload.price,
-    payload.mrp,
-  );
-  const defaultSize = getDefaultPlantSize(
-    plantSizes,
-    payload.price,
-    payload.mrp,
-  );
+const hasOwn = (payload, key) =>
+  Object.prototype.hasOwnProperty.call(payload, key);
 
-  return {
-    ...payload,
-    price: defaultSize.price,
-    mrp: defaultSize.mrp,
-    plantSizes,
-    originAddress: normalizeAddress(
+const normalizeProductPayload = (
+  payload = {},
+  { forcePlantSizes = false, forceOriginAddress = false } = {},
+) => {
+  const nextPayload = { ...payload };
+  const shouldNormalizePlantSizes =
+    forcePlantSizes || hasOwn(payload, "plantSizes");
+
+  if (shouldNormalizePlantSizes) {
+    const plantSizes = normalizePlantSizes(
+      payload.plantSizes,
+      payload.price,
+      payload.mrp,
+    );
+    const defaultSize = getDefaultPlantSize(
+      plantSizes,
+      payload.price,
+      payload.mrp,
+    );
+
+    nextPayload.plantSizes = plantSizes;
+    nextPayload.price = defaultSize.price;
+    nextPayload.mrp = defaultSize.mrp;
+  }
+
+  const shouldNormalizeOriginAddress =
+    forceOriginAddress || hasOwn(payload, "originAddress");
+  if (shouldNormalizeOriginAddress) {
+    nextPayload.originAddress = normalizeAddress(
       payload.originAddress || DEFAULT_ORIGIN_ADDRESS,
-    ),
-  };
+    );
+  }
+
+  return nextPayload;
 };
 
 // ✅ GET VENDOR PROFILE
@@ -88,18 +104,31 @@ router.put("/profile", vendorAuthMiddleware, async (req, res) => {
       businessPhone,
       businessLocation,
       businessWebsite,
+      city,
+      deliveryRadius,
     } = req.body;
+
+    const updateData = {
+      updatedAt: new Date(),
+    };
+
+    // Only update provided fields
+    if (businessName !== undefined) updateData.businessName = businessName;
+    if (businessDescription !== undefined) updateData.businessDescription = businessDescription;
+    if (businessPhone !== undefined) updateData.businessPhone = businessPhone;
+    if (businessLocation !== undefined) updateData.businessLocation = businessLocation;
+    if (businessWebsite !== undefined) updateData.businessWebsite = businessWebsite;
+    if (city !== undefined) updateData.city = city;
+    if (deliveryRadius !== undefined) {
+      const radius = Number(deliveryRadius);
+      if (radius >= 1 && radius <= 100) {
+        updateData.deliveryRadius = radius;
+      }
+    }
 
     const vendor = await Vendor.findByIdAndUpdate(
       req.vendorId,
-      {
-        businessName,
-        businessDescription,
-        businessPhone,
-        businessLocation,
-        businessWebsite,
-        updatedAt: new Date(),
-      },
+      updateData,
       { new: true },
     ).select("-password");
 
@@ -107,7 +136,7 @@ router.put("/profile", vendorAuthMiddleware, async (req, res) => {
       return res.status(404).json({ message: "Vendor not found" });
     }
 
-    res.json({ message: "Business details updated successfully", vendor });
+    res.json({ message: "Profile updated successfully", vendor });
   } catch (err) {
     res
       .status(500)
@@ -198,13 +227,13 @@ router.put("/products/:id", vendorAuthMiddleware, async (req, res) => {
     }
 
     // Update only allowed fields
-    if (name) product.name = name;
-    if (category) product.category = category;
-    if (price) product.price = price;
-    if (mrp) product.mrp = mrp;
-    if (brand) product.brand = brand;
-    if (description) product.description = description;
-    if (plantSizes) product.plantSizes = plantSizes;
+    if (name !== undefined) product.name = name;
+    if (category !== undefined) product.category = category;
+    if (price !== undefined) product.price = price;
+    if (mrp !== undefined) product.mrp = mrp;
+    if (brand !== undefined) product.brand = brand;
+    if (description !== undefined) product.description = description;
+    if (plantSizes !== undefined) product.plantSizes = plantSizes;
 
     // Auto-populate originAddress from vendor's profile
     const vendor = await Vendor.findById(req.vendorId);

@@ -24,6 +24,8 @@ const VendorSchema = new mongoose.Schema(
     businessLocation: { type: String, default: "" },
     businessWebsite: { type: String, default: "" },
     businessLogo: { type: String, default: "" },
+    city: { type: String, default: "" },
+    deliveryRadius: { type: Number, default: 10, min: 1, max: 100 },
 
     // Performance Metrics
     totalProducts: { type: Number, default: 0 },

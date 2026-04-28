@@ -34,6 +34,8 @@ const defaultSize: PlantSizeOption = {
   mrp: 0,
   potPrice: 0,
   potMrp: 0,
+  potName: "",
+  potImage: "",
   isDefault: true,
 };
 
@@ -48,6 +50,7 @@ export default function AddProduct() {
     brand: "",
     description: "",
     tags: "",
+    isAvailable: true,
   });
   const [plantSizes, setPlantSizes] = useState<PlantSizeOption[]>([
     defaultSize,
@@ -179,6 +182,7 @@ export default function AddProduct() {
         brand: product.brand || "",
         description: product.description || "",
         tags: (product.tags || []).join(", "),
+        isAvailable: product.isAvailable !== false,
       });
 
       // Pre-fill plant sizes
@@ -734,6 +738,33 @@ export default function AddProduct() {
                     </div>
                   </div>
                 )}
+              </div>
+
+              <div className="rounded-lg border border-gray-300 bg-blue-50 p-4">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    name="isAvailable"
+                    checked={formData.isAvailable}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        isAvailable: e.target.checked,
+                      })
+                    }
+                    className="h-5 w-5 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                  />
+                  <div>
+                    <p className="font-semibold text-gray-800">
+                      {formData.isAvailable ? "✓ In Stock" : "✗ Out of Stock"}
+                    </p>
+                    <p className="text-xs text-gray-600">
+                      {formData.isAvailable
+                        ? "Product is available for customers"
+                        : "Product is not available"}
+                    </p>
+                  </div>
+                </label>
               </div>
 
               <button

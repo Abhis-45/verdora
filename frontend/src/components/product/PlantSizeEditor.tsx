@@ -11,6 +11,8 @@ const emptySize = (label = ""): PlantSizeOption => ({
   mrp: 0,
   potPrice: 0,
   potMrp: 0,
+  potName: "",
+  potImage: "",
   isDefault: false,
 });
 
@@ -159,7 +161,23 @@ export default function PlantSizeEditor({
               </p>
             )}
 
-            {/* Third Row: Pot Price + Pot MRP (Optional) */}
+            {/* Third Row: Pot Name (Optional) */}
+            <div className="border-t pt-2">
+              <label className="text-xs text-amber-700 font-medium block mb-1">
+                Pot Name <span className="text-gray-500 font-normal">optional</span>
+              </label>
+              <input
+                type="text"
+                value={(size.potName as string) || ""}
+                onChange={(event) =>
+                  updateSize(index, "potName", event.target.value)
+                }
+                placeholder="e.g., Ceramic Pot, Terracotta Pot, Plastic Pot"
+                className="w-full rounded-md border border-amber-300 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-amber-500 bg-amber-50"
+              />
+            </div>
+
+            {/* Fourth Row: Pot Price + Pot MRP (Optional) */}
             <div className="flex gap-2 border-t pt-2">
               <div className="flex-1">
                 <label className="text-xs text-amber-700 font-medium block mb-1">
@@ -202,7 +220,111 @@ export default function PlantSizeEditor({
               </p>
             )}
 
-            {/* Fourth Row: Default + Delete */}
+            {/* Sixth Row: Multiple Pot Options (Advanced) */}
+            {size.potPrice > 0 && (
+              <div className="border-t pt-2">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs text-amber-700 font-medium">
+                    Multiple Pot Options <span className="text-gray-500 font-normal">advanced</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const currentPots = size.potOptions || [];
+                      updateSize(index, "potOptions", [
+                        ...currentPots,
+                        { name: "", price: 0, mrp: 0, image: "" }
+                      ]);
+                    }}
+                    className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded hover:bg-amber-200"
+                  >
+                    + Add Pot Option
+                  </button>
+                </div>
+
+                {(size.potOptions || []).map((pot, potIndex) => (
+                  <div key={potIndex} className="mb-2 p-2 bg-amber-50 rounded border border-amber-200">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-medium text-amber-800">Pot Option {potIndex + 1}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const currentPots = size.potOptions || [];
+                          updateSize(index, "potOptions", currentPots.filter((_, i) => i !== potIndex));
+                        }}
+                        className="text-xs text-red-600 hover:text-red-800"
+                      >
+                        Remove
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 mb-2">
+                      <input
+                        type="text"
+                        placeholder="Pot name"
+                        value={pot.name}
+                        onChange={(event) => {
+                          const currentPots = size.potOptions || [];
+                          const updatedPots = [...currentPots];
+                          updatedPots[potIndex] = { ...pot, name: event.target.value };
+                          updateSize(index, "potOptions", updatedPots);
+                        }}
+                        className="w-full rounded border border-amber-300 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-amber-500"
+                      />
+                      <input
+                        type="url"
+                        placeholder="Image URL"
+                        value={pot.image || ""}
+                        onChange={(event) => {
+                          const currentPots = size.potOptions || [];
+                          const updatedPots = [...currentPots];
+                          updatedPots[potIndex] = { ...pot, image: event.target.value };
+                          updateSize(index, "potOptions", updatedPots);
+                        }}
+                        className="w-full rounded border border-amber-300 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-amber-500"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="number"
+                        placeholder="Price"
+                        value={pot.price || ""}
+                        onChange={(event) => {
+                          const currentPots = size.potOptions || [];
+                          const updatedPots = [...currentPots];
+                          updatedPots[potIndex] = { ...pot, price: Number(event.target.value) };
+                          updateSize(index, "potOptions", updatedPots);
+                        }}
+                        min="0"
+                        className="w-full rounded border border-amber-300 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-amber-500"
+                      />
+                      <input
+                        type="number"
+                        placeholder="MRP"
+                        value={pot.mrp || ""}
+                        onChange={(event) => {
+                          const currentPots = size.potOptions || [];
+                          const updatedPots = [...currentPots];
+                          updatedPots[potIndex] = { ...pot, mrp: Number(event.target.value) };
+                          updateSize(index, "potOptions", updatedPots);
+                        }}
+                        min="0"
+                        className="w-full rounded border border-amber-300 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-amber-500"
+                      />
+                    </div>
+                  </div>
+                ))}
+
+                {(size.potOptions || []).length === 0 && (
+                  <p className="text-[10px] text-amber-600">
+                    Add multiple pot options for customers to choose from
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Seventh Row: Default + Delete */}
             <div className="flex items-center justify-between border-t pt-2">
               <label className="flex items-center gap-1 text-xs font-medium text-green-800">
                 <input

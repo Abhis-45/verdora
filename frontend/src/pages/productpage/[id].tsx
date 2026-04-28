@@ -28,7 +28,7 @@ import {
 
 import ProductImageCarousel from "../../components/productpage/ProductImageCarousel";
 import PlantSizeSelector from "../../components/productpage/PlantSizeSelector";
-import PotToggleSelector from "../../components/productpage/PotToggleSelector";
+import PotOptionsSelector from "../../components/productpage/PotOptionsSelector";
 import TabbedSection from "../../components/productpage/TabbedSection";
 import TrustBadges from "../../components/productpage/TrustBadges";
 import CartActions from "../../components/productpage/CartActions";
@@ -49,6 +49,7 @@ type ProductRecord = {
   mrp: number;
   description?: string;
   tags?: string[];
+  isAvailable?: boolean;
   plantSizes?: PlantSizeOption[];
   originAddress?: {
     address?: string;
@@ -73,6 +74,7 @@ export default function ProductDetailPage() {
   const [locationEditorOpen, setLocationEditorOpen] = useState(false);
   const [shareMessage, setShareMessage] = useState("");
   const [includePot, setIncludePot] = useState(false);
+  const [selectedPotOption, setSelectedPotOption] = useState<any>(null);
 
   const { cartItems, addToCart, updateQuantity, removeFromCart } = useCart();
   const { addViewedProduct } = useRecentlyViewed();
@@ -242,15 +244,31 @@ export default function ProductDetailPage() {
   };
 
   const addCurrentVariantToCart = () => {
-    const finalPrice = includePot && selectedSize.potPrice
-      ? selectedSize.price + selectedSize.potPrice
-      : selectedSize.price;
-    const finalMrp = includePot && selectedSize.potMrp
-      ? selectedSize.mrp + (selectedSize.potMrp || 0)
-      : selectedSize.mrp;
+    // Calculate price with selected pot option or default pot
+    let potPrice = 0;
+    let potMrp = 0;
+    let potName = "";
+    
+    if (includePot) {
+      if (selectedPotOption) {
+        potPrice = selectedPotOption.price;
+        potMrp = selectedPotOption.mrp;
+        potName = selectedPotOption.name;
+      } else if (selectedSize.potPrice) {
+        potPrice = selectedSize.potPrice;
+        potMrp = selectedSize.potMrp || 0;
+        potName = selectedSize.potName || "";
+      }
+    }
+
+    const finalPrice = selectedSize.price + potPrice;
+    const finalMrp = selectedSize.mrp + potMrp;
+    const cartKeySuffix = includePot 
+      ? `::with-pot::${potName || 'default'}`
+      : '';
 
     addToCart({
-      cartKey: includePot ? `${cartKey}::with-pot` : cartKey,
+      cartKey: `${cartKey}${cartKeySuffix}`,
       id: productIdVal,
       productId: productIdVal,
       name: product.name,
@@ -266,6 +284,7 @@ export default function ProductDetailPage() {
         price: finalPrice,
         mrp: finalMrp,
       },
+      selectedPotOption: includePot ? (selectedPotOption || { name: selectedSize.potName, price: selectedSize.potPrice, mrp: selectedSize.potMrp }) : null,
       plantSizes,
       originAddress: product.originAddress,
       deliveryEstimate,
@@ -370,6 +389,21 @@ export default function ProductDetailPage() {
                       Vendor : {product.brand || "Verdora"}
                     </p>
 
+                    {/* Stock Status Badge */}
+                    <div className="flex items-center gap-2">
+                      {product.isAvailable !== false ? (
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
+                          <span className="inline-block w-2 h-2 bg-green-500 rounded-full"></span>
+                          In Stock
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">
+                          <span className="inline-block w-2 h-2 bg-red-500 rounded-full"></span>
+                          Out of Stock
+                        </span>
+                      )}
+                    </div>
+
                     <p className="mt-1 text-sm sm:text-base text-gray-700">
                       <span className="text-gray-900">Size:</span>{" "}
                       <span className="text-green-700">
@@ -410,11 +444,13 @@ export default function ProductDetailPage() {
                     onSelectSize={setSelectedSize}
                   />
 
-                  {/* Pot Toggle Selector */}
-                  <PotToggleSelector
+                  {/* Pot Options Selector */}
+                  <PotOptionsSelector
                     selectedSize={selectedSize}
+                    selectedPotOption={selectedPotOption}
                     includePot={includePot}
                     onTogglePot={setIncludePot}
+                    onSelectPot={setSelectedPotOption}
                   />
 
                   <div className="border-t border-gray-200" />
@@ -538,6 +574,7 @@ export default function ProductDetailPage() {
                           if (!cartItem) addCurrentVariantToCart();
                           router.push("/cart");
                         }}
+                        isAvailable={product.isAvailable !== false}
                       />
                     </div>
                   </div>
@@ -556,6 +593,7 @@ export default function ProductDetailPage() {
                       if (!cartItem) addCurrentVariantToCart();
                       router.push("/cart");
                     }}
+                    isAvailable={product.isAvailable !== false}
                   />
                 </div>
 

@@ -30,27 +30,43 @@ const isValidObjectId = (id) => {
   );
 };
 
-const normalizeProductPayload = (payload = {}) => {
-  const plantSizes = normalizePlantSizes(
-    payload.plantSizes,
-    payload.price,
-    payload.mrp,
-  );
-  const defaultSize = getDefaultPlantSize(
-    plantSizes,
-    payload.price,
-    payload.mrp,
-  );
+const hasOwn = (payload, key) =>
+  Object.prototype.hasOwnProperty.call(payload, key);
 
-  return {
-    ...payload,
-    price: defaultSize.price,
-    mrp: defaultSize.mrp,
-    plantSizes,
-    originAddress: normalizeAddress(
+const normalizeProductPayload = (
+  payload = {},
+  { forcePlantSizes = false, forceOriginAddress = false } = {},
+) => {
+  const nextPayload = { ...payload };
+  const shouldNormalizePlantSizes =
+    forcePlantSizes || hasOwn(payload, "plantSizes");
+
+  if (shouldNormalizePlantSizes) {
+    const plantSizes = normalizePlantSizes(
+      payload.plantSizes,
+      payload.price,
+      payload.mrp,
+    );
+    const defaultSize = getDefaultPlantSize(
+      plantSizes,
+      payload.price,
+      payload.mrp,
+    );
+
+    nextPayload.plantSizes = plantSizes;
+    nextPayload.price = defaultSize.price;
+    nextPayload.mrp = defaultSize.mrp;
+  }
+
+  const shouldNormalizeOriginAddress =
+    forceOriginAddress || hasOwn(payload, "originAddress");
+  if (shouldNormalizeOriginAddress) {
+    nextPayload.originAddress = normalizeAddress(
       payload.originAddress || DEFAULT_ORIGIN_ADDRESS,
-    ),
-  };
+    );
+  }
+
+  return nextPayload;
 };
 
 const getDiscountPercentageExpression = () => ({
@@ -388,9 +404,29 @@ router.get("/featured/corporate", async (req, res) => {
 
 router.get("/", async (req, res) => {
   try {
-    let query = {};
+    let query = { isAvailable: { $ne: false } }; // Only show available products by default
     let sortOption = { createdAt: -1 };
     let useAggregation = false;
+
+    // Handle city filter - return products from vendors in that city
+    if (req.query.city) {
+      const city = req.query.city.trim().toLowerCase();
+      
+      // First get all vendors in this city
+      const vendorsInCity = await Vendor.find({
+        city: { $regex: city, $options: "i" },
+        status: "active",
+      }).select("_id");
+
+      const vendorIds = vendorsInCity.map((v) => v._id);
+      
+      if (vendorIds.length > 0) {
+        query.$or = [
+          { vendorId: { $in: vendorIds } },
+          { originAddress: { $not: { $eq: null } } }, // Also include products with origin address matching
+        ];
+      }
+    }
 
     // Handle filter query parameter
     if (req.query.filter) {
@@ -399,10 +435,8 @@ router.get("/", async (req, res) => {
       if (filter.includes('discountPercentage>')) {
         // Filter for discount percentage greater than a value
         const minDiscount = parseInt(filter.split('>')[1]);
-        query = {
-          $expr: {
-            $gt: [getDiscountPercentageExpression(), minDiscount],
-          },
+        query.$expr = {
+          $gt: [getDiscountPercentageExpression(), minDiscount],
         };
         // Also sort by discount percentage high to low
         useAggregation = true;
@@ -498,7 +532,9 @@ router.get("/:id", async (req, res) => {
 });
 
 router.post("/", vendorAuthMiddleware, async (req, res) => {
-  const payload = normalizeProductPayload(req.body);
+  const payload = normalizeProductPayload(req.body, {
+    forcePlantSizes: true,
+  });
   const {
     name,
     category,
@@ -626,8 +662,16 @@ router.patch(
       }
 
       // Validate MRP >= Price if either is being updated
-      const newPrice = payload.price !== undefined ? payload.price : product.price;
-      const newMrp = payload.mrp !== undefined ? payload.mrp : product.mrp;
+      const newPrice =
+        payload.price !== undefined ? Number(payload.price) : Number(product.price);
+      const newMrp =
+        payload.mrp !== undefined ? Number(payload.mrp) : Number(product.mrp);
+
+      if (!Number.isFinite(newPrice) || !Number.isFinite(newMrp)) {
+        return res.status(400).json({
+          message: "Price and MRP must be valid numbers",
+        });
+      }
 
       if (newMrp < newPrice) {
         return res.status(400).json({
@@ -647,6 +691,8 @@ router.patch(
         "images",
         "cloudinaryPublicId",
         "plantSizes",
+        "originAddress",
+        "isAvailable",
       ];
 
       allowedFields.forEach((field) => {

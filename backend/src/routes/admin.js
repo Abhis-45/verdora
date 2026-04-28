@@ -34,32 +34,48 @@ import {
   sendVendorApprovedSMS,
   sendVendorRejectedSMS,
   sendVendorRegistrationReceivedSMS,
-} from "../services/twilioService.js";
+} from "../services/twoFactorService.js";
 import { adminAuthMiddleware } from "../middleware/auth.js";
 
 const router = express.Router();
 
-const normalizeProductPayload = (payload = {}) => {
-  const plantSizes = normalizePlantSizes(
-    payload.plantSizes,
-    payload.price,
-    payload.mrp,
-  );
-  const defaultSize = getDefaultPlantSize(
-    plantSizes,
-    payload.price,
-    payload.mrp,
-  );
+const hasOwn = (payload, key) =>
+  Object.prototype.hasOwnProperty.call(payload, key);
 
-  return {
-    ...payload,
-    price: defaultSize.price,
-    mrp: defaultSize.mrp,
-    plantSizes,
-    originAddress: normalizeAddress(
+const normalizeProductPayload = (
+  payload = {},
+  { forcePlantSizes = false, forceOriginAddress = false } = {},
+) => {
+  const nextPayload = { ...payload };
+  const shouldNormalizePlantSizes =
+    forcePlantSizes || hasOwn(payload, "plantSizes");
+
+  if (shouldNormalizePlantSizes) {
+    const plantSizes = normalizePlantSizes(
+      payload.plantSizes,
+      payload.price,
+      payload.mrp,
+    );
+    const defaultSize = getDefaultPlantSize(
+      plantSizes,
+      payload.price,
+      payload.mrp,
+    );
+
+    nextPayload.plantSizes = plantSizes;
+    nextPayload.price = defaultSize.price;
+    nextPayload.mrp = defaultSize.mrp;
+  }
+
+  const shouldNormalizeOriginAddress =
+    forceOriginAddress || hasOwn(payload, "originAddress");
+  if (shouldNormalizeOriginAddress) {
+    nextPayload.originAddress = normalizeAddress(
       payload.originAddress || DEFAULT_ORIGIN_ADDRESS,
-    ),
-  };
+    );
+  }
+
+  return nextPayload;
 };
 
 // ✅ GET ADMIN STATS (Dashboard Overview)
@@ -646,42 +662,39 @@ router.put("/products/:id", adminAuthMiddleware, async (req, res) => {
       originAddress,
     } = payload;
 
+    const updateFields = {
+      updatedAt: new Date(),
+    };
+    const candidateFields = {
+      name,
+      price,
+      mrp,
+      category,
+      brand,
+      description,
+      vendorName,
+      image,
+      vendorId,
+      plantSizes,
+      originAddress,
+    };
+
+    Object.entries(candidateFields).forEach(([field, value]) => {
+      if (value !== undefined) {
+        updateFields[field] = value;
+      }
+    });
+
     // Find by _id first, then by id
     const product =
       (await Product.findByIdAndUpdate(
         req.params.id,
-        {
-          name,
-          price,
-          mrp,
-          category,
-          brand,
-          description,
-          vendorName,
-          image,
-          vendorId,
-          plantSizes,
-          originAddress,
-          updatedAt: new Date(),
-        },
+        updateFields,
         { new: true },
       )) ||
       (await Product.findOneAndUpdate(
         { id: req.params.id },
-        {
-          name,
-          price,
-          mrp,
-          category,
-          brand,
-          description,
-          vendorName,
-          image,
-          vendorId,
-          plantSizes,
-          originAddress,
-          updatedAt: new Date(),
-        },
+        updateFields,
         { new: true },
       ));
 
@@ -719,7 +732,10 @@ router.patch("/vendors/:id/status", adminAuthMiddleware, async (req, res) => {
 // ✅ CREATE PRODUCT (ADMIN)
 router.post("/products", adminAuthMiddleware, async (req, res) => {
   try {
-    const payload = normalizeProductPayload(req.body);
+    const payload = normalizeProductPayload(req.body, {
+      forcePlantSizes: true,
+      forceOriginAddress: true,
+    });
     const {
       name,
       category,

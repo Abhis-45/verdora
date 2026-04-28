@@ -31,6 +31,7 @@ export type ProductItem = {
   tags?: string[];
   vendorName?: string;
   includePot?: boolean;
+  selectedPotOption?: { name: string; price: number; mrp: number; image?: string } | null;
 };
 
 export type CartContextType = {

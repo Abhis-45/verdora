@@ -38,7 +38,7 @@ export default function PlantCareProducts({
             typeof window !== "undefined"
               ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
               : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
-          const res = await fetch(`${BACKEND_URL}/api/products?category=Fertilizers&limit=8`);
+          const res = await fetch(`${BACKEND_URL}/api/products?category=Pots%20%26%20Planters&limit=8`);
 
           if (!res.ok) {
             throw new Error("Failed to fetch");
@@ -72,9 +72,9 @@ export default function PlantCareProducts({
   return (
     <section className="mb-8 sm:mb-10">
       <h2 className="text-lg sm:text-xl font-bold mb-4 sm:mb-6 text-green-700 flex items-center justify-between">
-        Plant Care Essentials
+        Plant Decor
         <Link
-          href={`/products?category=Fertilizers`}
+          href={`/products?category=Pots%20%26%20Planters`}
           className="text-green-600 hover:text-green-700 font-medium text-sm sm:text-base flex gap-1 items-center transition"
         >
           View All

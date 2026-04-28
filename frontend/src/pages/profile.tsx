@@ -1254,7 +1254,7 @@ export default function ProfilePage() {
                     ) : (
                       <>
                         <p className="text-sm text-gray-300 mb-4 bg-green-950 bg-opacity-50 p-3 rounded-lg">
-                          ✉️ OTP sent to your email and mobile
+                          OTP sent to your registered contact. Enter it to continue.
                         </p>
                         <input
                           type="text"
@@ -1519,7 +1519,7 @@ export default function ProfilePage() {
                     ) : (
                       <>
                         <p className="text-sm text-gray-300 mb-4 bg-green-950 bg-opacity-50 p-3 rounded-lg">
-                          ✉️ OTP sent to your email and mobile
+                          OTP sent to your email. Enter it to continue.
                         </p>
                         <input
                           type="text"
@@ -1595,7 +1595,7 @@ export default function ProfilePage() {
                     ) : (
                       <>
                         <p className="text-sm text-gray-300 mb-4 bg-green-950 bg-opacity-50 p-3 rounded-lg">
-                          ✉️ OTP sent to your email and mobile
+                          OTP sent to your mobile number. Enter it to continue.
                         </p>
                         <input
                           type="text"

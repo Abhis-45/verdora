@@ -1,3 +1,10 @@
+export type PotOption = {
+  name: string;
+  price: number;
+  mrp: number;
+  image?: string;
+};
+
 export type PlantSizeOption = {
   id: string;
   label: string;
@@ -6,7 +13,10 @@ export type PlantSizeOption = {
   isDefault?: boolean;
   potPrice?: number;
   potMrp?: number;
+  potName?: string;
+  potImage?: string;
   includePotByDefault?: boolean;
+  potOptions?: PotOption[]; // New: Multiple pot options
 };
 
 export const FREE_SIZE_LABEL = "FREE SIZE";
@@ -30,6 +40,27 @@ const normalizeNumber = (value: unknown) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
 };
+
+const normalizePotOptions = (options: PotOption[] | undefined) =>
+  (Array.isArray(options) ? options : [])
+    .map((pot, index) => {
+      const name = String(pot?.name || "").trim();
+      const image = String(pot?.image || "").trim();
+      const price = normalizeNumber(pot?.price || 0);
+      const mrp = Math.max(normalizeNumber(pot?.mrp || 0), price);
+
+      if (!name && !image && price === 0 && mrp === 0) {
+        return null;
+      }
+
+      return {
+        name: name || `Pot Option ${index + 1}`,
+        price,
+        mrp,
+        image,
+      };
+    })
+    .filter(Boolean) as PotOption[];
 
 export const normalizePlantSizes = (
   sizes: PlantSizeOption[] | undefined | null,
@@ -55,6 +86,10 @@ export const normalizePlantSizes = (
         mrp,
         potPrice,
         potMrp,
+        potName: size.potName || "",
+        potImage: size.potImage || "",
+        includePotByDefault: Boolean(size.includePotByDefault),
+        potOptions: normalizePotOptions(size.potOptions),
         isDefault: Boolean(size.isDefault),
       };
     })
@@ -69,6 +104,10 @@ export const normalizePlantSizes = (
         mrp: Math.max(normalizeNumber(fallbackMrp), normalizeNumber(fallbackPrice)),
         potPrice: 0,
         potMrp: 0,
+        potName: "",
+        potImage: "",
+        includePotByDefault: false,
+        potOptions: [],
         isDefault: true,
       },
     ];

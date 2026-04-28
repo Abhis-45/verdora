@@ -70,7 +70,32 @@ export const calculateDeliveryEstimate = ({
   };
 };
 
-export const normalizePlantSizes = (plantSizes = [], fallbackPrice = 0, fallbackMrp = 0) => {
+const normalizePotOptions = (potOptions = []) =>
+  (Array.isArray(potOptions) ? potOptions : [])
+    .map((pot, index) => {
+      const name = String(pot?.name || "").trim();
+      const image = String(pot?.image || "").trim();
+      const price = Math.max(Number(pot?.price || 0), 0);
+      const mrp = Math.max(Number(pot?.mrp || 0), price);
+
+      if (!name && !image && price === 0 && mrp === 0) {
+        return null;
+      }
+
+      return {
+        name: name || `Pot Option ${index + 1}`,
+        price,
+        mrp,
+        image,
+      };
+    })
+    .filter(Boolean);
+
+export const normalizePlantSizes = (
+  plantSizes = [],
+  fallbackPrice = 0,
+  fallbackMrp = 0,
+) => {
   const cleaned = (Array.isArray(plantSizes) ? plantSizes : [])
     .map((size, index) => {
       const label = String(size?.label || "")
@@ -93,6 +118,9 @@ export const normalizePlantSizes = (plantSizes = [], fallbackPrice = 0, fallback
         mrp,
         potPrice,
         potMrp,
+        potName: String(size.potName || "").trim(),
+        potImage: String(size.potImage || "").trim(),
+        potOptions: normalizePotOptions(size.potOptions),
         isDefault: Boolean(size.isDefault),
         includePotByDefault: Boolean(size.includePotByDefault),
       };
@@ -108,6 +136,9 @@ export const normalizePlantSizes = (plantSizes = [], fallbackPrice = 0, fallback
         mrp: Math.max(Number(fallbackMrp || fallbackPrice || 0), Number(fallbackPrice || 0)),
         potPrice: 0,
         potMrp: 0,
+        potName: "",
+        potImage: "",
+        potOptions: [],
         isDefault: true,
         includePotByDefault: false,
       },

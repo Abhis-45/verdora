@@ -18,6 +18,7 @@ import DynamicTestimonials from "@/components/home/DynamicTestimonials";
 import TopCategories from "@/components/home/TopCategories";
 import TrendingProducts from "@/components/home/TrendingProducts";
 import RecentlyViewedProducts from "@/components/home/RecentlyViewedProducts";
+import PlantDecor from "@/components/home/PlantDecor";
 
 const promos = [
   {
@@ -67,15 +68,14 @@ export default function Home() {
           <TopCategories />
           <RecentlyViewedProducts />
           <HerbalCombos />
+          <PlantCareProducts />
+          <PlantDecor />
+          <PremiumPlants />
+          <CorporateCombos products={corporateProducts} />
           <ProductsByCharacteristics />
           <ProductsByColor />
-
-          {/* New Sections - Conditional rendering */}
-          <CorporateCombos products={corporateProducts} />
-          <PlantCareProducts />
           <ProductsBySize />
           <ProductsByPrice />
-          <PremiumPlants />
           <ServicesPreview />
           <AboutSection />
           <DynamicTestimonials />

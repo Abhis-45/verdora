@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 import Admin from "../models/Admin.js";
 import Vendor from "../models/Vendor.js";
 import { sendOtpEmail } from "../services/emailService.js";
-import { sendOtpSMS } from "../services/twilioService.js";
+import { sendOtpSMS } from "../services/twoFactorService.js";
 
 const router = express.Router();
 
@@ -511,13 +511,16 @@ router.post("/forgot-password", async (req, res) => {
       if (method === "sms") {
         // Send via SMS - requires phone number
         const user = admin || vendor;
-        const phoneNumber = user.mobileNumber || user.phone;
-        if (phoneNumber && phoneNumber.startsWith("+")) {
+        const phoneNumber = user.mobileNumber || user.phone || user.businessPhone;
+        if (phoneNumber) {
           await sendOtpSMS(phoneNumber, otp);
+          const masked = String(phoneNumber)
+            .replace(/\D/g, "")
+            .replace(/(\d{2})\d+(\d{2})$/, "$1******$2");
           return res.json({
             message: "OTP sent to your phone number",
             method: "sms",
-            maskedPhone: phoneNumber.replace(/(?<=.{2}).(?=.{2})/g, "*"),
+            maskedPhone: masked,
           });
         } else {
           // Fall back to email if phone is not valid

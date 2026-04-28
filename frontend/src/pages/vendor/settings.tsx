@@ -20,6 +20,8 @@ interface VendorProfile {
   businessWebsite: string;
   vendorName: string;
   mobileNumber: string;
+  city?: string;
+  deliveryRadius?: number;
   status: "active" | "inactive";
 }
 
@@ -27,7 +29,7 @@ export default function VendorSettings() {
   const router = useRouter();
   const [profile, setProfile] = useState<VendorProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"profile" | "password">("profile");
+  const [activeTab, setActiveTab] = useState<"profile" | "password" | "delivery">("profile");
 
   // Profile form state
   const [profileForm, setProfileForm] = useState({
@@ -39,6 +41,14 @@ export default function VendorSettings() {
   });
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileMessage, setProfileMessage] = useState("");
+
+  // Delivery form state
+  const [deliveryForm, setDeliveryForm] = useState({
+    city: "",
+    deliveryRadius: 10,
+  });
+  const [deliveryLoading, setDeliveryLoading] = useState(false);
+  const [deliveryMessage, setDeliveryMessage] = useState("");
 
   // Password form state
   const [passwordForm, setPasswordForm] = useState({
@@ -84,6 +94,10 @@ export default function VendorSettings() {
           businessLocation: data.businessLocation || "",
           businessWebsite: data.businessWebsite || "",
         });
+        setDeliveryForm({
+          city: data.city || "",
+          deliveryRadius: data.deliveryRadius || 10,
+        });
       } else {
         setProfileMessage("Failed to load profile");
       }
@@ -99,6 +113,53 @@ export default function VendorSettings() {
   ) => {
     const { name, value } = e.target;
     setProfileForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleDeliveryChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const { name, value } = e.target;
+    setDeliveryForm((prev) => ({
+      ...prev,
+      [name]: name === "deliveryRadius" ? Number(value) : value,
+    }));
+  };
+
+  const handleDeliverySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setDeliveryLoading(true);
+    setDeliveryMessage("");
+
+    try {
+      const token = localStorage.getItem("vendorToken");
+      const BACKEND_URL =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+
+      const res = await fetch(`${BACKEND_URL}/api/vendor/profile`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(deliveryForm),
+      });
+
+      if (res.ok) {
+        setDeliveryMessage("✅ Delivery settings updated successfully!");
+        if (token) {
+          fetchVendorProfile(token);
+        }
+      } else {
+        const data = await res.json();
+        setDeliveryMessage(`❌ ${data.message || "Failed to update delivery settings"}`);
+      }
+    } catch (err) {
+      setDeliveryMessage(`❌ Error: ${err}`);
+    } finally {
+      setDeliveryLoading(false);
+    }
   };
 
   const handleProfileSubmit = async (e: React.FormEvent) => {
@@ -255,10 +316,10 @@ export default function VendorSettings() {
         {/* Content */}
         <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
           {/* Tabs */}
-          <div className="flex gap-4 mb-6 border-b border-gray-200">
+          <div className="flex gap-4 mb-6 border-b border-gray-200 overflow-x-auto">
             <button
               onClick={() => setActiveTab("profile")}
-              className={`px-4 py-3 font-semibold border-b-2 transition ${
+              className={`px-4 py-3 font-semibold border-b-2 transition whitespace-nowrap ${
                 activeTab === "profile"
                   ? "border-emerald-600 text-emerald-700"
                   : "border-transparent text-gray-600 hover:text-gray-900"
@@ -267,8 +328,18 @@ export default function VendorSettings() {
               👤 Profile Information
             </button>
             <button
+              onClick={() => setActiveTab("delivery")}
+              className={`px-4 py-3 font-semibold border-b-2 transition whitespace-nowrap ${
+                activeTab === "delivery"
+                  ? "border-emerald-600 text-emerald-700"
+                  : "border-transparent text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              🚚 Delivery Settings
+            </button>
+            <button
               onClick={() => setActiveTab("password")}
-              className={`px-4 py-3 font-semibold border-b-2 transition ${
+              className={`px-4 py-3 font-semibold border-b-2 transition whitespace-nowrap ${
                 activeTab === "password"
                   ? "border-emerald-600 text-emerald-700"
                   : "border-transparent text-gray-600 hover:text-gray-900"
@@ -382,6 +453,98 @@ export default function VendorSettings() {
                     className="flex-1 bg-emerald-600 text-white font-bold py-3 rounded-lg hover:bg-emerald-700 transition disabled:opacity-50"
                   >
                     {profileLoading ? "Saving..." : "💾 Save Changes"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* Delivery Settings Tab */}
+          {activeTab === "delivery" && (
+            <div className="bg-white rounded-lg shadow-lg p-6">
+              <div className="mb-6">
+                <h2 className="text-xl font-bold text-gray-900 mb-2">
+                  🚚 Delivery Settings
+                </h2>
+                <p className="text-gray-600">
+                  Configure your delivery location and service radius
+                </p>
+              </div>
+
+              {deliveryMessage && (
+                <div
+                  className={`mb-6 rounded-lg p-4 ${
+                    deliveryMessage.includes("✅")
+                      ? "bg-green-50 border border-green-200 text-green-700"
+                      : "bg-red-50 border border-red-200 text-red-700"
+                  }`}
+                >
+                  {deliveryMessage}
+                </div>
+              )}
+
+              <form onSubmit={handleDeliverySubmit} className="space-y-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    City
+                  </label>
+                  <input
+                    type="text"
+                    name="city"
+                    value={deliveryForm.city}
+                    onChange={handleDeliveryChange}
+                    className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                    placeholder="e.g., Pune, Mumbai, Delhi"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    The main city where your business is located
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Delivery Radius (in km)
+                  </label>
+                  <div className="flex items-center gap-4">
+                    <input
+                      type="range"
+                      name="deliveryRadius"
+                      min="1"
+                      max="100"
+                      value={deliveryForm.deliveryRadius}
+                      onChange={handleDeliveryChange}
+                      className="flex-1 h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
+                    />
+                    <div className="flex items-center justify-center min-w-max">
+                      <span className="text-2xl font-bold text-emerald-600">
+                        {deliveryForm.deliveryRadius}
+                      </span>
+                      <span className="text-sm text-gray-600 ml-1">km</span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Products will only be shown to customers within this radius from your city
+                  </p>
+                </div>
+
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <p className="text-sm font-semibold text-blue-900 mb-2">
+                    📍 Service Information
+                  </p>
+                  <ul className="text-xs text-blue-800 space-y-1">
+                    <li>• Your city: <span className="font-semibold">{deliveryForm.city || "Not set"}</span></li>
+                    <li>• Delivery radius: <span className="font-semibold">{deliveryForm.deliveryRadius} km</span></li>
+                    <li>• Service area: {deliveryForm.city && `${deliveryForm.city} and nearby areas within ${deliveryForm.deliveryRadius} km`}</li>
+                  </ul>
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="submit"
+                    disabled={deliveryLoading}
+                    className="flex-1 bg-emerald-600 text-white font-bold py-3 rounded-lg hover:bg-emerald-700 transition disabled:opacity-50"
+                  >
+                    {deliveryLoading ? "Saving..." : "💾 Save Delivery Settings"}
                   </button>
                 </div>
               </form>

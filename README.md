@@ -31,9 +31,14 @@ This project consists of a Next.js frontend with React and a Node.js backend usi
    - Create a new cluster
    - Get your connection string
 
-4. Update the `.env` file in `backend/` with your MongoDB Atlas URI:
+4. Update the `.env` file in `backend/`:
    ```
    MONGO_URI=mongodb+srv://username:password@cluster.mongodb.net/database?retryWrites=true&w=majority
+   JWT_SECRET=your_jwt_secret
+   EMAIL_USER=your_email_user
+   EMAIL_PASS=your_email_app_password
+   TWO_FACTOR_API_KEY=your_2factor_api_key
+   TWO_FACTOR_SENDER_ID=your_approved_sender_id
    ```
 
 5. Start the backend server:
@@ -79,7 +84,7 @@ const data = await response.json();
 - **Backend**: Node.js, Express.js, Mongoose
 - **Database**: MongoDB Atlas
 - **Authentication**: JWT + OTP (Email & SMS)
-- **Services**: Nodemailer, Twilio
+- **Services**: Nodemailer, 2Factor.in
 
 ---
 
@@ -101,7 +106,7 @@ const data = await response.json();
 - See `PROFILE_TEST_CASES.md` for comprehensive testing
 
 ### Security Features
-- OTP sent via email + SMS (dual delivery)
+- OTP sent via email or SMS (2Factor.in for SMS)
 - 10-minute OTP expiration
 - bcryptjs password hashing
 - JWT token validation
@@ -109,7 +114,7 @@ const data = await response.json();
 
 ### What's New
 - **Password Update**: Request OTP → Verify → Update (no current password needed)
-- **Email/Mobile Update**: Same OTP-based flow with dual delivery
+- **Email/Mobile Update**: Same OTP-based flow with 2Factor SMS support
 - **Address Selection**: Radio buttons with default auto-selection
 - **Auth Flow**: Show login popup when accessing profile without token
 - **Modal Theme**: All modals use green-900 theme with white text

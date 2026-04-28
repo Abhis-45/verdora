@@ -5,7 +5,13 @@ import Admin from "../models/Admin.js";
 import Product from "../models/Product.js";
 import ServiceRequest from "../models/ServiceRequest.js";
 import upload from "../middleware/multerConfig.js";
-import { sendOtpSMS, sendOrderConfirmationSMS, sendOrderStatusUpdateSMS, sendOrderCancelledSMS } from "../services/twilioService.js";
+import {
+  sendOtpSMS,
+  sendOrderConfirmationSMS,
+  sendOrderStatusUpdateSMS,
+  sendOrderCancelledSMS,
+  verifyOtp as verifyOtpVia2Factor,
+} from "../services/twoFactorService.js";
 import {
   sendOtpEmail,
   sendAccountDeletedEmail,
@@ -48,6 +54,39 @@ const ORDER_STATUSES = [
 ];
 const CUSTOMER_RETURN_STATUSES = ["returned", "replaced"];
 const RETURN_WINDOW_DAYS = 3;
+
+const normalizeMobileForOtp = (value) => {
+  const digits = String(value || "").replace(/\D/g, "");
+  if (digits.length === 10) return `+91${digits}`;
+  if (digits.length === 11 && digits.startsWith("0")) return `+91${digits.slice(1)}`;
+  if (digits.length >= 11 && digits.length <= 15) return `+${digits}`;
+  return String(value || "").trim();
+};
+
+const verifyUserStoredOtp = (user, expectedField, otp) => {
+  if (String(user.otpField || "") !== String(expectedField || "")) {
+    return {
+      valid: false,
+      message: "OTP was not requested for this action",
+    };
+  }
+
+  if (isOtpExpired(user.otpExpiry)) {
+    return { valid: false, message: "OTP expired" };
+  }
+
+  if (String(user.otp || "") !== String(otp || "")) {
+    return { valid: false, message: "Invalid OTP" };
+  }
+
+  return { valid: true };
+};
+
+const clearUserOtp = (user) => {
+  user.otp = null;
+  user.otpField = null;
+  user.otpExpiry = null;
+};
 
 const getSafeDate = (value, fallback = new Date()) => {
   const parsed = value ? new Date(value) : null;
@@ -294,6 +333,10 @@ router.delete("/address/:addressId", authMiddleware, async (req, res) => {
 // If both email and mobile exist, sends OTP to both simultaneously
 router.post("/send-otp", authMiddleware, async (req, res) => {
   const { field, newValue } = req.body; // "email", "mobile", "password", or "delete"
+  if (!["email", "mobile", "password", "delete"].includes(field)) {
+    return res.status(400).json({ message: "Invalid OTP request field" });
+  }
+
   const otp = generateOtp();
 
   try {
@@ -303,45 +346,45 @@ router.post("/send-otp", authMiddleware, async (req, res) => {
     const sendPromises = [];
     const sentTo = [];
 
-    // Handle email sending: prefer newValue (for users without existing email)
-    if (field === "email" || field === "delete" || field === "password") {
-      const targetEmail = newValue && field === "email" ? newValue : user.email;
-      if (!targetEmail)
+    if (field === "email") {
+      const targetEmail = String(newValue || user.email || "").trim().toLowerCase();
+      if (!targetEmail) {
         return res.status(400).json({ message: "User email not found" });
-      // If sending to new email, validate format
-      if (field === "email" && newValue && !validateEmail(newValue)) {
+      }
+      if (!validateEmail(targetEmail)) {
         return res.status(400).json({ message: "Invalid email format" });
       }
       sendPromises.push(sendOtpEmail(targetEmail, otp));
       sentTo.push("email");
     }
-    // Handle mobile sending: allow sending to newValue if provided
+
     if (field === "mobile") {
-      const targetMobile = newValue ? newValue : user.mobile;
-      if (!targetMobile)
+      const targetMobile = normalizeMobileForOtp(newValue || user.mobile);
+      if (!targetMobile) {
         return res.status(400).json({ message: "User mobile not found" });
-      if (newValue && !validatePhone(newValue)) {
+      }
+      if (!validatePhone(targetMobile)) {
         return res.status(400).json({ message: "Invalid phone format" });
       }
-      const formattedMobile = targetMobile.startsWith("+")
-        ? targetMobile
-        : `+${targetMobile}`;
-      sendPromises.push(sendOtpSMS(formattedMobile, otp));
-      sentTo.push("mobile");
-    } else if (field === "password" && user.mobile) {
-      const formattedMobile = user.mobile.startsWith("+")
-        ? user.mobile
-        : `+${user.mobile}`;
-      sendPromises.push(sendOtpSMS(formattedMobile, otp));
+      sendPromises.push(sendOtpSMS(targetMobile, otp));
       sentTo.push("mobile");
     }
 
-    // If neither email nor mobile for password field
-    if (field === "password" && sentTo.length === 0) {
-      return res.status(400).json({ message: "No email or mobile found" });
+    if (field === "password" || field === "delete") {
+      if (user.email) {
+        sendPromises.push(sendOtpEmail(String(user.email).trim().toLowerCase(), otp));
+        sentTo.push("email");
+      }
+      if (field === "password" && user.mobile) {
+        sendPromises.push(sendOtpSMS(normalizeMobileForOtp(user.mobile), otp));
+        sentTo.push("mobile");
+      }
     }
 
-    // Send OTP to all available contacts simultaneously
+    if (!sendPromises.length) {
+      return res.status(400).json({ message: "No valid contact found to send OTP" });
+    }
+
     await Promise.all(sendPromises);
 
     // Store OTP in database (expires in 10 minutes)
@@ -368,11 +411,14 @@ router.patch("/verify-otp-update", authMiddleware, async (req, res) => {
     return res.status(400).json({ message: "Invalid field" });
   }
 
+  const normalizedNewValue =
+    field === "mobile" ? normalizeMobileForOtp(newValue) : String(newValue || "").trim().toLowerCase();
+
   // Validate new value format
-  if (field === "email" && !validateEmail(newValue)) {
+  if (field === "email" && !validateEmail(normalizedNewValue)) {
     return res.status(400).json({ message: "Invalid email format" });
   }
-  if (field === "mobile" && !validatePhone(newValue)) {
+  if (field === "mobile" && !validatePhone(normalizedNewValue)) {
     return res.status(400).json({ message: "Invalid phone format" });
   }
 
@@ -380,30 +426,33 @@ router.patch("/verify-otp-update", authMiddleware, async (req, res) => {
     const user = await User.findById(req.userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    // Verify OTP
-    if (user.otp !== otp) {
-      return res.status(400).json({ message: "Invalid OTP" });
+    const otpCheck = verifyUserStoredOtp(user, field, otp);
+    if (!otpCheck.valid) {
+      return res.status(400).json({ message: otpCheck.message });
     }
 
-    if (user.otpField !== field) {
-      return res.status(400).json({ message: "OTP mismatch for this field" });
-    }
-
-    if (isOtpExpired(user.otpExpiry)) {
-      return res.status(400).json({ message: "OTP expired" });
+    if (field === "mobile") {
+      try {
+        const verifyResult = await verifyOtpVia2Factor(normalizedNewValue, otp);
+        if (!verifyResult?.matched) {
+          return res.status(400).json({ message: "Invalid OTP" });
+        }
+      } catch (_err) {
+        // If provider verification is temporarily unavailable, local OTP check above still protects the flow.
+      }
     }
 
     // Check if new value already exists
     if (field === "email") {
       const existingUser = await User.findOne({
-        email: newValue,
+        email: normalizedNewValue,
         _id: { $ne: req.userId },
       });
       if (existingUser)
         return res.status(400).json({ message: "Email already in use" });
     } else if (field === "mobile") {
       const existingUser = await User.findOne({
-        mobile: newValue,
+        mobile: normalizedNewValue,
         _id: { $ne: req.userId },
       });
       if (existingUser)
@@ -411,10 +460,8 @@ router.patch("/verify-otp-update", authMiddleware, async (req, res) => {
     }
 
     // Update field
-    user[field] = newValue;
-    user.otp = null;
-    user.otpField = null;
-    user.otpExpiry = null;
+    user[field] = normalizedNewValue;
+    clearUserOtp(user);
     await user.save();
 
     res.json({
@@ -446,26 +493,14 @@ router.patch("/update-password", authMiddleware, async (req, res) => {
     const user = await User.findById(req.userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    // Verify OTP
-    if (user.otp !== otp) {
-      return res.status(400).json({ message: "Invalid OTP" });
-    }
-
-    if (user.otpField !== "password") {
-      return res
-        .status(400)
-        .json({ message: "OTP was not requested for password update" });
-    }
-
-    if (isOtpExpired(user.otpExpiry)) {
-      return res.status(400).json({ message: "OTP expired" });
+    const otpCheck = verifyUserStoredOtp(user, "password", otp);
+    if (!otpCheck.valid) {
+      return res.status(400).json({ message: otpCheck.message });
     }
 
     // Hash and save new password
     user.password = await bcrypt.hash(newPassword, 10);
-    user.otp = null;
-    user.otpField = null;
-    user.otpExpiry = null;
+    clearUserOtp(user);
     await user.save();
 
     res.json({ message: "Password updated successfully" });
@@ -484,19 +519,9 @@ router.post("/delete-account", authMiddleware, async (req, res) => {
     const user = await User.findById(req.userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    // Verify OTP
-    if (user.otp !== otp) {
-      return res.status(400).json({ message: "Invalid OTP" });
-    }
-
-    if (user.otpField !== "delete") {
-      return res
-        .status(400)
-        .json({ message: "OTP was not requested for account deletion" });
-    }
-
-    if (isOtpExpired(user.otpExpiry)) {
-      return res.status(400).json({ message: "OTP expired" });
+    const otpCheck = verifyUserStoredOtp(user, "delete", otp);
+    if (!otpCheck.valid) {
+      return res.status(400).json({ message: otpCheck.message });
     }
 
     const userEmail = user.email;

@@ -2,167 +2,208 @@ import express from "express";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import User from "../models/User.js";
-import { sendOtpSMS, sendWelcomeSMS } from "../services/twilioService.js";
-import { 
+import {
+  sendOtpSMS,
+  sendWelcomeSMS,
+  verifyOtp as verifyOtpVia2Factor,
+} from "../services/twoFactorService.js";
+import {
   sendOtpEmail,
   sendWelcomeEmail,
-  verifyEmailTransporter
+  verifyEmailTransporter,
 } from "../services/emailService.js";
 
 const router = express.Router();
-const otpStore = new Map(); // Format: { otp: string, expiresAt: timestamp }
+const otpStore = new Map();
 const OTP_EXPIRY_MINUTES = 10;
 
-// ✅ Diagnostic endpoint to check email service
-router.get("/email-status", async (req, res) => {
-  try {
-    const isValid = await verifyEmailTransporter();
-    const emailUser = process.env.EMAIL_USER || "NOT SET";
-    const emailPass = process.env.EMAIL_PASS ? "****SET****" : "NOT SET";
-    
-    res.json({
-      status: isValid ? "✅ Working" : "❌ Failed",
-      email: emailUser,
-      emailPassConfigured: !!process.env.EMAIL_PASS,
-      details: {
-        emailUser,
-        emailPassStatus: emailPass,
-        message: isValid 
-          ? "Email service is ready to send OTPs"
-          : "Email service is not configured properly. Check EMAIL_USER and EMAIL_PASS in .env"
-      }
-    });
-  } catch (err) {
-    res.status(500).json({
-      status: "❌ Error",
-      error: err.message,
-      message: "Failed to check email status"
-    });
-  }
-});
+const generateOtp = () =>
+  Math.floor(100000 + Math.random() * 900000).toString();
 
-// ✅ Send OTP
-router.post("/send-otp", async (req, res) => {
-  const { identifier } = req.body;
-  
-  if (!identifier) {
-    return res.status(400).json({ message: "Email or mobile number is required" });
+const normalizePhoneIdentifier = (value) => {
+  const digits = String(value || "").replace(/\D/g, "");
+
+  if (digits.length === 10) return `+91${digits}`;
+  if (digits.length === 11 && digits.startsWith("0")) return `+91${digits.slice(1)}`;
+  if (digits.length >= 11 && digits.length <= 15) return `+${digits}`;
+
+  return String(value || "").trim();
+};
+
+const normalizeIdentifier = (identifier) => {
+  const raw = String(identifier || "").trim();
+  if (!raw) return raw;
+  return raw.includes("@") ? raw.toLowerCase() : normalizePhoneIdentifier(raw);
+};
+
+const isOtpExpired = (expiresAt) => Date.now() > Number(expiresAt || 0);
+
+const createSession = (identifier, channel, otp) => {
+  const expiresAt = Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000;
+  otpStore.set(identifier, { otp: String(otp), expiresAt, channel });
+};
+
+const verifyStoredOtp = (identifier, otp, expectedChannel) => {
+  const stored = otpStore.get(identifier);
+  if (!stored) {
+    return { valid: false, reason: "OTP not found or expired. Please request a new OTP." };
   }
 
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
-
-  try {
-    if (identifier.includes("@")) {
-      try {
-        await sendOtpEmail(identifier, otp);
-        console.log(`✅ Email OTP sent successfully to ${identifier}`);
-      } catch (emailErr) {
-        console.error(`❌ Email send failed for ${identifier}:`, emailErr.message);
-        console.error("Stack:", emailErr.stack);
-        throw new Error(`Failed to send OTP to email: ${emailErr.message}`);
-      }
-    } else {
-      try {
-        const result = await sendOtpSMS(identifier, otp);
-        if (!result || !result.sid) {
-          throw new Error("SMS service returned no confirmation");
-        }
-        console.log(`✅ SMS OTP sent successfully to ${identifier}`);
-      } catch (smsErr) {
-        console.error(`❌ SMS send failed for ${identifier}:`, smsErr.message);
-        throw new Error(`Failed to send OTP to SMS: ${smsErr.message}`);
-      }
-    }
-    
-    // Store OTP with expiration timestamp
-    const expiresAt = Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000;
-    otpStore.set(identifier, { otp, expiresAt });
-    
-    console.log(`✅ OTP sent to ${identifier}, expires at ${new Date(expiresAt).toISOString()}`);
-    res.json({ message: "OTP sent successfully" });
-  } catch (err) {
-    console.error(`❌ OTP Send Error for ${identifier}:`, err.message);
-    res.status(500).json({ 
-      message: "Failed to send OTP. Please check your email/phone number and try again.",
-      error: process.env.NODE_ENV === "development" ? err.message : undefined
-    });
-  }
-});
-
-// ✅ Verify OTP (Login/Register)
-router.post("/verify-otp", async (req, res) => {
-  const { identifier, otp } = req.body;
-  
-  if (!identifier || !otp) {
-    return res.status(400).json({ message: "Email/mobile and OTP are required" });
+  if (expectedChannel && stored.channel !== expectedChannel) {
+    return { valid: false, reason: "OTP type mismatch. Please request a new OTP." };
   }
 
-  const storedData = otpStore.get(identifier);
-
-  // Check if OTP exists
-  if (!storedData) {
-    return res.status(400).json({ message: "OTP not found or expired. Please request a new OTP." });
-  }
-
-  // Check if OTP has expired
-  if (Date.now() > storedData.expiresAt) {
+  if (isOtpExpired(stored.expiresAt)) {
     otpStore.delete(identifier);
-    return res.status(400).json({ message: "OTP has expired. Please request a new OTP." });
+    return { valid: false, reason: "OTP has expired. Please request a new OTP." };
   }
 
-  // Check if OTP matches
-  if (storedData.otp !== otp) {
-    return res.status(400).json({ message: "Invalid OTP. Please try again." });
+  if (String(stored.otp) !== String(otp)) {
+    return { valid: false, reason: "Invalid OTP. Please try again." };
   }
 
   otpStore.delete(identifier);
+  return { valid: true };
+};
+
+router.get("/email-status", async (_req, res) => {
+  try {
+    const isValid = await verifyEmailTransporter();
+    const emailUser = process.env.EMAIL_USER || "NOT SET";
+
+    res.json({
+      status: isValid ? "Working" : "Failed",
+      email: emailUser,
+      emailPassConfigured: Boolean(process.env.EMAIL_PASS),
+      details: {
+        emailUser,
+        message: isValid
+          ? "Email service is ready to send OTPs"
+          : "Email service is not configured properly. Check EMAIL_USER and EMAIL_PASS in .env",
+      },
+    });
+  } catch (err) {
+    res.status(500).json({
+      status: "Error",
+      error: err.message,
+      message: "Failed to check email status",
+    });
+  }
+});
+
+router.post("/send-otp", async (req, res) => {
+  const { identifier } = req.body;
+  const normalizedIdentifier = normalizeIdentifier(identifier);
+
+  if (!normalizedIdentifier) {
+    return res.status(400).json({ message: "Email or mobile number is required" });
+  }
+
+  const otp = generateOtp();
+  const isEmail = normalizedIdentifier.includes("@");
+
+  try {
+    if (isEmail) {
+      await sendOtpEmail(normalizedIdentifier, otp);
+      createSession(normalizedIdentifier, "email", otp);
+      return res.json({ message: "OTP sent to email successfully" });
+    }
+
+    await sendOtpSMS(normalizedIdentifier, otp);
+    createSession(normalizedIdentifier, "sms", otp);
+    return res.json({ message: "OTP sent to mobile successfully" });
+  } catch (err) {
+    return res.status(500).json({
+      message: "Failed to send OTP. Please try again.",
+      error: process.env.NODE_ENV === "development" ? err.message : undefined,
+    });
+  }
+});
+
+router.post("/verify-otp", async (req, res) => {
+  const { identifier, otp } = req.body;
+  const normalizedIdentifier = normalizeIdentifier(identifier);
+
+  if (!normalizedIdentifier || !otp) {
+    return res.status(400).json({ message: "Email/mobile and OTP are required" });
+  }
+
+  const isEmail = normalizedIdentifier.includes("@");
+
+  if (isEmail) {
+    const emailCheck = verifyStoredOtp(normalizedIdentifier, otp, "email");
+    if (!emailCheck.valid) {
+      return res.status(400).json({ message: emailCheck.reason });
+    }
+  } else {
+    let smsVerified = false;
+    let verificationError = null;
+
+    try {
+      const verifyResult = await verifyOtpVia2Factor(normalizedIdentifier, otp);
+      smsVerified = Boolean(verifyResult?.matched);
+    } catch (err) {
+      verificationError = err;
+    }
+
+    if (!smsVerified) {
+      const localFallback = verifyStoredOtp(normalizedIdentifier, otp, "sms");
+      if (!localFallback.valid) {
+        return res.status(400).json({
+          message:
+            verificationError?.message && !verificationError.message.toLowerCase().includes("otp")
+              ? `OTP verification failed: ${verificationError.message}`
+              : localFallback.reason,
+        });
+      }
+    } else {
+      otpStore.delete(normalizedIdentifier);
+    }
+  }
 
   let user = await User.findOne(
-    identifier.includes("@") ? { email: identifier } : { mobile: identifier },
+    isEmail ? { email: normalizedIdentifier } : { mobile: normalizedIdentifier },
   );
 
   const isNewUser = !user;
 
   if (!user) {
     user = new User(
-      identifier.includes("@") ? { email: identifier } : { mobile: identifier },
+      isEmail ? { email: normalizedIdentifier } : { mobile: normalizedIdentifier },
     );
     await user.save();
 
-    // 🎉 Send welcome notifications to new user
     try {
-      if (identifier.includes("@")) {
-        // Send welcome email
-        await sendWelcomeEmail(identifier, user.name || "Guest").catch((err) => {
-          console.error("❌ Welcome email failed:", err.message);
-        });
+      if (isEmail) {
+        await sendWelcomeEmail(normalizedIdentifier, user.name || "Guest");
       } else {
-        // Send welcome SMS
-        await sendWelcomeSMS(`+${identifier.replace(/\D/g, '').slice(-10)}`, user.name || "Guest").catch((err) => {
-          console.error("❌ Welcome SMS failed:", err.message);
-        });
+        await sendWelcomeSMS(normalizedIdentifier, user.name || "Guest");
       }
-    } catch (notificationErr) {
-      console.error("Notification error:", notificationErr.message);
-      // Don't fail the login even if notification fails
+    } catch (_notificationErr) {
+      // Welcome notification should not block login.
     }
   }
 
   const token = jwt.sign({ id: user._id, role: "user" }, process.env.JWT_SECRET, {
     expiresIn: "1d",
   });
-  res.json({ message: "Login successful", token, user, isNewUser });
+
+  return res.json({
+    message: "Login successful",
+    token,
+    user,
+    isNewUser,
+  });
 });
 
-// ✅ Password Login/Register combined
 router.post("/password", async (req, res) => {
   const { email, mobile, password } = req.body;
+  const normalizedEmail = email ? String(email).trim().toLowerCase() : null;
+  const normalizedMobile = mobile ? normalizePhoneIdentifier(mobile) : null;
 
-  // Find user by email or mobile
-  let user = await User.findOne(email ? { email } : { mobile });
+  let user = await User.findOne(normalizedEmail ? { email: normalizedEmail } : { mobile: normalizedMobile });
 
   if (user) {
-    // User exists → login
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) return res.status(400).json({ message: "Invalid password" });
 
@@ -170,35 +211,27 @@ router.post("/password", async (req, res) => {
       expiresIn: "1d",
     });
     return res.json({ message: "Login successful", token, user });
-  } else {
-    // User does not exist → register
-    const hashedPassword = await bcrypt.hash(password, 10);
-    user = new User({ email, mobile, password: hashedPassword });
-    await user.save();
-
-    // 🎉 Send welcome notifications to new user
-    try {
-      if (email) {
-        // Send welcome email
-        await sendWelcomeEmail(email, user.name || "Guest").catch((err) => {
-          console.error("❌ Welcome email failed:", err.message);
-        });
-      } else if (mobile) {
-        // Send welcome SMS
-        await sendWelcomeSMS(`+${mobile.replace(/\D/g, '').slice(-10)}`, user.name || "Guest").catch((err) => {
-          console.error("❌ Welcome SMS failed:", err.message);
-        });
-      }
-    } catch (notificationErr) {
-      console.error("Notification error:", notificationErr.message);
-      // Don't fail the registration even if notification fails
-    }
-
-    const token = jwt.sign({ id: user._id, role: "user" }, process.env.JWT_SECRET, {
-      expiresIn: "1d",
-    });
-    return res.json({ message: "Registered successfully", token, user });
   }
+
+  const hashedPassword = await bcrypt.hash(password, 10);
+  user = new User({ email: normalizedEmail, mobile: normalizedMobile, password: hashedPassword });
+  await user.save();
+
+  try {
+    if (normalizedEmail) {
+      await sendWelcomeEmail(normalizedEmail, user.name || "Guest");
+    } else if (normalizedMobile) {
+      await sendWelcomeSMS(normalizedMobile, user.name || "Guest");
+    }
+  } catch (_notificationErr) {
+    // Welcome notification should not block registration.
+  }
+
+  const token = jwt.sign({ id: user._id, role: "user" }, process.env.JWT_SECRET, {
+    expiresIn: "1d",
+  });
+
+  return res.json({ message: "Registered successfully", token, user });
 });
 
 export default router;
