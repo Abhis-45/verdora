@@ -1,6 +1,10 @@
 "use client";
 
-import { PlantSizeOption, PLANT_SIZE_PRESETS } from "@/utils/productOptions";
+import {
+  PlantSizeOption,
+  PLANT_SIZE_PRESETS,
+  PotOption,
+} from "@/utils/productOptions";
 import { TrashIcon, CheckIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { useState } from "react";
 
@@ -28,19 +32,24 @@ export default function PlantSizeEditor({
   const updateSize = (
     index: number,
     field: keyof PlantSizeOption,
-    value: string | number | boolean,
+    value: string | number | boolean | PotOption[] | undefined,
   ) => {
+    const normalizedValue =
+      field === "label"
+        ? String(value ?? "").toUpperCase()
+        : field === "price" ||
+            field === "mrp" ||
+            field === "potPrice" ||
+            field === "potMrp"
+          ? Number(value || 0)
+          : value;
+
     onChange(
       sizes.map((size, sizeIndex) =>
         sizeIndex === index
           ? {
               ...size,
-              [field]:
-                field === "label"
-                  ? String(value).toUpperCase()
-                  : field === "price" || field === "mrp"
-                    ? Number(value)
-                    : value,
+              [field]: normalizedValue,
             }
           : field === "isDefault"
             ? { ...size, isDefault: false }
@@ -132,7 +141,7 @@ export default function PlantSizeEditor({
                   type="number"
                   value={size.price || ""}
                   onChange={(event) =>
-                    updateSize(index, "price", event.target.value)
+                    updateSize(index, "price", Number(event.target.value || 0))
                   }
                   placeholder="Price"
                   className="w-full rounded-md border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
@@ -144,7 +153,7 @@ export default function PlantSizeEditor({
                   type="number"
                   value={size.mrp || ""}
                   onChange={(event) =>
-                    updateSize(index, "mrp", event.target.value)
+                    updateSize(index, "mrp", Number(event.target.value || 0))
                   }
                   placeholder="MRP"
                   className={`w-full rounded-md border px-2 py-1 text-sm focus:outline-none focus:ring-1 ${
@@ -187,7 +196,11 @@ export default function PlantSizeEditor({
                   type="number"
                   value={(size.potPrice as number) || ""}
                   onChange={(event) =>
-                    updateSize(index, "potPrice", event.target.value)
+                    updateSize(
+                      index,
+                      "potPrice",
+                      Number(event.target.value || 0),
+                    )
                   }
                   placeholder="Leave empty if no pot"
                   min="0"
@@ -202,7 +215,11 @@ export default function PlantSizeEditor({
                   type="number"
                   value={(size.potMrp as number) || ""}
                   onChange={(event) =>
-                    updateSize(index, "potMrp", event.target.value)
+                    updateSize(
+                      index,
+                      "potMrp",
+                      Number(event.target.value || 0),
+                    )
                   }
                   placeholder="Leave empty if no pot"
                   min="0"
@@ -221,7 +238,7 @@ export default function PlantSizeEditor({
             )}
 
             {/* Sixth Row: Multiple Pot Options (Advanced) */}
-            {size.potPrice > 0 && (
+            {(size.potPrice ?? 0) > 0 && (
               <div className="border-t pt-2">
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-xs text-amber-700 font-medium">

@@ -18,13 +18,13 @@ interface ProductItem {
   category?: string;
 }
 
-interface PlantCareProps {
+interface PlantDecorProps {
   products?: ProductItem[];
 }
 
-export default function PlantCareProducts({
+export default function PlantDecor({
   products: initialProducts,
-}: PlantCareProps) {
+}: PlantDecorProps) {
   const [products, setProducts] = useState<ProductItem[]>(
     initialProducts || [],
   );
@@ -32,7 +32,7 @@ export default function PlantCareProducts({
 
   useEffect(() => {
     if (!initialProducts) {
-      async function fetchPlantCare() {
+      async function fetchPlantDecor() {
         try {
           const BACKEND_URL =
             typeof window !== "undefined"
@@ -51,13 +51,13 @@ export default function PlantCareProducts({
           }));
           setProducts(normalized);
         } catch (err) {
-          console.error("Error fetching plant care products:", err);
+          console.error("Error fetching plant decor products:", err);
           setProducts([]);
         } finally {
           setLoading(false);
         }
       }
-      fetchPlantCare();
+      fetchPlantDecor();
     }
   }, [initialProducts]);
 

@@ -451,6 +451,23 @@ router.get("/", async (req, res) => {
       query.tags = { $in: [req.query.tag] };
     }
 
+    // Handle category filter
+    if (req.query.category) {
+      const rawCategory = Array.isArray(req.query.category)
+        ? req.query.category.join(",")
+        : String(req.query.category);
+      const categories = rawCategory
+        .split(",")
+        .map((value) => value.trim())
+        .filter(Boolean);
+
+      if (categories.length === 1) {
+        query.category = categories[0];
+      } else if (categories.length > 1) {
+        query.category = { $in: categories };
+      }
+    }
+
     const limit = parseInt(req.query.limit) || 0; // 0 means no limit
 
     let products;
