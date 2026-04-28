@@ -27,6 +27,22 @@ interface ProductTagSource {
   tags?: string[];
 }
 
+interface Product {
+  id: string;
+  name: string;
+  category: string;
+  price: number;
+  mrp: number;
+  brand?: string;
+  description?: string;
+  tags?: string[];
+  image?: string;
+  images?: { url: string; publicId?: string; uploadedAt?: string }[];
+  cloudinaryPublicId?: string;
+  plantSizes?: PlantSizeOption[];
+  isAvailable?: boolean;
+}
+
 const defaultSize: PlantSizeOption = {
   id: DEFAULT_PLANT_SIZE_ID,
   label: FREE_SIZE_LABEL,
@@ -171,14 +187,14 @@ export default function AddProduct() {
         return;
       }
 
-      const product = await response.json();
+      const product: Product = await response.json();
 
       // Pre-fill form with existing product data
       setFormData({
         name: product.name || "",
         category: product.category || "Indoor Plants",
-        price: product.price || "",
-        mrp: product.mrp || "",
+        price: product.price?.toString() || "",
+        mrp: product.mrp?.toString() || "",
         brand: product.brand || "",
         description: product.description || "",
         tags: (product.tags || []).join(", "),
