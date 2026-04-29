@@ -513,7 +513,9 @@ router.post("/forgot-password", async (req, res) => {
         const user = admin || vendor;
         const phoneNumber = user.mobileNumber || user.phone || user.businessPhone;
         if (phoneNumber) {
-          await sendTransactionalOtpSms(phoneNumber, otp);
+          // Get user's display name for SMS template
+          const userName = vendor?.businessName || vendor?.vendorName || admin?.username || user?.username || "User";
+          await sendTransactionalOtpSms(phoneNumber, otp, userName);
           const masked = String(phoneNumber)
             .replace(/\D/g, "")
             .replace(/(\d{2})\d+(\d{2})$/, "$1******$2");

@@ -10,7 +10,6 @@ import {
   sendOrderStatusUpdateSMS,
   sendOrderCancelledSMS,
   sendTransactionalOtpSms,
-  verifyOtpVia2Factor,
 } from "../services/enhancedTwoFactorService.js";
 import {
   sendOtpEmail,
@@ -366,7 +365,7 @@ router.post("/send-otp", authMiddleware, async (req, res) => {
       if (!validatePhone(targetMobile)) {
         return res.status(400).json({ message: "Invalid phone format" });
       }
-      sendPromises.push(sendTransactionalOtpSms(targetMobile, otp));
+      sendPromises.push(sendTransactionalOtpSms(targetMobile, otp, user.name || "User"));
       sentTo.push("mobile");
     }
 
@@ -376,7 +375,7 @@ router.post("/send-otp", authMiddleware, async (req, res) => {
         sentTo.push("email");
       }
       if (field === "password" && user.mobile) {
-        sendPromises.push(sendTransactionalOtpSms(normalizeMobileForOtp(user.mobile), otp));
+        sendPromises.push(sendTransactionalOtpSms(normalizeMobileForOtp(user.mobile), otp, user.name || "User"));
         sentTo.push("mobile");
       }
     }
@@ -432,16 +431,9 @@ router.patch("/verify-otp-update", authMiddleware, async (req, res) => {
     }
 
     if (field === "mobile") {
-      try {
-        const verifyResult = await verifyOtpVia2Factor(normalizedNewValue, otp);
-        if (!verifyResult?.matched) {
-          console.warn(
-            "2Factor OTP verify did not match; using server-side OTP validation result for mobile update",
-          );
-        }
-      } catch (_err) {
-        // If provider verification is temporarily unavailable, local OTP check above still protects the flow.
-      }
+      // Mobile verification is handled by the local OTP check above
+      // 2Factor.in doesn't provide server-side verification for mobile updates
+      console.log(`Mobile number update verified locally for: ${normalizedNewValue}`);
     }
 
     // Check if new value already exists

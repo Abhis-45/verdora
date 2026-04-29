@@ -23,7 +23,8 @@ interface VerifyOtpResponse {
  * @returns Promise with send status
  */
 export const sendOtp = async (
-  identifier: string
+  identifier: string,
+  debug = false
 ): Promise<SendOtpResponse> => {
   try {
     const BACKEND_URL =
@@ -36,7 +37,7 @@ export const sendOtp = async (
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ identifier }),
+      body: JSON.stringify({ identifier, debug }),
     });
 
     const data = await response.json();
