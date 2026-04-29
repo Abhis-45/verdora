@@ -5,9 +5,8 @@ dotenv.config();
 
 const API_KEY = process.env.TWO_FACTOR_API_KEY;
 const SENDER_ID = process.env.TWO_FACTOR_SENDER_ID || "VERDOR";
-const OTP_TEMPLATE_NAME = process.env.TWO_FACTOR_OTP_TEMPLATE || "OTP1";
-const OTP_BASE_URL = "https://2factor.in/API/V1";
-const TRANS_SMS_BASE_URL = "https://2factor.in/API/R1/SEND";
+// Use Transactional SMS API - SMS only, no voice
+const SMS_API_URL = "https://2factor.in/API/R1/SEND";
 
 const validateApiConfiguration = () => {
   if (!API_KEY) {
@@ -28,70 +27,86 @@ const formatPhoneNumber = (phoneNumber) => {
   return cleaned;
 };
 
-export const sendOtpSMS = async (phoneNumber, otp) => {
+/**
+ * Send OTP via SMS using Transactional SMS API (SMS-ONLY, no voice calls)
+ * This uses 2Factor.in's approved template for SMS
+ */
+export const sendOtpSMS = async (phoneNumber, otp, userName = "User") => {
   validateApiConfiguration();
 
   const formattedPhone = formatPhoneNumber(phoneNumber);
-  const requestUrl = `${OTP_BASE_URL}/${API_KEY}/SMS/${encodeURIComponent(formattedPhone)}/${encodeURIComponent(otp)}/${encodeURIComponent(OTP_TEMPLATE_NAME)}`;
+  // Use the approved template format
+  const message = `Hi ${userName}, Your one time password for phone verification is ${otp}.\nplease do not share otp with anyone.`;
 
   try {
-    const response = await axios.get(requestUrl, {
+    console.log(`\n📲 [SMS-OTP] Sending OTP SMS to ${formattedPhone}`);
+    console.log(`📌 API Endpoint: ${SMS_API_URL} (Transactional SMS - SMS ONLY, no voice)`);
+    console.log(`📌 Phone: ${formattedPhone}`);
+    console.log(`📌 Message: ${message}`);
+
+    // Use transactional SMS API for SMS-only delivery
+    const response = await axios.get(SMS_API_URL, {
+      params: {
+        apikey: API_KEY,
+        to: formattedPhone,
+        msg: message,
+        from: SENDER_ID,
+      },
       timeout: 10000,
-      validateStatus: () => true,
+      validateStatus: () => true, // Capture all responses
     });
+
+    console.log(`📤 API Response Status: ${response.status}`);
+    console.log(`📤 API Response Data:`, JSON.stringify(response.data));
 
     const data = response.data;
     if (data?.Status === "Success") {
+      console.log(`✅ OTP SMS sent successfully via Transactional API`);
       return {
         success: true,
-        message: "OTP sent successfully",
-        sessionId: data.Details,
+        message: "OTP sent successfully via SMS",
+        phoneNumber: formattedPhone,
         apiResponse: data,
-        apiRequestUrl: requestUrl,
       };
     }
 
     if (data?.Status === "Error") {
-      throw new Error(data?.Details || "OTP API returned an error");
+      const errorMsg = data?.Details || "API returned error";
+      console.error(`❌ Transactional SMS API Error: ${errorMsg}`);
+      throw new Error(`SMS API Error: ${errorMsg}`);
     }
 
-    throw new Error(`Unexpected OTP API response: ${JSON.stringify(data)}`);
+    throw new Error(`Unexpected API response: ${JSON.stringify(data)}`);
   } catch (err) {
-    console.error(`Failed to send OTP SMS: ${err.message}`);
+    console.error(`\n❌ Failed to send OTP SMS to ${formattedPhone}`);
+    console.error(`Error: ${err.message}`);
     if (err.response?.data) {
-      console.error("OTP API response:", err.response.data);
+      console.error("API Response:", err.response.data);
     }
     throw err;
   }
 };
 
-export const verifyOtp = async (phoneNumber, otp) => {
-  validateApiConfiguration();
-
+/**
+ * Verify OTP - Use local verification instead of 2Factor API
+ * This avoids voice call issues and is more reliable
+ */
+export const verifyOtp = async (phoneNumber, otp, storedOtp) => {
   const formattedPhone = formatPhoneNumber(phoneNumber);
-  const requestUrl = `${OTP_BASE_URL}/${API_KEY}/SMS/VERIFY3/${encodeURIComponent(formattedPhone)}/${encodeURIComponent(otp)}`;
 
   try {
-    const response = await axios.get(requestUrl, {
-      timeout: 10000,
-      validateStatus: () => true,
-    });
-
-    const data = response.data;
-    if (data?.Status === "Success") {
-      return { matched: true, message: data?.Details || "OTP verified" };
+    console.log(`\n🔐 [OTP Verify] Verifying OTP for ${formattedPhone}`);
+    
+    // Simple local verification - compare OTPs
+    if (String(storedOtp).trim() === String(otp).trim()) {
+      console.log(`✅ OTP verification successful`);
+      return { matched: true, message: "OTP verified successfully" };
     }
 
-    if (data?.Status === "Error") {
-      return { matched: false, message: data?.Details || "OTP verification failed" };
-    }
-
-    throw new Error(`Unexpected OTP verification response: ${JSON.stringify(data)}`);
+    console.warn(`❌ OTP mismatch - stored: ${storedOtp}, provided: ${otp}`);
+    return { matched: false, message: "OTP does not match" };
   } catch (err) {
-    console.error(`OTP verification failed: ${err.message}`);
-    if (err.response?.data) {
-      console.error("OTP verify API response:", err.response.data);
-    }
+    console.error(`❌ OTP verification failed: ${err.message}`);
     throw err;
   }
 };
@@ -103,7 +118,9 @@ const sendTransactionalSms = async (phoneNumber, message) => {
   const encodedMessage = String(message || "").slice(0, 160);
 
   try {
-    const response = await axios.get(TRANS_SMS_BASE_URL, {
+    console.log(`\n📱 [Transactional SMS] Sending to ${formattedPhone}`);
+    
+    const response = await axios.get(SMS_API_URL, {
       params: {
         apikey: API_KEY,
         to: formattedPhone,
@@ -115,9 +132,11 @@ const sendTransactionalSms = async (phoneNumber, message) => {
 
     const data = response.data;
     if (data?.Status === "Success") {
+      console.log(`✅ Transactional SMS sent successfully`);
       return data;
     }
     if (data?.Status === "Error") {
+      console.error(`❌ Transactional SMS Error: ${data?.Details || "Unknown error"}`);
       throw new Error(data?.Details || "Transactional SMS API returned an error");
     }
     throw new Error(`Unexpected transactional SMS response: ${JSON.stringify(data)}`);

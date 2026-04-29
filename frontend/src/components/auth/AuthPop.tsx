@@ -150,6 +150,10 @@ export default function AuthPopup({
         typeof window !== "undefined"
           ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
           : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+
+      console.log(`🔐 [Frontend] Verifying OTP for: ${payloadIdentifier}`);
+      console.log(`🔐 [Frontend] OTP entered: ${otp}`);
+
       const res = await fetch(`${BACKEND_URL}/api/auth/verify-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -158,10 +162,15 @@ export default function AuthPopup({
           otp: otp.trim(),
         }),
       });
+
       const data = await res.json();
       setLoading(false);
 
+      console.log(`🔐 [Frontend] Verify OTP response status: ${res.status}`);
+      console.log(`🔐 [Frontend] Response data:`, data);
+
       if (res.ok) {
+        console.log(`✅ [Frontend] OTP verification successful, logging in user`);
         login(data.user, data.token);
         setMessage("Login successful!");
         setMessageType("success");
@@ -171,11 +180,15 @@ export default function AuthPopup({
           setTimeout(() => onClose(), 500);
         }
       } else {
+        console.log(`❌ [Frontend] OTP verification failed: ${data.message}`);
         setMessage(data.message || "Invalid OTP");
         setMessageType("error");
+        // Clear OTP on failure to prevent reuse
+        setOtp("");
       }
     } catch (err) {
       setLoading(false);
+      console.error(`❌ [Frontend] OTP verification error:`, err);
       setMessage("Network error. Please try again.");
       setMessageType("error");
     }

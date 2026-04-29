@@ -106,6 +106,9 @@ export default function OtpVerification({
           ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
           : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
 
+      console.log(`🔐 [OtpVerification] Verifying OTP for: ${identifier}`);
+      console.log(`🔐 [OtpVerification] OTP entered: ${otp}`);
+
       const res = await fetch(`${BACKEND_URL}/api/auth/verify-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -117,7 +120,11 @@ export default function OtpVerification({
 
       const data = await res.json();
 
+      console.log(`🔐 [OtpVerification] Response status: ${res.status}`);
+      console.log(`🔐 [OtpVerification] Response data:`, data);
+
       if (res.ok) {
+        console.log(`✅ [OtpVerification] OTP verification successful`);
         setMessage("OTP verified successfully!");
         setMessageType("success");
         setTimeout(() => {
@@ -125,11 +132,15 @@ export default function OtpVerification({
           onClose();
         }, 500);
       } else {
+        console.log(`❌ [OtpVerification] OTP verification failed: ${data.message}`);
         setMessage(data.message || "Invalid OTP");
         setMessageType("error");
+        // Clear OTP on failure to prevent reuse attempts
+        setOtp("");
         if (onError) onError(data.message || "Invalid OTP");
       }
     } catch (err) {
+      console.error(`❌ [OtpVerification] Network error:`, err);
       setMessage("Network error. Please try again.");
       setMessageType("error");
       if (onError) onError("Network error. Please try again.");
