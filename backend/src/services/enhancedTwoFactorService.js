@@ -3,16 +3,11 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-const API_KEY = process.env.TWO_FACTOR_API_KEY;
-const SENDER_ID = process.env.TWO_FACTOR_SENDER_ID || "VERDOR";
-// Use Transactional SMS API - SMS only, no voice
-const SMS_API_URL = "https://2factor.in/API/R1/SEND";
-
-const validateApiConfiguration = () => {
-  if (!API_KEY) {
-    throw new Error("2Factor API key is not configured");
-  }
-};
+const TWO_FACTOR_API_KEY = process.env.TWO_FACTOR_API_KEY;
+const OTP_TEMPLATE = process.env.TWO_FACTOR_OTP_TEMPLATE || "OTP1";
+const FAST2SMS_API_KEY = process.env.FAST2SMS_API_KEY;
+const FAST2SMS_SENDER_ID = process.env.FAST2SMS_SENDER_ID || "FSTSMS";
+const SMS_PROVIDER = (process.env.SMS_PROVIDER || "2factor").toLowerCase();
 
 const formatPhoneNumber = (phoneNumber) => {
   if (!phoneNumber) throw new Error("Phone number is required");
@@ -24,129 +19,176 @@ const formatPhoneNumber = (phoneNumber) => {
   if (cleaned.length === 10) {
     cleaned = "91" + cleaned;
   }
-  return cleaned;
+  return "+" + cleaned;
 };
 
-/**
- * Send OTP via SMS using Transactional SMS API (SMS-ONLY, no voice calls)
- * This uses 2Factor.in's approved template for SMS
- */
-export const sendOtpSMS = async (phoneNumber, otp, userName = "User") => {
-  validateApiConfiguration();
+const formatPhoneDigits = (phoneNumber) => {
+  return formatPhoneNumber(phoneNumber).replace(/^\+/, "");
+};
+
+const validate2FactorConfig = () => {
+  if (!TWO_FACTOR_API_KEY) {
+    throw new Error("2Factor API key is not configured");
+  }
+};
+
+const validateFast2SmsConfig = () => {
+  if (!FAST2SMS_API_KEY) {
+    throw new Error("Fast2SMS API key is not configured");
+  }
+};
+
+const sendSmsVia2Factor = async (phoneNumber, message) => {
+  validate2FactorConfig();
 
   const formattedPhone = formatPhoneNumber(phoneNumber);
-  // Use the approved template format
-  const message = `Hi ${userName}, Your one time password for phone verification is ${otp}.\nplease do not share otp with anyone.`;
+  const encodedMessage = encodeURIComponent(String(message || "").slice(0, 140));
+  const apiUrl = `https://2factor.in/API/V1/${TWO_FACTOR_API_KEY}/SMS/${formattedPhone}/AUTOGEN/${OTP_TEMPLATE}?message=${encodedMessage}`;
 
-  try {
-    console.log(`\n📲 [SMS-OTP] Sending OTP SMS to ${formattedPhone}`);
-    console.log(`📌 API Endpoint: ${SMS_API_URL} (Transactional SMS - SMS ONLY, no voice)`);
-    console.log(`📌 Phone: ${formattedPhone}`);
-    console.log(`📌 Message: ${message}`);
+  console.log(`\n📲 [2Factor SMS] Sending message to ${formattedPhone}`);
+  console.log(`🔗 API URL: ${apiUrl.replace(TWO_FACTOR_API_KEY, "XXXX-XXXX-XXXX-XXXX-XXXX")}`);
 
-    // Use transactional SMS API for SMS-only delivery
-    const response = await axios.get(SMS_API_URL, {
-      params: {
-        apikey: API_KEY,
-        to: formattedPhone,
-        msg: message,
-        from: SENDER_ID,
-      },
-      timeout: 10000,
-      validateStatus: () => true, // Capture all responses
-    });
+  const response = await axios.get(apiUrl, {
+    timeout: 10000,
+    validateStatus: () => true,
+  });
 
-    console.log(`📤 API Response Status: ${response.status}`);
-    console.log(`📤 API Response Data:`, JSON.stringify(response.data));
+  console.log(`📤 2Factor Response Status: ${response.status}`);
+  console.log(`📤 2Factor Response Data:`, JSON.stringify(response.data));
 
-    const data = response.data;
-    if (data?.Status === "Success") {
-      console.log(`✅ OTP SMS sent successfully via Transactional API`);
+  const data = response.data;
+  if (data?.Status === "Success") {
+    return {
+      provider: "2factor",
+      success: true,
+      apiResponse: data,
+      phoneNumber: formattedPhone,
+      sessionId: data?.Details,
+    };
+  }
+
+  const errorMsg = data?.Details || `2Factor returned non-success status ${data?.Status}`;
+  throw new Error(errorMsg);
+};
+
+const sendSmsViaFast2Sms = async (phoneNumber, message) => {
+  validateFast2SmsConfig();
+
+  const digits = formatPhoneDigits(phoneNumber);
+  const encodedMessage = encodeURIComponent(String(message || "").slice(0, 140));
+  const apiUrl = `https://www.fast2sms.com/dev/bulk?authorization=${FAST2SMS_API_KEY}&sender_id=${FAST2SMS_SENDER_ID}&message=${encodedMessage}&language=english&route=p&numbers=${digits}`;
+
+  console.log(`\n📲 [Fast2SMS] Sending SMS to ${digits}`);
+  console.log(`🔗 API URL: ${apiUrl.replace(FAST2SMS_API_KEY, "XXXX-XXXX-XXXX-XXXX-XXXX")}`);
+
+  const response = await axios.get(apiUrl, {
+    timeout: 15000,
+    validateStatus: () => true,
+  });
+
+  console.log(`📤 Fast2SMS Response Status: ${response.status}`);
+  console.log(`📤 Fast2SMS Response Data:`, JSON.stringify(response.data));
+
+  const data = response.data;
+  if (data?.return === true || data?.Return === true || String(data?.return).toLowerCase() === "true") {
+    return {
+      provider: "fast2sms",
+      success: true,
+      apiResponse: data,
+      phoneNumber: `+${digits}`,
+    };
+  }
+
+  const errorMsg = data?.message || data?.error || "Fast2SMS returned failure";
+  throw new Error(errorMsg);
+};
+
+export const sendOtpSMS = async (phoneNumber, otp, userName = "User") => {
+  const message = `Hi ${userName}, Your one time password for phone verification is ${otp}. Please do not share OTP with anyone.`;
+  const providers = [];
+
+  if (SMS_PROVIDER === "fast2sms") {
+    providers.push(sendSmsViaFast2Sms);
+    if (TWO_FACTOR_API_KEY) providers.push(sendSmsVia2Factor);
+  } else {
+    if (TWO_FACTOR_API_KEY) providers.push(sendSmsVia2Factor);
+    if (FAST2SMS_API_KEY) providers.push(sendSmsViaFast2Sms);
+  }
+
+  if (providers.length === 0) {
+    throw new Error("No SMS provider is configured. Set TWO_FACTOR_API_KEY or FAST2SMS_API_KEY.");
+  }
+
+  let lastError = null;
+  for (const providerFn of providers) {
+    try {
+      const result = await providerFn(phoneNumber, message);
       return {
         success: true,
-        message: "OTP sent successfully via SMS",
-        phoneNumber: formattedPhone,
-        apiResponse: data,
+        provider: result.provider,
+        phoneNumber: result.phoneNumber,
+        apiResponse: result.apiResponse,
+        sessionId: result.sessionId,
       };
+    } catch (error) {
+      lastError = error;
+      console.warn(`⚠️ SMS provider failed: ${error.message}`);
     }
-
-    if (data?.Status === "Error") {
-      const errorMsg = data?.Details || "API returned error";
-      console.error(`❌ Transactional SMS API Error: ${errorMsg}`);
-      throw new Error(`SMS API Error: ${errorMsg}`);
-    }
-
-    throw new Error(`Unexpected API response: ${JSON.stringify(data)}`);
-  } catch (err) {
-    console.error(`\n❌ Failed to send OTP SMS to ${formattedPhone}`);
-    console.error(`Error: ${err.message}`);
-    if (err.response?.data) {
-      console.error("API Response:", err.response.data);
-    }
-    throw err;
   }
+
+  throw new Error(`SMS API Error: All providers failed. Last error: ${lastError?.message}`);
 };
 
-/**
- * Verify OTP - Use local verification instead of 2Factor API
- * This avoids voice call issues and is more reliable
- */
-export const verifyOtp = async (phoneNumber, otp, storedOtp) => {
-  const formattedPhone = formatPhoneNumber(phoneNumber);
+export const verifyOtp = async (sessionId, otp) => {
+  validate2FactorConfig();
 
-  try {
-    console.log(`\n🔐 [OTP Verify] Verifying OTP for ${formattedPhone}`);
-    
-    // Simple local verification - compare OTPs
-    if (String(storedOtp).trim() === String(otp).trim()) {
-      console.log(`✅ OTP verification successful`);
-      return { matched: true, message: "OTP verified successfully" };
-    }
-
-    console.warn(`❌ OTP mismatch - stored: ${storedOtp}, provided: ${otp}`);
-    return { matched: false, message: "OTP does not match" };
-  } catch (err) {
-    console.error(`❌ OTP verification failed: ${err.message}`);
-    throw err;
+  if (!sessionId || !otp) {
+    throw new Error("Session ID and OTP are required for verification.");
   }
+
+  const apiUrl = `https://2factor.in/API/V1/${TWO_FACTOR_API_KEY}/SMS/VERIFY/${sessionId}/${String(otp).trim()}`;
+
+  console.log(`\n🔐 [2Factor Verify] Verifying OTP using session ${sessionId}`);
+  console.log(`🔗 API URL: ${apiUrl.replace(TWO_FACTOR_API_KEY, "XXXX-XXXX-XXXX-XXXX-XXXX")}`);
+
+  const response = await axios.get(apiUrl, {
+    timeout: 10000,
+    validateStatus: () => true,
+  });
+
+  console.log(`📤 2Factor Verify Response Status: ${response.status}`);
+  console.log(`📤 2Factor Verify Response Data:`, JSON.stringify(response.data));
+
+  const data = response.data;
+  const matched = data?.Status === "Success" && data?.Details?.toLowerCase?.().includes("otp matched");
+  return {
+    success: matched,
+    matched,
+    apiResponse: data,
+  };
 };
 
 const sendTransactionalSms = async (phoneNumber, message) => {
-  validateApiConfiguration();
+  validate2FactorConfig();
 
   const formattedPhone = formatPhoneNumber(phoneNumber);
-  const encodedMessage = String(message || "").slice(0, 160);
+  const encodedMessage = encodeURIComponent(String(message || "").slice(0, 140));
+  const apiUrl = `https://2factor.in/API/V1/${TWO_FACTOR_API_KEY}/SMS/${formattedPhone}/${Date.now()}/${OTP_TEMPLATE}`;
 
-  try {
-    console.log(`\n📱 [Transactional SMS] Sending to ${formattedPhone}`);
-    
-    const response = await axios.get(SMS_API_URL, {
-      params: {
-        apikey: API_KEY,
-        to: formattedPhone,
-        msg: encodedMessage,
-      },
-      timeout: 10000,
-      validateStatus: () => true,
-    });
+  console.log(`\n📱 [Transactional SMS] Sending to ${formattedPhone}`);
 
-    const data = response.data;
-    if (data?.Status === "Success") {
-      console.log(`✅ Transactional SMS sent successfully`);
-      return data;
-    }
-    if (data?.Status === "Error") {
-      console.error(`❌ Transactional SMS Error: ${data?.Details || "Unknown error"}`);
-      throw new Error(data?.Details || "Transactional SMS API returned an error");
-    }
-    throw new Error(`Unexpected transactional SMS response: ${JSON.stringify(data)}`);
-  } catch (err) {
-    console.error(`Failed to send transactional SMS: ${err.message}`);
-    if (err.response?.data) {
-      console.error("Transactional SMS API response:", err.response.data);
-    }
-    throw err;
+  const response = await axios.get(apiUrl, {
+    timeout: 15000,
+    validateStatus: () => true,
+  });
+
+  const data = response.data;
+  if (data?.Status === "Success") {
+    return data;
   }
+
+  const errorMsg = data?.Details || "API returned error";
+  throw new Error(errorMsg);
 };
 
 export const sendTransactionalOtpSms = async (phoneNumber, otp, userName = "User") => {

@@ -4,17 +4,15 @@ import bcrypt from "bcryptjs";
 import User from "../models/User.js";
 import {
   sendOtpSMS as sendOtpSMSVia2FA,
-  verifyOtp as verifyOtpVia2Factor,
+  verifyOtp,
 } from "../services/enhancedTwoFactorService.js";
 import {
   sendOtpEmail,
   sendWelcomeEmail,
   verifyEmailTransporter,
 } from "../services/emailService.js";
-
 const router = express.Router();
-// Email OTP store retained for email flow only (no SMS local OTP storage)
-const emailOtpStore = new Map();
+const otpStore = new Map();
 const OTP_EXPIRY_MINUTES = 10;
 
 const generateOtp = () =>
@@ -38,30 +36,30 @@ const normalizeIdentifier = (identifier) => {
 
 const isOtpExpired = (expiresAt) => Date.now() > Number(expiresAt || 0);
 
-const createSession = (identifier, channel, otp) => {
+const createSession = (identifier, channel, otp = null, sessionId = null) => {
   const expiresAt = Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000;
-  emailOtpStore.set(identifier, {
-    otp: String(otp),
-    expiresAt,
+  otpStore.set(identifier, {
+    otp: otp !== null ? String(otp) : null,
+    sessionId: sessionId ? String(sessionId) : null,
     channel,
-    verified: false, // Track if OTP has been verified
-    attempts: 0, // Track verification attempts
+    expiresAt,
+    verified: false,
+    attempts: 0,
   });
-  console.log(`✅ OTP session created for ${identifier} (expires: ${new Date(expiresAt).toISOString()})`);
+  console.log(`✅ OTP session created for ${identifier} (channel: ${channel}, expires: ${new Date(expiresAt).toISOString()})`);
 };
 
 const verifyStoredOtp = (identifier, otp, expectedChannel) => {
   console.log(`\n🔍 [OTP Debug] Verifying OTP for ${identifier}`);
-  console.log(`Expected channel: ${expectedChannel}`);
-  console.log(`Provided OTP: ${otp}`);
 
-  const stored = emailOtpStore.get(identifier);
+  const stored = otpStore.get(identifier);
   console.log(`Stored data:`, stored ? {
     otp: stored.otp,
+    sessionId: stored.sessionId,
     channel: stored.channel,
     expiresAt: stored.expiresAt,
     attempts: stored.attempts,
-    verified: stored.verified
+    verified: stored.verified,
   } : 'NOT FOUND');
 
   if (!stored) {
@@ -69,17 +67,15 @@ const verifyStoredOtp = (identifier, otp, expectedChannel) => {
     return { valid: false, reason: "OTP not found or expired. Please request a new OTP." };
   }
 
-  // Check if already verified (prevent reuse)
   if (stored.verified) {
     console.log(`❌ OTP already verified for ${identifier}`);
-    emailOtpStore.delete(identifier);
+    otpStore.delete(identifier);
     return { valid: false, reason: "OTP already used. Please request a new OTP." };
   }
 
-  // Check attempts limit (prevent brute force)
   if (stored.attempts >= 5) {
     console.log(`❌ Too many attempts for ${identifier}`);
-    emailOtpStore.delete(identifier);
+    otpStore.delete(identifier);
     return { valid: false, reason: "Too many failed attempts. Please request a new OTP." };
   }
 
@@ -90,7 +86,7 @@ const verifyStoredOtp = (identifier, otp, expectedChannel) => {
 
   if (isOtpExpired(stored.expiresAt)) {
     console.log(`❌ OTP expired for ${identifier}`);
-    emailOtpStore.delete(identifier);
+    otpStore.delete(identifier);
     return { valid: false, reason: "OTP has expired. Please request a new OTP." };
   }
 
@@ -99,7 +95,6 @@ const verifyStoredOtp = (identifier, otp, expectedChannel) => {
 
   console.log(`Comparing: stored="${storedOtpStr}" vs provided="${providedOtpStr}"`);
 
-  // Increment attempts counter
   stored.attempts += 1;
 
   if (storedOtpStr !== providedOtpStr) {
@@ -107,10 +102,9 @@ const verifyStoredOtp = (identifier, otp, expectedChannel) => {
     return { valid: false, reason: "Invalid OTP. Please try again." };
   }
 
-  // Mark as verified and clean up
   stored.verified = true;
   console.log(`✅ OTP verification successful for ${identifier}`);
-  emailOtpStore.delete(identifier);
+  otpStore.delete(identifier);
   return { valid: true };
 };
 
@@ -165,38 +159,33 @@ router.get("/sms-status", async (_req, res) => {
   }
 });
 
-// Test endpoint to diagnose 2Factor OTP API issues
+// Test endpoint to diagnose SMS OTP provider issues
 router.get("/test-sms/:phone", async (req, res) => {
   try {
     const { phone } = req.params;
     const testOtp = "123456";
     const cleanPhone = phone.replace(/[^\d]/g, "");
-    const formattedPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
-    const sendPhone = `+${formattedPhone}`;
-    const templateName = "OTP1";
+    const formattedPhone = cleanPhone.length === 10 ? `+91${cleanPhone}` : `+${cleanPhone}`;
 
-    console.log(`\n🧪 Testing 2Factor V1 OTP API`);
+    console.log(`\n🧪 Testing SMS OTP provider`);
     console.log(`Input Phone: ${phone}`);
     console.log(`Formatted Phone: ${formattedPhone}`);
-    console.log(`Send Phone: ${sendPhone}`);
 
-    const sendResponse = await sendOtpSMSVia2FA(sendPhone, testOtp);
-    const verifyResponse = await verifyOtpVia2Factor(formattedPhone, testOtp);
+    const sendResponse = await sendOtpSMSVia2FA(formattedPhone, testOtp);
+    console.log(`Send Response:`, sendResponse);
 
     res.json({
-      success: sendResponse?.success === true && verifyResponse?.matched === true,
+      success: sendResponse?.success === true,
       sendResponse,
-      verifyResponse,
       diagnostics: {
         inputPhone: phone,
         formattedPhone,
-        sendPhone,
         otp: testOtp,
-        templateName,
+        provider: sendResponse?.provider,
       },
     });
   } catch (err) {
-    console.error(`\n❌ 2Factor API Test Failed`);
+    console.error(`\n❌ SMS OTP Test Failed`);
     console.error(`Error: ${err.message}`);
     console.error(`Response Status: ${err.response?.status}`);
     console.error(`Response Data:`, err.response?.data);
@@ -235,38 +224,33 @@ router.post("/send-otp", async (req, res) => {
       return res.json({ message: "OTP sent to email successfully" });
     }
 
-    // For SMS: Use 2Factor Transactional SMS API (SMS-ONLY, not voice)
+    // For SMS: Use 2Factor Custom OTP API
     console.log(`📲 Attempting to send OTP via SMS...`);
     const otp = generateOtp();
 
-    // Store OTP locally for verification as fallback
-    createSession(normalizedIdentifier, "sms", otp);
-    console.log(`✅ OTP stored locally (${otp}) for SMS verification`);
-
     try {
-      // Try to send via 2Factor API
-      const user = await User.findOne({ mobile: normalizedIdentifier });
-      const userName = user?.name || "User";
-      
+      // Send via 2Factor API and get session ID if available
+      const userName = "User";
       const sendResult = await sendOtpSMSVia2FA(normalizedIdentifier, otp, userName);
-      console.info(`✅ OTP sent via 2Factor SMS API to ${normalizedIdentifier}`);
-      
+      console.info(`✅ OTP sent via SMS provider to ${normalizedIdentifier}`);
+
+      // Store OTP locally for verification; preserve provider session ID if returned
+      createSession(normalizedIdentifier, "sms", otp, sendResult.sessionId || null);
+
       const responsePayload = {
         message: "OTP sent to mobile successfully",
         channel: "sms",
+        provider: sendResult.provider,
       };
       if (debug || process.env.NODE_ENV === "development") {
         responsePayload.smsApiResponse = sendResult?.apiResponse;
       }
       return res.json(responsePayload);
     } catch (smsApiErr) {
-      // SMS API failed, but OTP is stored locally - can still verify locally
-      console.warn(`⚠️ SMS API failed, but OTP available locally for verification`);
-      console.warn(`SMS Error: ${smsApiErr.message}`);
-      
+      // SMS API failed - return error (no local fallback for new API)
+      console.error(`❌ SMS API failed: ${smsApiErr.message}`);
       return res.status(500).json({
-        message: "SMS service temporarily unavailable, but you can still verify OTP sent to your registered email or use alternative verification method",
-        channel: "sms_local_fallback",
+        message: "Failed to send SMS OTP. Please try again.",
         error: debug ? smsApiErr.message : undefined,
       });
     }
@@ -309,56 +293,95 @@ router.post("/verify-otp", async (req, res) => {
   console.log(`Channel type: ${isEmail ? 'EMAIL' : 'SMS'}`);
 
   if (isEmail) {
-    const emailCheck = verifyStoredOtp(normalizedIdentifier, otp, "email");
-    if (!emailCheck.valid) {
-      console.log(`❌ Email OTP verification failed: ${emailCheck.reason}`);
-      return res.status(400).json({ message: emailCheck.reason });
+    // For email: Use local OTP verification
+    const otpCheck = verifyStoredOtp(normalizedIdentifier, otp, "email");
+    if (!otpCheck.valid) {
+      console.warn(`❌ Email OTP verification failed: ${otpCheck.reason}`);
+      return res.status(400).json({ message: otpCheck.reason });
     }
-    console.log(`✅ Email OTP verification successful`);
   } else {
-    // For SMS: Use local OTP verification (no 2Factor API calls)
-    console.log(`🔐 [OTP Verification] Verifying SMS OTP for: ${normalizedIdentifier}`);
-    const smsCheck = verifyStoredOtp(normalizedIdentifier, otp, "sms");
-    if (!smsCheck.valid) {
-      console.warn(`❌ SMS OTP verification failed: ${smsCheck.reason}`);
-      return res.status(400).json({ message: smsCheck.reason });
+    // For SMS: verify with 2Factor session if available, otherwise fall back to local OTP verification
+    const stored = otpStore.get(normalizedIdentifier);
+    if (!stored) {
+      console.warn(`❌ No SMS session found for ${normalizedIdentifier}`);
+      return res.status(400).json({ message: "No active SMS session. Please request a new OTP." });
     }
-    console.log(`✅ SMS OTP verification successful for: ${normalizedIdentifier}`);
+
+    if (isOtpExpired(stored.expiresAt)) {
+      console.log(`❌ SMS OTP expired for ${normalizedIdentifier}`);
+      otpStore.delete(normalizedIdentifier);
+      return res.status(400).json({ message: "OTP has expired. Please request a new OTP." });
+    }
+
+    if (stored.sessionId) {
+      try {
+        const verifyResult = await verifyOtp(stored.sessionId, otp);
+        if (!verifyResult.success) {
+          console.warn(`❌ SMS API verification failed for ${normalizedIdentifier}`);
+          return res.status(400).json({ message: "Invalid OTP. Please try again." });
+        }
+        console.log(`✅ SMS API verification successful for ${normalizedIdentifier}`);
+        otpStore.delete(normalizedIdentifier);
+      } catch (apiError) {
+        console.error(`❌ SMS API verification error: ${apiError.message}`);
+        return res.status(500).json({ message: "SMS verification service error. Please try again." });
+      }
+    } else {
+      const otpCheck = verifyStoredOtp(normalizedIdentifier, otp, "sms");
+      if (!otpCheck.valid) {
+        console.warn(`❌ SMS OTP verification failed: ${otpCheck.reason}`);
+        return res.status(400).json({ message: otpCheck.reason });
+      }
+    }
   }
 
-  // OTP verification passed - now create/find user and login
-  console.log(`✅ OTP verified successfully, proceeding with login for: ${normalizedIdentifier}`);
+  console.log(`✅ ${isEmail ? "Email" : "SMS"} OTP verification successful for: ${normalizedIdentifier}`);
 
-  let user = await User.findOne(
-    isEmail ? { email: normalizedIdentifier } : { mobile: normalizedIdentifier },
-  );
+  let user = null;
+  let userLookupError = null;
+  try {
+    user = await User.findOne(
+      isEmail ? { email: normalizedIdentifier } : { mobile: normalizedIdentifier },
+    );
+  } catch (lookupError) {
+    userLookupError = lookupError;
+    console.warn(`⚠️ Could not lookup user due to DB issue: ${lookupError.message}`);
+  }
 
   const isNewUser = !user;
   console.log(`User lookup result: ${user ? 'EXISTING' : 'NEW'} user`);
 
   if (!user) {
-    console.log(`Creating new user for: ${normalizedIdentifier}`);
-    user = new User(
-      isEmail ? { email: normalizedIdentifier } : { mobile: normalizedIdentifier },
-    );
-    await user.save();
-    console.log(`✅ New user created with ID: ${user._id}`);
-
-    try {
-      if (isEmail) {
-        await sendWelcomeEmail(normalizedIdentifier, user.name || "Guest");
-        console.log(`✅ Welcome email sent`);
-      } else {
-        // Note: SMS welcome disabled to avoid confusion with OTP SMS
-        console.log(`ℹ️ Welcome SMS disabled to avoid OTP confusion`);
+    if (userLookupError) {
+      console.warn(`⚠️ Skipping user creation due to DB connectivity issues`);
+    } else {
+      console.log(`Creating new user for: ${normalizedIdentifier}`);
+      user = new User(
+        isEmail ? { email: normalizedIdentifier } : { mobile: normalizedIdentifier },
+      );
+      try {
+        await user.save();
+        console.log(`✅ New user created with ID: ${user._id}`);
+      } catch (saveError) {
+        console.warn(`⚠️ Could not create new user due to DB issue: ${saveError.message}`);
       }
-    } catch (_notificationErr) {
-      console.warn(`⚠️ Welcome notification failed: ${_notificationErr.message}`);
-      // Welcome notification should not block login.
     }
   }
 
-  console.log(`Generating JWT token for user: ${user._id}`);
+  try {
+    if (isEmail) {
+      await sendWelcomeEmail(normalizedIdentifier, user?.name || "Guest");
+      console.log(`✅ Welcome email sent`);
+    } else {
+      // Note: SMS welcome disabled to avoid confusion with OTP SMS
+      console.log(`ℹ️ Welcome SMS disabled to avoid OTP confusion`);
+    }
+  } catch (_notificationErr) {
+    console.warn(`⚠️ Welcome notification failed: ${_notificationErr.message}`);
+    // Welcome notification should not block login.
+  }
+
+  console.log(`Generating JWT token for user: ${user?._id || 'unknown'}`);
   const token = jwt.sign({ id: user._id, role: "user" }, process.env.JWT_SECRET, {
     expiresIn: "1d",
   });

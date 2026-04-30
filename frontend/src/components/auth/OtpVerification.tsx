@@ -158,7 +158,17 @@ export default function OtpVerification({
 
   return (
     <div className={styles.modalBackdrop} onClick={onClose}>
-      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+      <div
+        className={styles.modal}
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && !loading && otp.length === 6) {
+            e.preventDefault();
+            handleVerifyOtp();
+          }
+        }}
+        tabIndex={-1}
+      >
         {/* Header */}
         <div className={styles.header}>
           <h2>Verify OTP</h2>

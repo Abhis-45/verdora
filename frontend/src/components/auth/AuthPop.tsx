@@ -294,6 +294,16 @@ export default function AuthPopup({
             placeholder="Enter Email or Mobile"
             value={identifier}
             onChange={(e) => setIdentifier(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !loading) {
+                e.preventDefault();
+                if (mode === "password") {
+                  loginOrRegisterPassword();
+                } else if (!otpSent) {
+                  sendOtp();
+                }
+              }
+            }}
             className="w-full p-2 sm:p-3 text-sm sm:text-base border rounded text-white bg-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500"
             required
           />
@@ -326,6 +336,12 @@ export default function AuthPopup({
                     maxLength={6}
                     value={otp}
                     onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !loading) {
+                        e.preventDefault();
+                        verifyOtp();
+                      }
+                    }}
                     className="w-full p-2 sm:p-3 text-sm sm:text-base border rounded mt-2 text-white bg-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500"
                     required
                   />
@@ -373,6 +389,12 @@ export default function AuthPopup({
                 placeholder="Enter Password (min 6 characters)"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !loading) {
+                    e.preventDefault();
+                    loginOrRegisterPassword();
+                  }
+                }}
                 className="w-full p-2 sm:p-3 text-sm sm:text-base border rounded text-white bg-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500"
                 required
               />
