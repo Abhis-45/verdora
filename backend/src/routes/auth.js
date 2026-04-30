@@ -226,16 +226,16 @@ router.post("/send-otp", async (req, res) => {
 
     // For SMS: Use 2Factor Custom OTP API
     console.log(`📲 Attempting to send OTP via SMS...`);
-    const otp = generateOtp();
 
     try {
       // Send via 2Factor API and get session ID if available
       const userName = "User";
-      const sendResult = await sendOtpSMSVia2FA(normalizedIdentifier, otp, userName);
+      // Do not pass a pre-generated OTP; 2Factor will generate and send one
+      const sendResult = await sendOtpSMSVia2FA(normalizedIdentifier, undefined, userName);
       console.info(`✅ OTP sent via SMS provider to ${normalizedIdentifier}`);
 
-      // Store OTP locally for verification; preserve provider session ID if returned
-      createSession(normalizedIdentifier, "sms", otp, sendResult.sessionId || null);
+      // Store sessionId only; the OTP is managed by 2Factor
+      createSession(normalizedIdentifier, "sms", null, sendResult.sessionId || null);
 
       const responsePayload = {
         message: "OTP sent to mobile successfully",

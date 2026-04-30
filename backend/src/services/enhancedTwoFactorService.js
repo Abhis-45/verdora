@@ -38,12 +38,13 @@ const validateFast2SmsConfig = () => {
   }
 };
 
-const sendSmsVia2Factor = async (phoneNumber, message) => {
+ const sendSmsVia2Factor = async (phoneNumber, /* otp */ userName = "User") => {
   validate2FactorConfig();
 
   const formattedPhone = formatPhoneNumber(phoneNumber);
-  const encodedMessage = encodeURIComponent(String(message || "").slice(0, 140));
-  const apiUrl = `https://2factor.in/API/V1/${TWO_FACTOR_API_KEY}/SMS/${formattedPhone}/AUTOGEN/${OTP_TEMPLATE}?message=${encodedMessage}`;
+  // We use AUTOGEN to let 2Factor generate and send the OTP via SMS
+  // Do not rely on a locally generated OTP; the OTP will be verified by 2Factor using the sessionId
+  const apiUrl = `https://2factor.in/API/V1/${TWO_FACTOR_API_KEY}/SMS/${formattedPhone}/AUTOGEN`;
 
   console.log(`\n📲 [2Factor SMS] Sending message to ${formattedPhone}`);
   console.log(`🔗 API URL: ${apiUrl.replace(TWO_FACTOR_API_KEY, "XXXX-XXXX-XXXX-XXXX-XXXX")}`);
