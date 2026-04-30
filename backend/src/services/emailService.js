@@ -11,6 +11,9 @@ const EMAIL_PORT = Number(process.env.EMAIL_PORT || 587);
 const EMAIL_SECURE = process.env.EMAIL_SECURE === "true" || EMAIL_PORT === 465;
 const EMAIL_SERVICE = process.env.EMAIL_SERVICE || undefined;
 
+// Force IPv4 only DNS resolution
+dns.setDefaultResultOrder('ipv4first');
+
 const transporterConfig = {
   host: EMAIL_HOST,
   port: EMAIL_PORT,
@@ -24,12 +27,21 @@ const transporterConfig = {
     rejectUnauthorized: false,
     minVersion: "TLSv1.2",
   },
-  connectionTimeout: 15000,
-  greetingTimeout: 15000,
-  socketTimeout: 30000,
+  connectionTimeout: 20000,
+  greetingTimeout: 20000,
+  socketTimeout: 40000,
   family: 4,
   lookup: (hostname, options, callback) => {
-    return dns.lookup(hostname, { ...options, family: 4 }, callback);
+    dns.resolve4(hostname, (err, addresses) => {
+      if (err) {
+        console.warn(`⚠️ IPv4 resolution failed for ${hostname}, attempting A record lookup...`);
+        return dns.lookup(hostname, { family: 4 }, callback);
+      }
+      if (addresses.length === 0) {
+        return dns.lookup(hostname, { family: 4 }, callback);
+      }
+      callback(null, addresses[0], 4);
+    });
   },
 };
 
