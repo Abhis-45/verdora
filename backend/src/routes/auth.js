@@ -5,6 +5,7 @@ import User from "../models/User.js";
 import {
   sendOtpSMS as sendOtpSMSVia2FA,
   verifyOtp,
+  verifyOtpByPhone,
   sendWelcomeSMS,
 } from "../services/enhancedTwoFactorService.js";
 import {
@@ -323,11 +324,20 @@ router.post("/verify-otp", async (req, res) => {
       try {
         const verifyResult = await verifyOtp(stored.sessionId, otp);
         if (!verifyResult.success) {
-          console.warn(`❌ SMS API verification failed for ${normalizedIdentifier}`);
-          return res.status(400).json({ message: "Invalid OTP. Please try again." });
+          console.warn(`❌ SMS API verification failed for ${normalizedIdentifier}`, verifyResult.apiResponse);
+
+          const fallbackResult = await verifyOtpByPhone(normalizedIdentifier, otp);
+          if (!fallbackResult.success) {
+            console.warn(`❌ SMS phone fallback verification failed for ${normalizedIdentifier}`, fallbackResult.apiResponse);
+            return res.status(400).json({ message: "Invalid OTP. Please try again." });
+          }
+
+          console.log(`✅ SMS phone fallback verification successful for ${normalizedIdentifier}`);
+          otpStore.delete(normalizedIdentifier);
+        } else {
+          console.log(`✅ SMS API verification successful for ${normalizedIdentifier}`);
+          otpStore.delete(normalizedIdentifier);
         }
-        console.log(`✅ SMS API verification successful for ${normalizedIdentifier}`);
-        otpStore.delete(normalizedIdentifier);
       } catch (apiError) {
         console.error(`❌ SMS API verification error: ${apiError.message}`);
         return res.status(500).json({ message: "SMS verification service error. Please try again." });

@@ -367,12 +367,13 @@ export default function AuthPopup({
                       Resend OTP in {countdown}s
                     </span>
                   ) : (
-                    <a
+                    <button
+                      type="button"
                       onClick={sendOtp}
                       className="underline cursor-pointer text-green-400 hover:text-green-300"
                     >
                       {loading ? <Spinner /> : "Resend OTP"}
-                    </a>
+                    </button>
                   )}
                 </p>
               </>

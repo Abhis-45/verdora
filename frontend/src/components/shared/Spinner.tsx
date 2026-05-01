@@ -38,7 +38,7 @@ export default function Spinner({
 
   return (
     visible && (
-      <div
+      <span
         className={`flex justify-center items-center transition-opacity duration-200 ${
           show ? "opacity-100" : "opacity-0"
         }`}

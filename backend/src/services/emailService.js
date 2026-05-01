@@ -2,6 +2,8 @@ import nodemailer from "nodemailer";
 import dns from "dns";
 import dotenv from "dotenv";
 
+const dnsPromises = dns.promises;
+
 dotenv.config();
 
 const EMAIL_USER = process.env.EMAIL_USER;
@@ -11,44 +13,56 @@ const EMAIL_PORT = Number(process.env.EMAIL_PORT || 587);
 const EMAIL_SECURE = process.env.EMAIL_SECURE === "true" || EMAIL_PORT === 465;
 const EMAIL_SERVICE = process.env.EMAIL_SERVICE || undefined;
 
-// Force IPv4 only DNS resolution
-dns.setDefaultResultOrder('ipv4first');
+// Force IPv4 first, but use resolved IPv4 address directly when possible.
+if (dns.setDefaultResultOrder) {
+  dns.setDefaultResultOrder("ipv4first");
+}
 
-const transporterConfig = {
-  host: EMAIL_HOST,
-  port: EMAIL_PORT,
-  secure: EMAIL_SECURE,
-  service: EMAIL_SERVICE,
-  auth: {
-    user: EMAIL_USER,
-    pass: EMAIL_PASS,
-  },
-  tls: {
-    rejectUnauthorized: false,
-    minVersion: "TLSv1.2",
-  },
-  connectionTimeout: 20000,
-  greetingTimeout: 20000,
-  socketTimeout: 40000,
-  family: 4,
-  lookup: (hostname, options, callback) => {
-    dns.resolve4(hostname, (err, addresses) => {
-      if (err) {
-        console.warn(`⚠️ IPv4 resolution failed for ${hostname}, attempting A record lookup...`);
-        return dns.lookup(hostname, { family: 4 }, callback);
+const buildTransporterConfig = async () => {
+  const config = {
+    host: EMAIL_HOST,
+    port: EMAIL_PORT,
+    secure: EMAIL_SECURE,
+    service: EMAIL_SERVICE,
+    auth: {
+      user: EMAIL_USER,
+      pass: EMAIL_PASS,
+    },
+    tls: {
+      servername: EMAIL_HOST,
+      rejectUnauthorized: false,
+      minVersion: "TLSv1.2",
+    },
+    connectionTimeout: 20000,
+    greetingTimeout: 20000,
+    socketTimeout: 40000,
+    family: 4,
+  };
+
+  if (!EMAIL_SERVICE) {
+    try {
+      const addresses = await dnsPromises.resolve4(EMAIL_HOST);
+      if (addresses && addresses.length > 0) {
+        config.host = addresses[0];
+        console.log(`✅ Resolved ${EMAIL_HOST} to IPv4 ${config.host}`);
       }
-      if (addresses.length === 0) {
-        return dns.lookup(hostname, { family: 4 }, callback);
-      }
-      callback(null, addresses[0], 4);
-    });
-  },
+    } catch (err) {
+      console.warn(`⚠️ Could not resolve ${EMAIL_HOST} to IPv4: ${err.message}`);
+      console.warn(`   Using hostname ${EMAIL_HOST} and letting Node resolve it.`);
+    }
+  }
+
+  return config;
 };
 
-const transporter = nodemailer.createTransport(transporterConfig);
+const createTransporter = async () => {
+  const transporterConfig = await buildTransporterConfig();
+  return nodemailer.createTransport(transporterConfig);
+};
 
 export const verifyEmailTransporter = async () => {
   try {
+    const transporter = await createTransporter();
     await transporter.verify();
     console.log("✅ Email transporter verified successfully");
     return true;
@@ -68,6 +82,7 @@ const sendEmailWithRetry = async (mailOptions, maxRetries = 3) => {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       console.log(`📧 Email attempt ${attempt}/${maxRetries} to ${mailOptions.to}`);
+      const transporter = await createTransporter();
       const result = await transporter.sendMail({
         ...mailOptions,
         timeout: 30000,

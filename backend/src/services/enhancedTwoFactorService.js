@@ -195,6 +195,36 @@ export const verifyOtp = async (sessionId, otp) => {
   };
 };
 
+export const verifyOtpByPhone = async (phoneNumber, otp) => {
+  validate2FactorConfig();
+
+  if (!phoneNumber || !otp) {
+    throw new Error("Phone number and OTP are required for phone verification.");
+  }
+
+  const formattedPhone = formatPhoneDigits(phoneNumber);
+  const apiUrl = `https://2factor.in/API/V1/${TWO_FACTOR_API_KEY}/SMS/VERIFY3/${formattedPhone}/${String(otp).trim()}`;
+
+  console.log(`\n🔐 [2Factor Verify] Verifying OTP using phone ${formattedPhone}`);
+  console.log(`🔗 API URL: ${apiUrl.replace(TWO_FACTOR_API_KEY, "XXXX-XXXX-XXXX-XXXX-XXXX")}`);
+
+  const response = await axios.get(apiUrl, {
+    timeout: 10000,
+    validateStatus: () => true,
+  });
+
+  console.log(`📤 2Factor Verify3 Response Status: ${response.status}`);
+  console.log(`📤 2Factor Verify3 Response Data:`, JSON.stringify(response.data));
+
+  const data = response.data;
+  const matched = data?.Status === "Success" && data?.Details?.toLowerCase?.().includes("otp matched");
+  return {
+    success: matched,
+    matched,
+    apiResponse: data,
+  };
+};
+
 const sendTransactionalSms = async (phoneNumber, message) => {
   validate2FactorConfig();
 
