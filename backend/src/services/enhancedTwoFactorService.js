@@ -43,15 +43,22 @@ const validateFast2SmsConfig = () => {
   }
 };
 
-const sendSmsVia2Factor = async (phoneNumber, userName = "User") => {
+const sendSmsVia2Factor = async (phoneNumber, otp = undefined, userName = "User") => {
   validate2FactorConfig();
 
   const formattedPhone = formatPhoneNumber(phoneNumber);
-  const apiUrl = `https://2factor.in/API/V1/${TWO_FACTOR_API_KEY}/SMS/${formattedPhone}/AUTOGEN/${OTP_TEMPLATE}`;
+  let apiUrl;
+  if (otp) {
+    apiUrl = `https://2factor.in/API/V1/${TWO_FACTOR_API_KEY}/SMS/${formattedPhone}/${String(otp).trim()}/${OTP_TEMPLATE}`;
+    console.log(`\n📲 [2Factor SMS] Sending custom OTP to ${formattedPhone}`);
+    console.log(`🔧 OTP Template: ${OTP_TEMPLATE}`);
+  } else {
+    apiUrl = `https://2factor.in/API/V1/${TWO_FACTOR_API_KEY}/SMS/${formattedPhone}/AUTOGEN/${OTP_TEMPLATE}`;
+    console.log(`\n📲 [2Factor SMS] Sending AUTOGEN OTP to ${formattedPhone}`);
+    console.log(`🔧 OTP Template: ${OTP_TEMPLATE}`);
+  }
 
-  console.log(`\n📲 [2Factor SMS] Sending OTP to ${formattedPhone}`);
   console.log(`🔗 API URL: ${apiUrl.replace(TWO_FACTOR_API_KEY, "XXXX-XXXX-XXXX-XXXX-XXXX")}`);
-  console.log(`🔧 OTP Template: ${OTP_TEMPLATE}`);
 
   const response = await axios.get(apiUrl, {
     timeout: 10000,
@@ -68,8 +75,8 @@ const sendSmsVia2Factor = async (phoneNumber, userName = "User") => {
       success: true,
       apiResponse: data,
       phoneNumber: formattedPhone,
-      sessionId: data?.Details,
-      otp: data?.OTP || null,
+      sessionId: otp ? null : data?.Details,
+      otp: otp ? String(otp).trim() : null,
     };
   }
 
@@ -144,7 +151,10 @@ export const sendOtpSMS = async (phoneNumber, otp, userName = "User") => {
   let lastError = null;
   for (const providerFn of providers) {
     try {
-      const result = await providerFn(phoneNumber, userName);
+      const result = providerFn === sendSmsVia2Factor
+        ? await providerFn(phoneNumber, otp, userName)
+        : await providerFn(phoneNumber, userName);
+
       return {
         success: true,
         provider: result.provider,

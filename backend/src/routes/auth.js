@@ -227,20 +227,18 @@ router.post("/send-otp", async (req, res) => {
       return res.json({ message: "OTP sent to email successfully" });
     }
 
-    // For SMS: Use 2Factor Custom OTP API
+    // For SMS: send a generated OTP with 2Factor custom SMS API and verify locally
     console.log(`📲 Attempting to send OTP via SMS...`);
 
     try {
-      // Send via 2Factor API and get session ID if available
-      const userName = "User";
-      // Do not pass a pre-generated OTP; 2Factor will generate and send one
-      const sendResult = await sendOtpSMSVia2FA(normalizedIdentifier, undefined, userName);
+      const otp = generateOtp();
+      const sendResult = await sendOtpSMSVia2FA(normalizedIdentifier, otp);
       console.info(`✅ OTP sent via SMS provider to ${normalizedIdentifier}`);
 
       createSession(
         normalizedIdentifier,
         "sms",
-        sendResult.otp || null,
+        otp,
         sendResult.sessionId || null,
       );
 
@@ -254,7 +252,6 @@ router.post("/send-otp", async (req, res) => {
       }
       return res.json(responsePayload);
     } catch (smsApiErr) {
-      // SMS API failed - return error (no local fallback for new API)
       console.error(`❌ SMS API failed: ${smsApiErr.message}`);
       return res.status(500).json({
         message: "Failed to send SMS OTP. Please try again.",
@@ -307,7 +304,6 @@ router.post("/verify-otp", async (req, res) => {
       return res.status(400).json({ message: otpCheck.reason });
     }
   } else {
-    // For SMS: verify with 2Factor session if available, otherwise fall back to local OTP verification
     const stored = otpStore.get(normalizedIdentifier);
     if (!stored) {
       console.warn(`❌ No SMS session found for ${normalizedIdentifier}`);
@@ -320,34 +316,27 @@ router.post("/verify-otp", async (req, res) => {
       return res.status(400).json({ message: "OTP has expired. Please request a new OTP." });
     }
 
-    if (stored.sessionId) {
-      try {
-        const verifyResult = await verifyOtp(stored.sessionId, otp);
-        if (!verifyResult.success) {
-          console.warn(`❌ SMS API verification failed for ${normalizedIdentifier}`, verifyResult.apiResponse);
+    try {
+      console.log(`🔐 Verifying SMS OTP through 2Factor custom API for ${normalizedIdentifier}`);
+      const verifyResult = await verifyOtpByPhone(normalizedIdentifier, otp);
+      console.log(`🔐 2Factor custom verify result:`, verifyResult.apiResponse);
 
-          const fallbackResult = await verifyOtpByPhone(normalizedIdentifier, otp);
-          if (!fallbackResult.success) {
-            console.warn(`❌ SMS phone fallback verification failed for ${normalizedIdentifier}`, fallbackResult.apiResponse);
-            return res.status(400).json({ message: "Invalid OTP. Please try again." });
-          }
-
-          console.log(`✅ SMS phone fallback verification successful for ${normalizedIdentifier}`);
-          otpStore.delete(normalizedIdentifier);
-        } else {
-          console.log(`✅ SMS API verification successful for ${normalizedIdentifier}`);
-          otpStore.delete(normalizedIdentifier);
+      if (!verifyResult.success) {
+        console.warn(`❌ SMS API verification failed for ${normalizedIdentifier}`);
+        const otpCheck = verifyStoredOtp(normalizedIdentifier, otp, "sms");
+        if (!otpCheck.valid) {
+          console.warn(`❌ Local SMS OTP verification also failed: ${otpCheck.reason}`);
+          return res.status(400).json({ message: "Invalid OTP. Please try again." });
         }
-      } catch (apiError) {
-        console.error(`❌ SMS API verification error: ${apiError.message}`);
-        return res.status(500).json({ message: "SMS verification service error. Please try again." });
+        console.log(`⚠️ SMS custom verification failed, but local OTP matches for ${normalizedIdentifier}`);
       }
-    } else {
+    } catch (apiError) {
+      console.error(`❌ SMS API verification error: ${apiError.message}`);
       const otpCheck = verifyStoredOtp(normalizedIdentifier, otp, "sms");
       if (!otpCheck.valid) {
-        console.warn(`❌ SMS OTP verification failed: ${otpCheck.reason}`);
-        return res.status(400).json({ message: otpCheck.reason });
+        return res.status(500).json({ message: "SMS verification failed. Please try again." });
       }
+      console.log(`⚠️ SMS API verification failed. Local OTP matches for ${normalizedIdentifier}`);
     }
   }
 
