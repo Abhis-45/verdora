@@ -4,7 +4,8 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const TWO_FACTOR_API_KEY = process.env.TWO_FACTOR_API_KEY;
-const OTP_TEMPLATE = process.env.TWO_FACTOR_OTP_TEMPLATE || "OTP1";
+const TWO_FACTOR_SENDER_ID = process.env.TWO_FACTOR_SENDER_ID || "VERDORA";
+const OTP_TEMPLATE = process.env.TWO_FACTOR_TEMPLATE || process.env.TWO_FACTOR_OTP_TEMPLATE || "OTP1";
 const FAST2SMS_API_KEY = process.env.FAST2SMS_API_KEY;
 const FAST2SMS_SENDER_ID = process.env.FAST2SMS_SENDER_ID || "FSTSMS";
 const SMS_PROVIDER = (process.env.SMS_PROVIDER || "2factor").toLowerCase();
@@ -12,14 +13,18 @@ const SMS_PROVIDER = (process.env.SMS_PROVIDER || "2factor").toLowerCase();
 const formatPhoneNumber = (phoneNumber) => {
   if (!phoneNumber) throw new Error("Phone number is required");
 
-  let cleaned = String(phoneNumber).replace(/[^\d+]/g, "");
+  let cleaned = String(phoneNumber).trim().replace(/[^\d+]/g, "");
   if (cleaned.startsWith("+")) {
     cleaned = cleaned.slice(1);
   }
+
   if (cleaned.length === 10) {
-    cleaned = "91" + cleaned;
+    cleaned = `91${cleaned}`;
+  } else if (cleaned.length === 11 && cleaned.startsWith("0")) {
+    cleaned = `91${cleaned.slice(1)}`;
   }
-  return "+" + cleaned;
+
+  return `+${cleaned}`;
 };
 
 const formatPhoneDigits = (phoneNumber) => {
@@ -38,16 +43,15 @@ const validateFast2SmsConfig = () => {
   }
 };
 
- const sendSmsVia2Factor = async (phoneNumber, /* otp */ userName = "User") => {
+const sendSmsVia2Factor = async (phoneNumber, userName = "User") => {
   validate2FactorConfig();
 
   const formattedPhone = formatPhoneNumber(phoneNumber);
-  // We use AUTOGEN to let 2Factor generate and send the OTP via SMS
-  // Do not rely on a locally generated OTP; the OTP will be verified by 2Factor using the sessionId
-  const apiUrl = `https://2factor.in/API/V1/${TWO_FACTOR_API_KEY}/SMS/${formattedPhone}/AUTOGEN`;
+  const apiUrl = `https://2factor.in/API/V1/${TWO_FACTOR_API_KEY}/SMS/${formattedPhone}/AUTOGEN/${OTP_TEMPLATE}`;
 
-  console.log(`\n📲 [2Factor SMS] Sending message to ${formattedPhone}`);
+  console.log(`\n📲 [2Factor SMS] Sending OTP to ${formattedPhone}`);
   console.log(`🔗 API URL: ${apiUrl.replace(TWO_FACTOR_API_KEY, "XXXX-XXXX-XXXX-XXXX-XXXX")}`);
+  console.log(`🔧 OTP Template: ${OTP_TEMPLATE}`);
 
   const response = await axios.get(apiUrl, {
     timeout: 10000,
@@ -65,6 +69,7 @@ const validateFast2SmsConfig = () => {
       apiResponse: data,
       phoneNumber: formattedPhone,
       sessionId: data?.Details,
+      otp: data?.OTP || null,
     };
   }
 
@@ -105,15 +110,31 @@ const sendSmsViaFast2Sms = async (phoneNumber, message) => {
 };
 
 export const sendOtpSMS = async (phoneNumber, otp, userName = "User") => {
-  const message = `Hi ${userName}, Your one time password for phone verification is ${otp}. Please do not share OTP with anyone.`;
   const providers = [];
+  const otpValue = otp || null;
 
   if (SMS_PROVIDER === "fast2sms") {
-    providers.push(sendSmsViaFast2Sms);
+    providers.push(async (phone, _message) => {
+      const generatedOtp = otpValue || generateSixDigitOtp();
+      const message = `Hi ${userName}, Your one time password for phone verification is ${generatedOtp}. Please do not share OTP with anyone.`;
+      const result = await sendSmsViaFast2Sms(phone, message);
+      return {
+        ...result,
+        otp: generatedOtp,
+      };
+    });
     if (TWO_FACTOR_API_KEY) providers.push(sendSmsVia2Factor);
   } else {
     if (TWO_FACTOR_API_KEY) providers.push(sendSmsVia2Factor);
-    if (FAST2SMS_API_KEY) providers.push(sendSmsViaFast2Sms);
+    if (FAST2SMS_API_KEY) providers.push(async (phone, _message) => {
+      const generatedOtp = otpValue || generateSixDigitOtp();
+      const message = `Hi ${userName}, Your one time password for phone verification is ${generatedOtp}. Please do not share OTP with anyone.`;
+      const result = await sendSmsViaFast2Sms(phone, message);
+      return {
+        ...result,
+        otp: generatedOtp,
+      };
+    });
   }
 
   if (providers.length === 0) {
@@ -123,13 +144,14 @@ export const sendOtpSMS = async (phoneNumber, otp, userName = "User") => {
   let lastError = null;
   for (const providerFn of providers) {
     try {
-      const result = await providerFn(phoneNumber, message);
+      const result = await providerFn(phoneNumber, userName);
       return {
         success: true,
         provider: result.provider,
         phoneNumber: result.phoneNumber,
         apiResponse: result.apiResponse,
         sessionId: result.sessionId,
+        otp: result.otp || null,
       };
     } catch (error) {
       lastError = error;
@@ -138,6 +160,10 @@ export const sendOtpSMS = async (phoneNumber, otp, userName = "User") => {
   }
 
   throw new Error(`SMS API Error: All providers failed. Last error: ${lastError?.message}`);
+};
+
+const generateSixDigitOtp = () => {
+  return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
 export const verifyOtp = async (sessionId, otp) => {
@@ -214,6 +240,11 @@ export const sendOrderShippedSMS = async (phoneNumber, orderId, estimatedDeliver
 
 export const sendOrderDeliveredSMS = async (phoneNumber, orderId) => {
   const message = `Your Verdora order #${String(orderId || "").slice(-6)} was delivered. Please review it at https://verdora.com/orders`;
+  return sendTransactionalSms(phoneNumber, message);
+};
+
+export const sendWelcomeSMS = async (phoneNumber, name = "Customer") => {
+  const message = `Hello ${name}, welcome to Verdora! Your account is now active and ready to use.`;
   return sendTransactionalSms(phoneNumber, message);
 };
 

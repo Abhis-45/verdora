@@ -5,12 +5,14 @@ import User from "../models/User.js";
 import {
   sendOtpSMS as sendOtpSMSVia2FA,
   verifyOtp,
+  sendWelcomeSMS,
 } from "../services/enhancedTwoFactorService.js";
 import {
   sendOtpEmail,
   sendWelcomeEmail,
   verifyEmailTransporter,
 } from "../services/emailService.js";
+import { sanitizeUser } from "../utils/validators.js";
 const router = express.Router();
 const otpStore = new Map();
 const OTP_EXPIRY_MINUTES = 10;
@@ -234,8 +236,12 @@ router.post("/send-otp", async (req, res) => {
       const sendResult = await sendOtpSMSVia2FA(normalizedIdentifier, undefined, userName);
       console.info(`✅ OTP sent via SMS provider to ${normalizedIdentifier}`);
 
-      // Store sessionId only; the OTP is managed by 2Factor
-      createSession(normalizedIdentifier, "sms", null, sendResult.sessionId || null);
+      createSession(
+        normalizedIdentifier,
+        "sms",
+        sendResult.otp || null,
+        sendResult.sessionId || null,
+      );
 
       const responsePayload = {
         message: "OTP sent to mobile successfully",
@@ -353,28 +359,29 @@ router.post("/verify-otp", async (req, res) => {
 
   if (!user) {
     if (userLookupError) {
-      console.warn(`⚠️ Skipping user creation due to DB connectivity issues`);
-    } else {
-      console.log(`Creating new user for: ${normalizedIdentifier}`);
-      user = new User(
-        isEmail ? { email: normalizedIdentifier } : { mobile: normalizedIdentifier },
-      );
-      try {
-        await user.save();
-        console.log(`✅ New user created with ID: ${user._id}`);
-      } catch (saveError) {
-        console.warn(`⚠️ Could not create new user due to DB issue: ${saveError.message}`);
-      }
+      console.warn(`❌ Database error prevented user lookup/creation for ${normalizedIdentifier}`);
+      return res.status(500).json({ message: "Unable to complete login at this time. Please try again later." });
+    }
+
+    console.log(`Creating new user for: ${normalizedIdentifier}`);
+    user = new User(
+      isEmail ? { email: normalizedIdentifier } : { mobile: normalizedIdentifier },
+    );
+    try {
+      await user.save();
+      console.log(`✅ New user created with ID: ${user._id}`);
+    } catch (saveError) {
+      console.error(`❌ Could not create new user due to DB issue: ${saveError.message}`);
+      return res.status(500).json({ message: "Unable to create user account at this time. Please try again later." });
     }
   }
 
   try {
-    if (isEmail) {
+    if (isNewUser && isEmail) {
       await sendWelcomeEmail(normalizedIdentifier, user?.name || "Guest");
       console.log(`✅ Welcome email sent`);
     } else {
-      // Note: SMS welcome disabled to avoid confusion with OTP SMS
-      console.log(`ℹ️ Welcome SMS disabled to avoid OTP confusion`);
+      console.log(`ℹ️ Welcome notification skipped for existing user or SMS login`);
     }
   } catch (_notificationErr) {
     console.warn(`⚠️ Welcome notification failed: ${_notificationErr.message}`);
@@ -391,7 +398,7 @@ router.post("/verify-otp", async (req, res) => {
   return res.json({
     message: "Login successful",
     token,
-    user,
+    user: sanitizeUser(user),
     isNewUser,
   });
 });
@@ -410,7 +417,7 @@ router.post("/password", async (req, res) => {
     const token = jwt.sign({ id: user._id, role: "user" }, process.env.JWT_SECRET, {
       expiresIn: "1d",
     });
-    return res.json({ message: "Login successful", token, user });
+    return res.json({ message: "Login successful", token, user: sanitizeUser(user) });
   }
 
   const hashedPassword = await bcrypt.hash(password, 10);
@@ -431,7 +438,7 @@ router.post("/password", async (req, res) => {
     expiresIn: "1d",
   });
 
-  return res.json({ message: "Registered successfully", token, user });
+  return res.json({ message: "Registered successfully", token, user: sanitizeUser(user) });
 });
 
 export default router;
