@@ -6,9 +6,7 @@ import { useRouter } from "next/router";
 import Head from "next/head";
 import Link from "next/link";
 import { HomeIcon, XMarkIcon } from "@heroicons/react/24/solid";
-import ProductImageCarousel from "../../components/productpage/ProductImageCarousel";
 import PlantSizeEditor from "@/components/product/PlantSizeEditor";
-import { DEFAULT_DELIVERY_LOCATION } from "@/utils/delivery";
 import {
   CUSTOM_CATEGORY_OPTION,
   DEFAULT_PLANT_SIZE_ID,

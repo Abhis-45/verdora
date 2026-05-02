@@ -15,7 +15,7 @@ interface OtpVerificationProps {
 
 /**
  * OTP Verification Modal Component
- * Displays OTP input and verification flow with 2Factor integration
+ * Displays OTP input and verification flow.
  */
 export default function OtpVerification({
   identifier,
@@ -79,9 +79,9 @@ export default function OtpVerification({
         setCanResend(false);
         setOtp("");
         
-        // Capture verificationId and provider for SMS flows
-        if (data.verificationId) {
-          setVerificationId(data.verificationId);
+        // Capture Message Central verification id for SMS flows.
+        if (data.verificationId || data.requestId) {
+          setVerificationId(data.verificationId || data.requestId);
         }
         if (data.provider) {
           setSmsProvider(data.provider);
@@ -91,7 +91,7 @@ export default function OtpVerification({
         setMessageType("error");
         if (onError) onError(data.message || "Failed to resend OTP");
       }
-    } catch (err) {
+    } catch {
       setMessage("Network error. Please try again.");
       setMessageType("error");
       if (onError) onError("Network error. Please try again.");
@@ -125,8 +125,11 @@ export default function OtpVerification({
         identifier,
       };
 
-      // If MessageCentrals SMS provider, use verificationId + code
-      if (smsProvider === "messagecentrals" && verificationId) {
+      // If Message Central is used, the provider verifies the SMS OTP.
+      if (
+        (smsProvider === "messagecentral" || smsProvider === "messagecentrals") &&
+        verificationId
+      ) {
         requestBody.verificationId = verificationId;
         requestBody.code = otp;
       } else {
@@ -235,14 +238,14 @@ export default function OtpVerification({
                 onClick={handleResendOtp}
                 disabled={loading}
               >
-                Didn't receive OTP? Resend
+                Didn&apos;t receive OTP? Resend
               </button>
             )}
           </div>
 
           {/* Help Text */}
           <p className={styles.helpText}>
-            OTP valid for 10 minutes. Check your spam folder if you didn't receive it.
+            OTP valid for 10 minutes. Check your spam folder if you didn&apos;t receive it.
           </p>
         </div>
 

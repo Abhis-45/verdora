@@ -1,18 +1,20 @@
 /**
- * 2Factor.in SMS OTP Integration API Service
- * Handles OTP sending and verification through 2Factor API
+ * Verdora OTP API service.
+ * Email OTPs are verified by the backend and SMS OTPs are verified by Message Central.
  */
 
 interface SendOtpResponse {
   success: boolean;
   message?: string;
   error?: string;
+  provider?: string;
+  verificationId?: string;
 }
 
 interface VerifyOtpResponse {
   success: boolean;
   token?: string;
-  user?: any;
+  user?: unknown;
   message?: string;
   error?: string;
 }
@@ -46,6 +48,8 @@ export const sendOtp = async (
       return {
         success: true,
         message: data.message || "OTP sent successfully",
+        provider: data.provider,
+        verificationId: data.verificationId || data.requestId,
       };
     }
 
@@ -53,11 +57,14 @@ export const sendOtp = async (
       success: false,
       error: data.message || "Failed to send OTP",
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Send OTP Error:", error);
     return {
       success: false,
-      error: error.message || "Network error while sending OTP",
+      error:
+        error instanceof Error
+          ? error.message
+          : "Network error while sending OTP",
     };
   }
 };
@@ -104,11 +111,14 @@ export const verifyOtp = async (
       success: false,
       error: data.message || "Invalid OTP",
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Verify OTP Error:", error);
     return {
       success: false,
-      error: error.message || "Network error while verifying OTP",
+      error:
+        error instanceof Error
+          ? error.message
+          : "Network error while verifying OTP",
     };
   }
 };

@@ -2,25 +2,52 @@ import nodemailer from "nodemailer";
 import dns from "dns";
 import dotenv from "dotenv";
 
-const dnsPromises = dns.promises;
-
 dotenv.config();
 
-// Recommended Hostinger SMTP defaults
+const dnsPromises = dns.promises;
+
 const EMAIL_HOST = process.env.EMAIL_HOST || "smtp.hostinger.com";
 const EMAIL_PORT = Number(process.env.EMAIL_PORT || 465);
 const EMAIL_SECURE = process.env.EMAIL_SECURE === "true" || EMAIL_PORT === 465;
 const EMAIL_SERVICE = process.env.EMAIL_SERVICE || undefined;
-
-// Credentials / From address
-const EMAIL_USER = process.env.EMAIL_USER || undefined;
+const EMAIL_USER = process.env.EMAIL_USER || "support@verdora.in";
 const EMAIL_PASS = process.env.EMAIL_PASS || undefined;
 const EMAIL_FROM = process.env.EMAIL_FROM || "support@verdora.in";
 
-// Force IPv4 first, but use resolved IPv4 address directly when possible.
 if (dns.setDefaultResultOrder) {
   dns.setDefaultResultOrder("ipv4first");
 }
+
+const escapeHtml = (value = "") =>
+  String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+
+const formatCurrency = (value) =>
+  `Rs. ${Number(value || 0).toLocaleString("en-IN", {
+    maximumFractionDigits: 2,
+  })}`;
+
+const formatItems = (items = []) => {
+  const safeItems = Array.isArray(items) ? items : [];
+  if (!safeItems.length) return "<p>No item details provided.</p>";
+
+  return `
+    <ul>
+      ${safeItems
+        .map(
+          (item) =>
+            `<li>${escapeHtml(item.title || item.name || "Item")} x ${escapeHtml(
+              item.quantity || 1,
+            )}</li>`,
+        )
+        .join("")}
+    </ul>
+  `;
+};
 
 const buildTransporterConfig = async () => {
   const config = {
@@ -39,627 +66,558 @@ const buildTransporterConfig = async () => {
       rejectUnauthorized: false,
       minVersion: "TLSv1.2",
     },
-    logger: true,
-    debug: true,
-    connectionTimeout: 20000,
-    greetingTimeout: 20000,
-    socketTimeout: 40000,
+    connectionTimeout: 30000,
+    greetingTimeout: 30000,
+    socketTimeout: 60000,
     family: 4,
+    pool: true,
+    maxConnections: 1,
+    maxMessages: 10,
   };
 
   if (!EMAIL_SERVICE) {
     try {
       const addresses = await dnsPromises.resolve4(EMAIL_HOST);
-      if (addresses && addresses.length > 0) {
+      if (addresses?.length) {
         config.host = addresses[0];
-        console.log(`✅ Resolved ${EMAIL_HOST} to IPv4 ${config.host}`);
       }
-    } catch (err) {
-      console.warn(`⚠️ Could not resolve ${EMAIL_HOST} to IPv4: ${err.message}`);
-      console.warn(`   Using hostname ${EMAIL_HOST} and letting Node resolve it.`);
+    } catch (_err) {
+      config.host = EMAIL_HOST;
     }
   }
 
   return config;
 };
 
-const createTransporter = async () => {
-  const transporterConfig = await buildTransporterConfig();
-  return nodemailer.createTransport(transporterConfig);
+const createTransporter = async () =>
+  nodemailer.createTransport(await buildTransporterConfig());
+
+const requireEmailConfig = () => {
+  if (!EMAIL_USER || !EMAIL_PASS) {
+    throw new Error("Email credentials are not configured");
+  }
 };
 
 export const verifyEmailTransporter = async () => {
   try {
+    requireEmailConfig();
     const transporter = await createTransporter();
     await transporter.verify();
-    console.log("✅ Email transporter verified successfully");
     return true;
   } catch (err) {
-    console.error("❌ Email transporter verification failed:", err.message);
-    console.error("⚠️  Solutions:");
-    console.error("   1. Check EMAIL_USER and EMAIL_PASS in .env");
-    console.error("   2. If using Hostinger, use SMTP host: smtp.hostinger.com, port: 465 (SSL) or 587 (TLS/STARTTLS) and set EMAIL_USER to the full mailbox address and EMAIL_PASS to mailbox password.");
-    console.error("   3. If using another provider, set EMAIL_HOST, EMAIL_PORT, EMAIL_SECURE and EMAIL_SERVICE accordingly");
+    console.error("Email transporter verification failed:", err.message);
     return false;
   }
 };
 
 const sendEmailWithRetry = async (mailOptions, maxRetries = 3) => {
+  requireEmailConfig();
   let lastError;
 
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+  for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
     try {
-      console.log(`📧 Email attempt ${attempt}/${maxRetries} to ${mailOptions.to}`);
       const transporter = await createTransporter();
-      const result = await transporter.sendMail({
+      return await transporter.sendMail({
+        from: EMAIL_FROM,
         ...mailOptions,
-        timeout: 30000,
       });
-      console.log(`✅ Email sent successfully to ${mailOptions.to} (Attempt ${attempt})`);
-      return result;
     } catch (err) {
       lastError = err;
-      console.error(`❌ Email attempt ${attempt}/${maxRetries} failed for ${mailOptions.to}:`, err.message);
-      if (err.code) {
-        console.error(`   Error code: ${err.code}`);
-      }
-      if (err.response) {
-        console.error(`   SMTP response: ${err.response}`);
-      }
-
       if (attempt < maxRetries) {
-        const delay = 2000 * attempt;
-        console.log(`⏳ Retrying email in ${delay}ms...`);
-        await new Promise((resolve) => setTimeout(resolve, delay));
+        await new Promise((resolve) => setTimeout(resolve, attempt * 1500));
       }
     }
   }
 
-  throw new Error(`Failed to send email after ${maxRetries} attempts: ${lastError?.message}`);
+  throw new Error(`Failed to send email: ${lastError?.message || "unknown error"}`);
 };
 
-export const sendOtpEmail = async (email, otp) => {
-  if (!EMAIL_FROM) {
-    throw new Error("Email sender (EMAIL_FROM) is not configured");
-  }
+const layout = (title, body) => `
+  <div style="font-family:Arial,sans-serif;max-width:640px;margin:0 auto;color:#1f2937;line-height:1.6">
+    <h2 style="color:#16a34a;margin-bottom:16px">${escapeHtml(title)}</h2>
+    ${body}
+    <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0" />
+    <p style="font-size:12px;color:#6b7280">Verdora Support: support@verdora.in</p>
+  </div>
+`;
 
-  return sendEmailWithRetry({
-    from: EMAIL_FROM,
+export const sendOtpEmail = async (email, otp) =>
+  sendEmailWithRetry({
     to: email,
     subject: "Your Verdora OTP",
-    html: `
-      <h2>Verdora - Verification Code</h2>
-      <p>Your One-Time Password (OTP) is:</p>
-      <h1 style="color: #22c55e; font-size: 32px; font-weight: bold;">${otp}</h1>
-      <p>This OTP is valid for 10 minutes.</p>
-      <p>If you didn't request this, please ignore this email.</p>
-      <hr>
-      <p style="color: #888; font-size: 12px;">© 2026 Verdora. All rights reserved.</p>
-    `,
+    html: layout(
+      "Verdora Verification Code",
+      `
+        <p>Your one-time password is:</p>
+        <p style="font-size:32px;font-weight:700;color:#16a34a;letter-spacing:4px">${escapeHtml(otp)}</p>
+        <p>This OTP is valid for 10 minutes.</p>
+        <p>If you did not request this, you can ignore this email.</p>
+      `,
+    ),
   });
-};
 
-export const sendWelcomeEmail = async (email, name) => {
-  if (!EMAIL_FROM) {
-    throw new Error("Email sender (EMAIL_FROM) is not configured");
-  }
-
-  return sendEmailWithRetry({
-    from: EMAIL_FROM,
+export const sendWelcomeEmail = async (email, name = "Guest") =>
+  sendEmailWithRetry({
     to: email,
-    subject: "Welcome to Verdora!",
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #22c55e;">Welcome to Verdora, ${name}!</h2>
-        <p>Thanks for joining Verdora. Your account is now active and ready to use.</p>
-        <p>We are excited to help you grow a greener home.</p>
-      </div>
-    `,
+    subject: "Welcome to Verdora",
+    html: layout(
+      `Welcome to Verdora, ${name}`,
+      `
+        <p>Your account is active and ready to use.</p>
+        <p>We are happy to help you grow a greener home.</p>
+      `,
+    ),
   });
-};
 
-export const sendAccountDeletedEmail = async (email, name) => {
-  if (!EMAIL_FROM) {
-    throw new Error("Email sender (EMAIL_FROM) is not configured");
-  }
-
-  return sendEmailWithRetry({
-    from: EMAIL_FROM,
+export const sendAccountDeletedEmail = async (email, name = "Customer") =>
+  sendEmailWithRetry({
     to: email,
     subject: "Account Deleted - Verdora",
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #ef4444;">Account Deleted</h2>
-        <p>Dear ${name},</p>
-        <p>Your Verdora account has been successfully deleted as requested.</p>
-        <p>If you change your mind, you can always create a new account.</p>
-        <p>Thank you for being part of Verdora.</p>
-      </div>
-    `,
+    html: layout(
+      "Account Deleted",
+      `
+        <p>Dear ${escapeHtml(name)},</p>
+        <p>Your Verdora account has been deleted as requested.</p>
+      `,
+    ),
   });
-};
 
-export const sendVendorOrderNotificationEmail = async (email, orderDetails) => {
-  if (!EMAIL_FROM) {
-    throw new Error("Email sender (EMAIL_FROM) is not configured");
-  }
+export const sendVendorOrderNotificationEmail = async (
+  email,
+  vendorNameOrDetails,
+  orderId,
+  customerName,
+  customerContact,
+  address,
+  items,
+  total,
+) => {
+  const details =
+    typeof vendorNameOrDetails === "object"
+      ? vendorNameOrDetails
+      : {
+          vendorName: vendorNameOrDetails,
+          orderId,
+          customerName,
+          customerContact,
+          address,
+          items,
+          total,
+        };
 
   return sendEmailWithRetry({
-    from: EMAIL_FROM,
     to: email,
-    subject: `New Order #${orderDetails.orderId} - Verdora`,
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #22c55e;">New Order Received!</h2>
+    subject: `New Order #${details.orderId || ""} - Verdora`,
+    html: layout(
+      "New Order Received",
+      `
+        <p>Dear ${escapeHtml(details.vendorName || "Vendor")},</p>
         <p>You have received a new order.</p>
-        <p><strong>Order ID:</strong> ${orderDetails.orderId}</p>
-        <p><strong>Customer:</strong> ${orderDetails.customerName}</p>
-        <p><strong>Total:</strong> ₹${orderDetails.total}</p>
-        <p>Please process this order promptly.</p>
-      </div>
-    `,
+        <p><strong>Order ID:</strong> ${escapeHtml(details.orderId || "N/A")}</p>
+        <p><strong>Customer:</strong> ${escapeHtml(details.customerName || "Customer")}</p>
+        <p><strong>Total:</strong> ${formatCurrency(details.total)}</p>
+        ${formatItems(details.items)}
+      `,
+    ),
   });
 };
 
-export const sendUserOrderConfirmationEmail = async (email, orderDetails) => {
-  if (!EMAIL_FROM) {
-    throw new Error("Email sender (EMAIL_FROM) is not configured");
-  }
+export const sendUserOrderConfirmationEmail = async (
+  email,
+  nameOrDetails,
+  orderId,
+  items,
+  address,
+  total,
+  estimatedDelivery,
+) => {
+  const details =
+    typeof nameOrDetails === "object"
+      ? nameOrDetails
+      : { name: nameOrDetails, orderId, items, address, total, estimatedDelivery };
 
   return sendEmailWithRetry({
-    from: EMAIL_FROM,
     to: email,
-    subject: `Order Confirmed #${orderDetails.orderId} - Verdora`,
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #22c55e;">Order Confirmed!</h2>
+    subject: `Order Confirmed #${details.orderId || ""} - Verdora`,
+    html: layout(
+      "Order Confirmed",
+      `
+        <p>Dear ${escapeHtml(details.name || "Customer")},</p>
         <p>Thank you for your order.</p>
-        <p><strong>Order ID:</strong> ${orderDetails.orderId}</p>
-        <p><strong>Total:</strong> ₹${orderDetails.total}</p>
-        <p>You will receive updates on your order status.</p>
-      </div>
-    `,
+        <p><strong>Order ID:</strong> ${escapeHtml(details.orderId || "N/A")}</p>
+        <p><strong>Total:</strong> ${formatCurrency(details.total)}</p>
+        <p><strong>Estimated delivery:</strong> ${escapeHtml(details.estimatedDelivery || "We will update you soon")}</p>
+        ${formatItems(details.items)}
+      `,
+    ),
   });
 };
 
-export const sendOrderStatusUpdateEmail = async (email, orderDetails) => {
-  if (!EMAIL_USER || !EMAIL_PASS) {
-    throw new Error("Email credentials are not configured");
-  }
+export const sendOrderStatusUpdateEmail = async (email, orderDetails = {}) =>
+  sendEmailWithRetry({
+    to: email,
+    subject: `Order Status Update #${orderDetails.orderId || ""} - Verdora`,
+    html: layout(
+      "Order Status Update",
+      `
+        <p>Your order status has changed.</p>
+        <p><strong>Order ID:</strong> ${escapeHtml(orderDetails.orderId || "N/A")}</p>
+        <p><strong>Status:</strong> ${escapeHtml(orderDetails.status || "Updated")}</p>
+      `,
+    ),
+  });
+
+export const sendUserReturnRequestEmail = async (
+  email,
+  nameOrDetails,
+  orderId,
+  productName,
+  action,
+) => {
+  const details =
+    typeof nameOrDetails === "object"
+      ? nameOrDetails
+      : { name: nameOrDetails, orderId, productName, action };
 
   return sendEmailWithRetry({
-    from: EMAIL_FROM,
     to: email,
-    subject: `Order Status Update #${orderDetails.orderId} - Verdora`,
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #3b82f6;">Order Status Update</h2>
-        <p>Your order status has been updated.</p>
-        <p><strong>Order ID:</strong> ${orderDetails.orderId}</p>
-        <p><strong>New Status:</strong> ${orderDetails.status}</p>
-        <p>Thank you for shopping with Verdora.</p>
-      </div>
-    `,
+    subject: `Return Request #${details.orderId || ""} - Verdora`,
+    html: layout(
+      "Return Request Received",
+      `
+        <p>Dear ${escapeHtml(details.name || "Customer")},</p>
+        <p>Your ${escapeHtml(details.action || "return")} request has been received.</p>
+        <p><strong>Order ID:</strong> ${escapeHtml(details.orderId || "N/A")}</p>
+        <p><strong>Item:</strong> ${escapeHtml(details.productName || details.reason || "N/A")}</p>
+      `,
+    ),
   });
 };
 
-export const sendUserReturnRequestEmail = async (email, returnDetails) => {
-  if (!EMAIL_USER || !EMAIL_PASS) {
-    throw new Error("Email credentials are not configured");
-  }
+export const sendUserOrderCancelledEmail = async (email, nameOrDetails, orderId) => {
+  const details =
+    typeof nameOrDetails === "object" ? nameOrDetails : { name: nameOrDetails, orderId };
 
   return sendEmailWithRetry({
-    from: EMAIL_FROM,
     to: email,
-    subject: `Return Request #${returnDetails.orderId} - Verdora`,
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #f59e0b;">Return Request Received</h2>
-        <p>Your return request has been received.</p>
-        <p><strong>Order ID:</strong> ${returnDetails.orderId}</p>
-        <p><strong>Reason:</strong> ${returnDetails.reason}</p>
-        <p>We will process your return request within 3-5 business days.</p>
-      </div>
-    `,
-  });
-};
-
-export const sendUserOrderCancelledEmail = async (email, orderDetails) => {
-  if (!EMAIL_USER || !EMAIL_PASS) {
-    throw new Error("Email credentials are not configured");
-  }
-
-  return sendEmailWithRetry({
-    from: EMAIL_FROM,
-    to: email,
-    subject: `Order Cancelled #${orderDetails.orderId} - Verdora`,
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #ef4444;">Order Cancelled</h2>
+    subject: `Order Cancelled #${details.orderId || ""} - Verdora`,
+    html: layout(
+      "Order Cancelled",
+      `
+        <p>Dear ${escapeHtml(details.name || "Customer")},</p>
         <p>Your order has been cancelled.</p>
-        <p><strong>Order ID:</strong> ${orderDetails.orderId}</p>
-        <p><strong>Reason:</strong> ${orderDetails.reason || 'Customer request'}</p>
-        <p>Refund will be processed within 5-7 business days.</p>
-      </div>
-    `,
+        <p><strong>Order ID:</strong> ${escapeHtml(details.orderId || "N/A")}</p>
+      `,
+    ),
   });
 };
 
-export const sendServiceBookingConfirmationEmail = async (email, serviceDetails) => {
-  if (!EMAIL_USER || !EMAIL_PASS) {
-    throw new Error("Email credentials are not configured");
-  }
+export const sendServiceBookingConfirmationEmail = async (
+  email,
+  nameOrDetails,
+  serviceSlug,
+  packageName,
+  selectedDate,
+  selectedTime,
+  price,
+  message,
+) => {
+  const details =
+    typeof nameOrDetails === "object"
+      ? nameOrDetails
+      : { name: nameOrDetails, serviceSlug, packageName, selectedDate, selectedTime, price, message };
 
   return sendEmailWithRetry({
-    from: EMAIL_FROM,
     to: email,
-    subject: `Service Booking Confirmed - Verdora`,
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #22c55e;">Service Booking Confirmed!</h2>
-        <p>Your service booking has been confirmed.</p>
-        <p><strong>Service:</strong> ${serviceDetails.serviceName}</p>
-        <p><strong>Date:</strong> ${serviceDetails.date}</p>
-        <p><strong>Time:</strong> ${serviceDetails.time}</p>
-        <p>Our team will contact you shortly.</p>
-      </div>
-    `,
+    subject: "Service Booking Confirmed - Verdora",
+    html: layout(
+      "Service Booking Confirmed",
+      `
+        <p>Dear ${escapeHtml(details.name || "Customer")},</p>
+        <p>Your service booking has been received.</p>
+        <p><strong>Service:</strong> ${escapeHtml(details.packageName || details.serviceName || details.serviceSlug || "Service")}</p>
+        <p><strong>Date:</strong> ${escapeHtml(details.selectedDate || details.date || "To be confirmed")}</p>
+        <p><strong>Time:</strong> ${escapeHtml(details.selectedTime || details.time || "To be confirmed")}</p>
+        <p><strong>Price:</strong> ${formatCurrency(details.price)}</p>
+      `,
+    ),
   });
 };
 
-export const sendAdminContactNotificationEmail = async (adminEmail, contactData) => {
-  if (!EMAIL_USER || !EMAIL_PASS) {
-    throw new Error("Email credentials are not configured");
-  }
-
-  return sendEmailWithRetry({
-    from: EMAIL_FROM,
+export const sendAdminContactNotificationEmail = async (adminEmail, contactData = {}) =>
+  sendEmailWithRetry({
     to: adminEmail,
     subject: "New Contact Form Submission - Verdora",
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #3b82f6;">New Contact Form Submission</h2>
-        <p><strong>Name:</strong> ${contactData.name}</p>
-        <p><strong>Email:</strong> ${contactData.email}</p>
-        <p><strong>Phone:</strong> ${contactData.phone || 'Not provided'}</p>
-        <p><strong>Subject:</strong> ${contactData.subject}</p>
+    html: layout(
+      "New Contact Form Submission",
+      `
+        <p><strong>Name:</strong> ${escapeHtml(contactData.name || "N/A")}</p>
+        <p><strong>Email:</strong> ${escapeHtml(contactData.email || "N/A")}</p>
+        <p><strong>Phone:</strong> ${escapeHtml(contactData.phone || "Not provided")}</p>
         <p><strong>Message:</strong></p>
-        <p>${contactData.message}</p>
-      </div>
-    `,
+        <p>${escapeHtml(contactData.message || "")}</p>
+      `,
+    ),
   });
-};
 
-export const sendContactFormEmail = async (userEmail, contactData) => {
-  if (!EMAIL_USER || !EMAIL_PASS) {
-    throw new Error("Email credentials are not configured");
-  }
+export const sendContactEmail = async (email, nameOrData = "Customer") => {
+  const details =
+    typeof nameOrData === "object" ? nameOrData : { name: nameOrData };
 
   return sendEmailWithRetry({
-    from: EMAIL_FROM,
-    to: userEmail,
-    subject: "Thank you for contacting Verdora",
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #22c55e;">Thank you for contacting us!</h2>
-        <p>Dear ${contactData.name},</p>
-        <p>We have received your message and will get back to you within 24 hours.</p>
-        <p><strong>Your message:</strong></p>
-        <p>${contactData.message}</p>
-        <p>Best regards,<br>Verdora Team</p>
-      </div>
-    `,
-  });
-};
-
-export const sendNewsletterSubscriptionEmail = async (email, name) => {
-  if (!EMAIL_USER || !EMAIL_PASS) {
-    throw new Error("Email credentials are not configured");
-  }
-
-  return sendEmailWithRetry({
-    from: EMAIL_FROM,
     to: email,
-    subject: "Welcome to Verdora Newsletter!",
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #22c55e;">Welcome to our Newsletter!</h2>
-        <p>Dear ${name || 'Subscriber'},</p>
-        <p>Thank you for subscribing to Verdora's newsletter.</p>
-        <p>You will receive updates on new products, gardening tips, and special offers.</p>
-      </div>
-    `,
+    subject: "Thank you for contacting Verdora",
+    html: layout(
+      "Thank you for contacting us",
+      `
+        <p>Dear ${escapeHtml(details.name || "Customer")},</p>
+        <p>We have received your message and will get back to you soon.</p>
+      `,
+    ),
   });
 };
 
-export const sendVendorApplicationEmail = async (vendorEmail, applicationData) => {
-  if (!EMAIL_USER || !EMAIL_PASS) {
-    throw new Error("Email credentials are not configured");
-  }
+export const sendSubscriptionEmail = async (email, name = "Subscriber") =>
+  sendEmailWithRetry({
+    to: email,
+    subject: "Welcome to Verdora Newsletter",
+    html: layout(
+      "Welcome to our Newsletter",
+      `
+        <p>Dear ${escapeHtml(name || "Subscriber")},</p>
+        <p>Thank you for subscribing to Verdora updates.</p>
+      `,
+    ),
+  });
+
+export const sendNewsletterSubscriptionEmail = sendSubscriptionEmail;
+export const sendContactFormEmail = sendContactEmail;
+
+export const sendVendorRegistrationSubmittedEmail = async (
+  vendorEmail,
+  nameOrData,
+  shopName,
+) => {
+  const details =
+    typeof nameOrData === "object"
+      ? nameOrData
+      : { name: nameOrData, businessName: shopName, applicationId: "" };
 
   return sendEmailWithRetry({
-    from: EMAIL_FROM,
     to: vendorEmail,
     subject: "Vendor Application Received - Verdora",
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #22c55e;">Application Received!</h2>
-        <p>Dear ${applicationData.name},</p>
-        <p>Your vendor application has been received.</p>
-        <p>We will review your application and get back to you within 3-5 business days.</p>
-        <p>Application ID: ${applicationData.applicationId}</p>
-      </div>
-    `,
+    html: layout(
+      "Vendor Application Received",
+      `
+        <p>Dear ${escapeHtml(details.name || details.vendorName || "Vendor")},</p>
+        <p>Your vendor application${details.businessName ? ` for ${escapeHtml(details.businessName)}` : ""} has been received.</p>
+        <p>We will review it and contact you by email.</p>
+      `,
+    ),
   });
 };
 
-export const sendVendorApprovalEmail = async (vendorEmail, vendorData) => {
-  if (!EMAIL_USER || !EMAIL_PASS) {
-    throw new Error("Email credentials are not configured");
-  }
+export const sendVendorApplicationEmail = sendVendorRegistrationSubmittedEmail;
+
+export const sendVendorApprovalEmail = async (
+  vendorEmail,
+  nameOrData,
+  businessName,
+  loginUrl,
+) => {
+  const details =
+    typeof nameOrData === "object"
+      ? nameOrData
+      : { name: nameOrData, businessName, loginUrl };
 
   return sendEmailWithRetry({
-    from: EMAIL_FROM,
     to: vendorEmail,
     subject: "Vendor Application Approved - Verdora",
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #22c55e;">Congratulations! Your Application is Approved</h2>
-        <p>Dear ${vendorData.name},</p>
-        <p>Your vendor application has been approved!</p>
-        <p>You can now start selling your products on Verdora.</p>
-        <p>Please log in to your vendor dashboard to add your products.</p>
-      </div>
-    `,
+    html: layout(
+      "Application Approved",
+      `
+        <p>Dear ${escapeHtml(details.name || "Vendor")},</p>
+        <p>Your vendor application${details.businessName ? ` for ${escapeHtml(details.businessName)}` : ""} has been approved.</p>
+        <p>You can log in here: ${escapeHtml(details.loginUrl || "https://verdora.in/vendor/login")}</p>
+      `,
+    ),
   });
 };
 
-export const sendVendorRejectionEmail = async (vendorEmail, vendorData) => {
-  if (!EMAIL_USER || !EMAIL_PASS) {
-    throw new Error("Email credentials are not configured");
-  }
+export const sendVendorRejectionEmail = async (
+  vendorEmail,
+  nameOrData,
+  businessName,
+  reason,
+) => {
+  const details =
+    typeof nameOrData === "object"
+      ? nameOrData
+      : { name: nameOrData, businessName, reason };
 
   return sendEmailWithRetry({
-    from: EMAIL_FROM,
     to: vendorEmail,
     subject: "Vendor Application Status - Verdora",
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #ef4444;">Application Status Update</h2>
-        <p>Dear ${vendorData.name},</p>
-        <p>After careful review, we regret to inform you that your vendor application could not be approved at this time.</p>
-        <p>You can reapply after 3 months or contact support for more information.</p>
-      </div>
-    `,
+    html: layout(
+      "Application Status Update",
+      `
+        <p>Dear ${escapeHtml(details.name || "Vendor")},</p>
+        <p>Your vendor application${details.businessName ? ` for ${escapeHtml(details.businessName)}` : ""} could not be approved at this time.</p>
+        <p><strong>Reason:</strong> ${escapeHtml(details.reason || "Please contact support for more information.")}</p>
+      `,
+    ),
   });
 };
 
-export const sendContactEmail = async (email, contactData) => {
-  if (!EMAIL_USER || !EMAIL_PASS) {
-    throw new Error("Email credentials are not configured");
-  }
+export const sendVendorApprovedEmail = sendVendorApprovalEmail;
+export const sendVendorRejectedEmail = sendVendorRejectionEmail;
+
+export const sendUserOrderShippedEmail = async (
+  email,
+  nameOrDetails,
+  orderId,
+  trackingNumber,
+  estimatedDelivery,
+) => {
+  const details =
+    typeof nameOrDetails === "object"
+      ? nameOrDetails
+      : { name: nameOrDetails, orderId, trackingNumber, estimatedDelivery };
 
   return sendEmailWithRetry({
-    from: EMAIL_FROM,
     to: email,
-    subject: "Thank you for contacting Verdora",
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #22c55e;">Thank you for contacting us!</h2>
-        <p>Dear ${contactData.name},</p>
-        <p>We have received your message and will get back to you within 24 hours.</p>
-        <p><strong>Your message:</strong></p>
-        <p>${contactData.message}</p>
-        <p>Best regards,<br>Verdora Team</p>
-      </div>
-    `,
+    subject: `Order Shipped #${details.orderId || ""} - Verdora`,
+    html: layout(
+      "Your Order Has Shipped",
+      `
+        <p>Dear ${escapeHtml(details.name || "Customer")},</p>
+        <p>Your order is on the way.</p>
+        <p><strong>Order ID:</strong> ${escapeHtml(details.orderId || "N/A")}</p>
+        <p><strong>Tracking:</strong> ${escapeHtml(details.trackingNumber || "Will be provided soon")}</p>
+        <p><strong>Estimated delivery:</strong> ${escapeHtml(details.estimatedDelivery || "2-5 business days")}</p>
+      `,
+    ),
   });
 };
 
-export const sendSubscriptionEmail = async (email, name) => {
-  if (!EMAIL_USER || !EMAIL_PASS) {
-    throw new Error("Email credentials are not configured");
-  }
+export const sendUserOrderDeliveredEmail = async (email, nameOrDetails, orderId) => {
+  const details =
+    typeof nameOrDetails === "object" ? nameOrDetails : { name: nameOrDetails, orderId };
 
   return sendEmailWithRetry({
-    from: EMAIL_FROM,
     to: email,
-    subject: "Welcome to Verdora Newsletter!",
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #22c55e;">Welcome to our Newsletter!</h2>
-        <p>Dear ${name || 'Subscriber'},</p>
-        <p>Thank you for subscribing to Verdora's newsletter.</p>
-        <p>You will receive updates on new products, gardening tips, and special offers.</p>
-      </div>
-    `,
+    subject: `Order Delivered #${details.orderId || ""} - Verdora`,
+    html: layout(
+      "Your Order Has Been Delivered",
+      `
+        <p>Dear ${escapeHtml(details.name || "Customer")},</p>
+        <p>Your order has been delivered.</p>
+        <p><strong>Order ID:</strong> ${escapeHtml(details.orderId || "N/A")}</p>
+      `,
+    ),
   });
 };
 
-export const sendVendorRegistrationSubmittedEmail = async (vendorEmail, applicationData) => {
-  if (!EMAIL_USER || !EMAIL_PASS) {
-    throw new Error("Email credentials are not configured");
-  }
+export const sendUserOrderOutForDeliveryEmail = async (email, orderDetails = {}) =>
+  sendEmailWithRetry({
+    to: email,
+    subject: `Order Out for Delivery #${orderDetails.orderId || ""} - Verdora`,
+    html: layout(
+      "Order Out for Delivery",
+      `<p>Your order is out for delivery today.</p>`,
+    ),
+  });
+
+export const sendUserOrderReturnedEmail = async (email, orderDetails = {}) =>
+  sendEmailWithRetry({
+    to: email,
+    subject: `Return Processed #${orderDetails.orderId || ""} - Verdora`,
+    html: layout(
+      "Return Processed",
+      `<p>Your return request has been processed.</p>`,
+    ),
+  });
+
+export const sendUserOrderRefundedEmail = async (
+  email,
+  nameOrDetails,
+  orderId,
+  refundAmount,
+) => {
+  const details =
+    typeof nameOrDetails === "object"
+      ? nameOrDetails
+      : { name: nameOrDetails, orderId, refundAmount };
 
   return sendEmailWithRetry({
-    from: EMAIL_FROM,
+    to: email,
+    subject: `Refund Processed #${details.orderId || ""} - Verdora`,
+    html: layout(
+      "Refund Processed",
+      `
+        <p>Dear ${escapeHtml(details.name || "Customer")},</p>
+        <p>Your refund has been processed.</p>
+        <p><strong>Order ID:</strong> ${escapeHtml(details.orderId || "N/A")}</p>
+        <p><strong>Refund Amount:</strong> ${formatCurrency(details.refundAmount)}</p>
+      `,
+    ),
+  });
+};
+
+export const sendUserRefundProcessedEmail = sendUserOrderRefundedEmail;
+
+export const sendVendorReadyToShipEmail = async (
+  vendorEmail,
+  nameOrDetails,
+  orderId,
+  customerName,
+  items,
+  date,
+) => {
+  const details =
+    typeof nameOrDetails === "object"
+      ? nameOrDetails
+      : { name: nameOrDetails, orderId, customerName, items, date };
+
+  return sendEmailWithRetry({
     to: vendorEmail,
-    subject: "Vendor Application Received - Verdora",
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #22c55e;">Application Received!</h2>
-        <p>Dear ${applicationData.name},</p>
-        <p>Your vendor application has been received.</p>
-        <p>We will review your application and get back to you within 3-5 business days.</p>
-        <p>Application ID: ${applicationData.applicationId}</p>
-      </div>
-    `,
+    subject: `Order Ready to Ship #${details.orderId || ""} - Verdora`,
+    html: layout(
+      "Order Ready to Ship",
+      `
+        <p>Dear ${escapeHtml(details.name || "Vendor")},</p>
+        <p>Order #${escapeHtml(details.orderId || "N/A")} is ready to ship.</p>
+        <p><strong>Customer:</strong> ${escapeHtml(details.customerName || "Customer")}</p>
+        ${formatItems(details.items)}
+      `,
+    ),
   });
 };
 
-export const sendUserOrderShippedEmail = async (email, orderDetails) => {
-  if (!EMAIL_USER || !EMAIL_PASS) {
-    throw new Error("Email credentials are not configured");
-  }
+export const sendVendorOrderShippedEmail = async (
+  vendorEmail,
+  nameOrDetails,
+  orderId,
+  customerName,
+  items,
+) => {
+  const details =
+    typeof nameOrDetails === "object"
+      ? nameOrDetails
+      : { name: nameOrDetails, orderId, customerName, items };
 
   return sendEmailWithRetry({
-    from: EMAIL_FROM,
-    to: email,
-    subject: `Order Shipped #${orderDetails.orderId} - Verdora`,
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #3b82f6;">Your Order Has Shipped!</h2>
-        <p>Great news! Your order has been shipped.</p>
-        <p><strong>Order ID:</strong> ${orderDetails.orderId}</p>
-        <p><strong>Tracking Number:</strong> ${orderDetails.trackingNumber || 'Will be provided soon'}</p>
-        <p><strong>Estimated Delivery:</strong> ${orderDetails.estimatedDelivery || '2-5 business days'}</p>
-        <p>You can track your order at https://verdora.in/orders</p>
-      </div>
-    `,
-  });
-};
-
-export const sendUserOrderDeliveredEmail = async (email, orderDetails) => {
-  if (!EMAIL_USER || !EMAIL_PASS) {
-    throw new Error("Email credentials are not configured");
-  }
-
-  return sendEmailWithRetry({
-    from: EMAIL_FROM,
-    to: email,
-    subject: `Order Delivered #${orderDetails.orderId} - Verdora`,
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #22c55e;">Your Order Has Been Delivered!</h2>
-        <p>Your order has been successfully delivered.</p>
-        <p><strong>Order ID:</strong> ${orderDetails.orderId}</p>
-        <p><strong>Delivered Date:</strong> ${orderDetails.deliveredDate || new Date().toLocaleDateString()}</p>
-        <p>Please review your order and let us know if you have any questions.</p>
-        <p>Thank you for shopping with Verdora!</p>
-      </div>
-    `,
-  });
-};
-
-export const sendUserOrderOutForDeliveryEmail = async (email, orderDetails) => {
-  if (!EMAIL_USER || !EMAIL_PASS) {
-    throw new Error("Email credentials are not configured");
-  }
-
-  return sendEmailWithRetry({
-    from: EMAIL_FROM,
-    to: email,
-    subject: `Order Out for Delivery #${orderDetails.orderId} - Verdora`,
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #f59e0b;">Your Order is Out for Delivery!</h2>
-        <p>Your order is now out for delivery.</p>
-        <p><strong>Order ID:</strong> ${orderDetails.orderId}</p>
-        <p><strong>Delivery Partner:</strong> ${orderDetails.deliveryPartner || 'Our delivery partner'}</p>
-        <p><strong>Expected Today:</strong> ${orderDetails.expectedToday ? 'Yes' : 'No'}</p>
-        <p>Please be available at the delivery address.</p>
-      </div>
-    `,
-  });
-};
-
-export const sendUserOrderReturnedEmail = async (email, orderDetails) => {
-  if (!EMAIL_USER || !EMAIL_PASS) {
-    throw new Error("Email credentials are not configured");
-  }
-
-  return sendEmailWithRetry({
-    from: EMAIL_FROM,
-    to: email,
-    subject: `Return Processed #${orderDetails.orderId} - Verdora`,
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #8b5cf6;">Return Processed</h2>
-        <p>Your return request has been processed.</p>
-        <p><strong>Order ID:</strong> ${orderDetails.orderId}</p>
-        <p><strong>Return Reason:</strong> ${orderDetails.returnReason}</p>
-        <p><strong>Refund Amount:</strong> ₹${orderDetails.refundAmount}</p>
-        <p>Refund will be processed within 5-7 business days.</p>
-      </div>
-    `,
-  });
-};
-
-export const sendUserOrderRefundedEmail = async (email, orderDetails) => {
-  if (!EMAIL_USER || !EMAIL_PASS) {
-    throw new Error("Email credentials are not configured");
-  }
-
-  return sendEmailWithRetry({
-    from: EMAIL_FROM,
-    to: email,
-    subject: `Refund Processed #${orderDetails.orderId} - Verdora`,
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #10b981;">Refund Processed</h2>
-        <p>Your refund has been successfully processed.</p>
-        <p><strong>Order ID:</strong> ${orderDetails.orderId}</p>
-        <p><strong>Refund Amount:</strong> ₹${orderDetails.refundAmount}</p>
-        <p><strong>Refund Method:</strong> ${orderDetails.refundMethod || 'Original payment method'}</p>
-        <p>The amount should reflect in your account within 3-5 business days.</p>
-      </div>
-    `,
-  });
-};
-
-export const sendUserRefundProcessedEmail = async (email, orderDetails) => {
-  return sendUserOrderRefundedEmail(email, orderDetails);
-};
-
-export const sendVendorApprovedEmail = async (vendorEmail, vendorData) => {
-  return sendVendorApprovalEmail(vendorEmail, vendorData);
-};
-
-export const sendVendorRejectedEmail = async (vendorEmail, vendorData) => {
-  return sendVendorRejectionEmail(vendorEmail, vendorData);
-};
-
-export const sendVendorReadyToShipEmail = async (vendorEmail, orderDetails) => {
-  if (!EMAIL_USER || !EMAIL_PASS) {
-    throw new Error("Email credentials are not configured");
-  }
-
-  return sendEmailWithRetry({
-    from: EMAIL_FROM,
     to: vendorEmail,
-    subject: `Order Ready to Ship #${orderDetails.orderId} - Verdora`,
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #3b82f6;">Order Ready to Ship</h2>
-        <p>Dear Vendor,</p>
-        <p>Order #${orderDetails.orderId} is ready to be shipped.</p>
-        <p><strong>Customer:</strong> ${orderDetails.customerName}</p>
-        <p><strong>Items:</strong> ${orderDetails.items}</p>
-        <p>Please ship the order and update the tracking information.</p>
-      </div>
-    `,
-  });
-};
-
-export const sendVendorOrderShippedEmail = async (vendorEmail, orderDetails) => {
-  if (!EMAIL_USER || !EMAIL_PASS) {
-    throw new Error("Email credentials are not configured");
-  }
-
-  return sendEmailWithRetry({
-    from: EMAIL_FROM,
-    to: vendorEmail,
-    subject: `Order Shipped Confirmation #${orderDetails.orderId} - Verdora`,
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #22c55e;">Order Shipped</h2>
-        <p>Dear Vendor,</p>
-        <p>Order #${orderDetails.orderId} has been shipped successfully.</p>
-        <p><strong>Tracking Number:</strong> ${orderDetails.trackingNumber}</p>
-        <p><strong>Carrier:</strong> ${orderDetails.carrier}</p>
-        <p>Thank you for your prompt service.</p>
-      </div>
-    `,
+    subject: `Order Shipped Confirmation #${details.orderId || ""} - Verdora`,
+    html: layout(
+      "Order Shipped",
+      `
+        <p>Dear ${escapeHtml(details.name || "Vendor")},</p>
+        <p>Order #${escapeHtml(details.orderId || "N/A")} has been marked shipped.</p>
+        <p><strong>Customer:</strong> ${escapeHtml(details.customerName || "Customer")}</p>
+        ${formatItems(details.items)}
+      `,
+    ),
   });
 };
 
@@ -675,7 +633,9 @@ export default {
   sendServiceBookingConfirmationEmail,
   sendAdminContactNotificationEmail,
   sendContactEmail,
+  sendContactFormEmail,
   sendSubscriptionEmail,
+  sendNewsletterSubscriptionEmail,
   sendVendorRegistrationSubmittedEmail,
   sendVendorApplicationEmail,
   sendVendorApprovalEmail,

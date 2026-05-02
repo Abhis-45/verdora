@@ -1,6 +1,6 @@
 /**
- * SMS OTP Verification Utility Functions
- * Handles phone number formatting and OTP utilities for 2Factor.in integration
+ * SMS OTP utility functions.
+ * Handles phone number formatting for Message Central OTP flows.
  */
 
 /**

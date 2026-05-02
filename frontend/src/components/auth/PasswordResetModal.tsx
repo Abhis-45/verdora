@@ -18,12 +18,9 @@ export default function PasswordResetModal({ isOpen, onClose, backendUrl }: Pass
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [resetToken, setResetToken] = useState("");
-  const [method, setMethod] = useState<"email" | "sms">("email");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [deliveryTarget, setDeliveryTarget] = useState("");
-  const [verificationId, setVerificationId] = useState<string | null>(null);
-  const [smsProvider, setSmsProvider] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
@@ -37,23 +34,15 @@ export default function PasswordResetModal({ isOpen, onClose, backendUrl }: Pass
       const response = await fetch(`${backendUrl}/api/admin/forgot-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, method }),
+        body: JSON.stringify({ email }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
         const fallbackMaskedEmail = email.replace(/(.{2})(.*)(.{2})/, "$1***$3");
-        setDeliveryTarget(data.maskedPhone || data.maskedEmail || fallbackMaskedEmail);
+        setDeliveryTarget(data.maskedEmail || fallbackMaskedEmail);
         setStep("verify");
-        
-        // Capture verificationId and provider for SMS flows
-        if (data.verificationId) {
-          setVerificationId(data.verificationId);
-        }
-        if (data.provider) {
-          setSmsProvider(data.provider);
-        }
       } else {
         setError(data.message || "Failed to send OTP");
       }
@@ -72,22 +61,10 @@ export default function PasswordResetModal({ isOpen, onClose, backendUrl }: Pass
     setError("");
 
     try {
-      // Build request body based on provider
-      const requestBody: any = { email };
-
-      // If MessageCentrals SMS provider, use verificationId + code
-      if (smsProvider === "messagecentrals" && verificationId) {
-        requestBody.requestId = verificationId;
-        requestBody.code = otp;
-      } else {
-        // Otherwise use standard otp field
-        requestBody.otp = otp;
-      }
-
       const response = await fetch(`${backendUrl}/api/admin/verify-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(requestBody),
+        body: JSON.stringify({ email, otp }),
       });
 
       const data = await response.json();
@@ -159,8 +136,6 @@ export default function PasswordResetModal({ isOpen, onClose, backendUrl }: Pass
     setResetToken("");
     setError("");
     setDeliveryTarget("");
-    setVerificationId(null);
-    setSmsProvider(null);
     onClose();
   };
 
@@ -200,34 +175,6 @@ export default function PasswordResetModal({ isOpen, onClose, backendUrl }: Pass
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                 placeholder="Enter your email"
               />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Receive OTP via:
-              </label>
-              <div className="space-y-2">
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="radio"
-                    value="email"
-                    checked={method === "email"}
-                    onChange={(e) => setMethod(e.target.value as "email" | "sms")}
-                    className="w-4 h-4 text-green-600"
-                  />
-                  <span className="text-gray-700">Email</span>
-                </label>
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="radio"
-                    value="sms"
-                    checked={method === "sms"}
-                    onChange={(e) => setMethod(e.target.value as "email" | "sms")}
-                    className="w-4 h-4 text-green-600"
-                  />
-                  <span className="text-gray-700">SMS (if available)</span>
-                </label>
-              </div>
             </div>
 
             {error && (

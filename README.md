@@ -35,10 +35,15 @@ This project consists of a Next.js frontend with React and a Node.js backend usi
    ```
    MONGO_URI=mongodb+srv://username:password@cluster.mongodb.net/database?retryWrites=true&w=majority
    JWT_SECRET=your_jwt_secret
-   EMAIL_USER=your_email_user
-   EMAIL_PASS=your_email_app_password
-   TWO_FACTOR_API_KEY=your_2factor_api_key
-   TWO_FACTOR_SENDER_ID=your_approved_sender_id
+   EMAIL_HOST=smtp.hostinger.com
+   EMAIL_PORT=465
+   EMAIL_SECURE=true
+   EMAIL_USER=support@verdora.in
+   EMAIL_FROM=support@verdora.in
+   EMAIL_PASS=your_hostinger_mail_password
+   SMS_OTP_PROVIDER=messagecentral
+   MESSAGE_CENTRAL_CUSTOMER_ID=your_message_central_customer_id
+   MESSAGE_CENTRAL_KEY=your_message_central_base64_key
    ```
 
 5. Start the backend server:
@@ -84,7 +89,7 @@ const data = await response.json();
 - **Backend**: Node.js, Express.js, Mongoose
 - **Database**: MongoDB Atlas
 - **Authentication**: JWT + OTP (Email & SMS)
-- **Services**: Nodemailer, 2Factor.in
+- **Services**: Nodemailer with Hostinger SMTP, Message Central VerifyNow
 
 ---
 
@@ -106,7 +111,7 @@ const data = await response.json();
 - See `PROFILE_TEST_CASES.md` for comprehensive testing
 
 ### Security Features
-- OTP sent via email or SMS (2Factor.in for SMS)
+- Login/register OTP sent via email or SMS (Message Central for SMS)
 - 10-minute OTP expiration
 - bcryptjs password hashing
 - JWT token validation
@@ -114,7 +119,7 @@ const data = await response.json();
 
 ### What's New
 - **Password Update**: Request OTP → Verify → Update (no current password needed)
-- **Email/Mobile Update**: Same OTP-based flow with 2Factor SMS support
+- **Email/Mobile Update**: Email OTP through Hostinger, mobile OTP through Message Central
 - **Address Selection**: Radio buttons with default auto-selection
 - **Auth Flow**: Show login popup when accessing profile without token
 - **Modal Theme**: All modals use green-900 theme with white text

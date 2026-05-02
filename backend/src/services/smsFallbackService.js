@@ -1,157 +1,244 @@
-import dotenv from 'dotenv';
+import dotenv from "dotenv";
 
 dotenv.config();
 
-const MESSAGE_CENTRALS_API_URL = process.env.MESSAGE_CENTRALS_API_URL || '';
-const MESSAGE_CENTRALS_API_KEY = process.env.MESSAGE_CENTRALS_API_KEY || '';
-const MESSAGE_CENTRALS_CUSTOMER_ID = process.env.MESSAGE_CENTRALS_CUSTOMER_ID || '';
-const MESSAGE_CENTRALS_KEY = process.env.MESSAGE_CENTRALS_KEY || '';
-const SMS_OTP_PROVIDER = process.env.SMS_OTP_PROVIDER || 'local';
+const MESSAGE_CENTRAL_API_URL =
+  process.env.MESSAGE_CENTRAL_API_URL ||
+  process.env.MESSAGE_CENTRALS_API_URL ||
+  "https://cpaas.messagecentral.com";
+const MESSAGE_CENTRAL_CUSTOMER_ID =
+  process.env.MESSAGE_CENTRAL_CUSTOMER_ID ||
+  process.env.MESSAGE_CENTRALS_CUSTOMER_ID ||
+  "";
+const MESSAGE_CENTRAL_KEY =
+  process.env.MESSAGE_CENTRAL_KEY ||
+  process.env.MESSAGE_CENTRALS_KEY ||
+  "";
+const MESSAGE_CENTRAL_PASSWORD =
+  process.env.MESSAGE_CENTRAL_PASSWORD ||
+  process.env.MESSAGE_CENTRALS_PASSWORD ||
+  "";
+const SMS_OTP_PROVIDER = (
+  process.env.SMS_OTP_PROVIDER ||
+  process.env.OTP_SMS_PROVIDER ||
+  "messagecentral"
+).toLowerCase();
 
-const maskPhone = (phone) => String(phone).replace(/\D/g, '').replace(/(\d{2})\d+(\d{2})$/, '$1******$2');
+let authToken = null;
+let authTokenExpiresAt = 0;
 
-// Request OTP via MessageCentrals (provider generates OTP)
-// Internal auth token cache
-let _mcAuthToken = null;
-let _mcAuthExpiry = 0;
+const isMessageCentralProvider = () =>
+  ["messagecentral", "messagecentrals"].includes(SMS_OTP_PROVIDER);
+
+const getMessageCentralKey = () => {
+  if (MESSAGE_CENTRAL_KEY) return MESSAGE_CENTRAL_KEY;
+  if (MESSAGE_CENTRAL_PASSWORD) {
+    return Buffer.from(MESSAGE_CENTRAL_PASSWORD).toString("base64");
+  }
+  return "";
+};
+
+const assertConfigured = () => {
+  if (!isMessageCentralProvider()) {
+    throw new Error("SMS OTP provider must be Message Central");
+  }
+  if (!MESSAGE_CENTRAL_CUSTOMER_ID || !getMessageCentralKey()) {
+    throw new Error(
+      "Message Central credentials missing. Set MESSAGE_CENTRAL_CUSTOMER_ID and MESSAGE_CENTRAL_KEY.",
+    );
+  }
+};
+
+const getBaseUrl = () => MESSAGE_CENTRAL_API_URL.replace(/\/$/, "");
+
+const normalizePhoneParts = (phone) => {
+  const digits = String(phone || "").replace(/\D/g, "");
+
+  if (digits.length < 10) {
+    throw new Error("Invalid mobile number");
+  }
+
+  return {
+    countryCode: digits.length > 10 ? digits.slice(0, -10) : "91",
+    mobileNumber: digits.slice(-10),
+  };
+};
+
+const extractVerificationId = (response) =>
+  response?.data?.verificationId ||
+  response?.data?.requestId ||
+  response?.verificationId ||
+  response?.requestId ||
+  response?.data?.transactionId ||
+  response?.transactionId ||
+  null;
 
 const getAuthToken = async () => {
-  if (Date.now() < _mcAuthExpiry && _mcAuthToken) return _mcAuthToken;
+  assertConfigured();
 
-  if (!MESSAGE_CENTRALS_API_URL) throw new Error('MESSAGE_CENTRALS_API_URL not configured');
-  if (!MESSAGE_CENTRALS_CUSTOMER_ID || !MESSAGE_CENTRALS_KEY) throw new Error('MessageCentrals credentials missing (CUSTOMER_ID/KEY)');
-
-  const urlBase = MESSAGE_CENTRALS_API_URL.replace(/\/$/, '');
-  const params = new URLSearchParams();
-  params.set('customerId', MESSAGE_CENTRALS_CUSTOMER_ID);
-  params.set('key', MESSAGE_CENTRALS_KEY);
-  // scope 'NEW' per docs for initial token
-  params.set('scope', 'NEW');
-
-  const url = `${urlBase}/auth/v1/authentication/token?${params.toString()}`;
-
-  const resp = await fetch(url, { method: 'GET', headers: { accept: '*/*' } });
-  if (!resp.ok) {
-    const txt = await resp.text();
-    throw new Error(`MessageCentrals auth failed: ${resp.status} ${txt}`);
+  if (authToken && Date.now() < authTokenExpiresAt) {
+    return authToken;
   }
 
-  const json = await resp.json();
-  // Expecting auth token in json.data.authToken or json.data?.authToken
-  const token = json?.data?.authToken || json?.authToken || null;
-  if (!token) throw new Error('MessageCentrals auth response missing authToken');
+  const params = new URLSearchParams({
+    customerId: MESSAGE_CENTRAL_CUSTOMER_ID,
+    key: getMessageCentralKey(),
+    scope: "NEW",
+  });
 
-  _mcAuthToken = token;
-  // set expiry to 14 minutes from now (provider examples not explicit)
-  _mcAuthExpiry = Date.now() + 14 * 60 * 1000;
-  return _mcAuthToken;
+  const response = await fetch(
+    `${getBaseUrl()}/auth/v1/authentication/token?${params.toString()}`,
+    { method: "GET", headers: { accept: "*/*" } },
+  );
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`Message Central auth failed: ${response.status} ${body}`);
+  }
+
+  const json = await response.json();
+  const nextToken =
+    json?.data?.authToken ||
+    json?.authToken ||
+    json?.data?.token ||
+    json?.token ||
+    null;
+
+  if (!nextToken) {
+    throw new Error("Message Central auth response did not include an auth token");
+  }
+
+  authToken = nextToken;
+  authTokenExpiresAt = Date.now() + 14 * 60 * 1000;
+  return authToken;
 };
 
-// Request OTP (send) using VerifyNow API
-export const requestSmsOtp = async (phone, otpLength = 4) => {
-  if (SMS_OTP_PROVIDER !== 'messagecentrals') {
-    throw new Error('SMS OTP provider not configured to MessageCentrals');
+export const getSmsOtpStatus = () => ({
+  provider: "messagecentral",
+  configured: Boolean(
+    isMessageCentralProvider() &&
+      MESSAGE_CENTRAL_CUSTOMER_ID &&
+      getMessageCentralKey(),
+  ),
+  apiUrl: getBaseUrl(),
+  customerIdConfigured: Boolean(MESSAGE_CENTRAL_CUSTOMER_ID),
+  keyConfigured: Boolean(getMessageCentralKey()),
+});
+
+export const requestSmsOtp = async (phone, otpLength = 6) => {
+  const token = await getAuthToken();
+  const { countryCode, mobileNumber } = normalizePhoneParts(phone);
+
+  const params = new URLSearchParams({
+    countryCode,
+    flowType: "SMS",
+    mobileNumber,
+    otpLength: String(otpLength),
+  });
+
+  const response = await fetch(
+    `${getBaseUrl()}/verification/v3/send?${params.toString()}`,
+    { method: "POST", headers: { authToken: token } },
+  );
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`Message Central send OTP failed: ${response.status} ${body}`);
   }
 
-  const authToken = await getAuthToken();
-  const urlBase = MESSAGE_CENTRALS_API_URL.replace(/\/$/, '');
+  const json = await response.json();
+  const verificationId = extractVerificationId(json);
 
-  // normalize phone: extract country code and number
-  const digits = String(phone || '').replace(/\D/g, '');
-  let countryCode = '91';
-  let mobileNumber = digits;
-  if (digits.length > 10) {
-    countryCode = digits.slice(0, digits.length - 10);
-    mobileNumber = digits.slice(-10);
+  if (!verificationId) {
+    throw new Error("Message Central send OTP response missing verificationId");
   }
 
-  const params = new URLSearchParams();
-  params.set('countryCode', countryCode);
-  params.set('flowType', 'SMS');
-  params.set('mobileNumber', mobileNumber);
-  if (otpLength) params.set('otpLength', String(otpLength));
+  return {
+    provider: "messagecentral",
+    verificationId,
+    requestId: verificationId,
+    response: json,
+  };
+};
 
-  const url = `${urlBase}/verification/v3/send?${params.toString()}`;
-
-  const resp = await fetch(url, { method: 'POST', headers: { authToken } });
-  if (!resp.ok) {
-    const txt = await resp.text();
-    throw new Error(`MessageCentrals send OTP failed: ${resp.status} ${txt}`);
+export const verifySmsOtp = async (verificationId, code, phone = null) => {
+  if (!verificationId || !code) {
+    throw new Error("verificationId and code are required");
   }
 
-  const json = await resp.json();
-  // Expecting json.data.verificationId and transactionId
+  const token = await getAuthToken();
+  const params = new URLSearchParams({
+    verificationId: String(verificationId),
+    customerId: MESSAGE_CENTRAL_CUSTOMER_ID,
+    code: String(code),
+  });
+
+  if (phone) {
+    const { countryCode, mobileNumber } = normalizePhoneParts(phone);
+    params.set("countryCode", countryCode);
+    params.set("mobileNumber", mobileNumber);
+  }
+
+  const response = await fetch(
+    `${getBaseUrl()}/verification/v3/validateOtp?${params.toString()}`,
+    { method: "GET", headers: { authToken: token } },
+  );
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`Message Central verify OTP failed: ${response.status} ${body}`);
+  }
+
+  const json = await response.json();
+  const status =
+    json?.data?.verificationStatus ||
+    json?.data?.status ||
+    json?.data?.message ||
+    json?.verificationStatus ||
+    json?.status ||
+    json?.message ||
+    "";
+  const verified = json?.data?.verified ?? json?.verified;
+
+  if (verified === true) {
+    return json;
+  }
+
+  if (
+    status &&
+    !/success|verified|approved|verification_completed|completed|200/i.test(
+      String(status),
+    )
+  ) {
+    throw new Error(`Message Central rejected OTP with status: ${status}`);
+  }
+
   return json;
 };
 
-// Verify OTP via MessageCentrals
-// Verify OTP using VerifyNow API
-export const verifySmsOtp = async (verificationId, code) => {
-  if (SMS_OTP_PROVIDER !== 'messagecentrals') {
-    throw new Error('SMS OTP provider not configured to MessageCentrals');
-  }
-  const authToken = await getAuthToken();
-  const urlBase = MESSAGE_CENTRALS_API_URL.replace(/\/$/, '');
-
-  const params = new URLSearchParams();
-  params.set('verificationId', String(verificationId));
-  params.set('code', String(code));
-
-  const url = `${urlBase}/verification/v3/validateOtp?${params.toString()}`;
-
-  const resp = await fetch(url, { method: 'POST', headers: { authToken } });
-  if (!resp.ok) {
-    const txt = await resp.text();
-    throw new Error(`MessageCentrals verifyOtp failed: ${resp.status} ${txt}`);
-  }
-
-  const json = await resp.json();
-  return json;
-};
-
-// OTP transactional sender (backwards compatible)
-// Backwards compatible transactional OTP sender (if local flow is used)
-export const sendTransactionalOtpSms = async (phone, otp, name) => {
-  if (SMS_OTP_PROVIDER === 'messagecentrals') {
-    // Use VerifyNow send endpoint
-    const resp = await requestSmsOtp(phone, String(otp || '').length || 4);
-    return resp; // contains data.verificationId
-  }
-
-  // Local SMS sending (if provider not configured) - try to call /sms/send
-  try {
-    if (!MESSAGE_CENTRALS_API_URL || !MESSAGE_CENTRALS_API_KEY) return;
-    const url = `${MESSAGE_CENTRALS_API_URL.replace(/\/$/, '')}/sms/send`;
-    const body = { phone, message: `Hi ${name || 'User'}, your OTP is ${otp}` };
-    await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${MESSAGE_CENTRALS_API_KEY}` },
-      body: JSON.stringify(body),
-    });
-  } catch (err) {
-    console.error('sendTransactionalOtpSms failed:', err.message);
-  }
-};
-
-// Optional resend endpoint — try provider's resend, fall back to error
 export const resendSmsOtp = async (verificationId) => {
-  if (SMS_OTP_PROVIDER !== 'messagecentrals') throw new Error('SMS OTP provider not configured to MessageCentrals');
-  const authToken = await getAuthToken();
-  const urlBase = MESSAGE_CENTRALS_API_URL.replace(/\/$/, '');
-  const params = new URLSearchParams();
-  params.set('verificationId', String(verificationId));
-  const url = `${urlBase}/verification/v3/resend?${params.toString()}`;
-  const resp = await fetch(url, { method: 'POST', headers: { authToken } });
-  if (!resp.ok) {
-    const txt = await resp.text();
-    throw new Error(`MessageCentrals resend failed: ${resp.status} ${txt}`);
+  if (!verificationId) {
+    throw new Error("verificationId is required");
   }
-  return await resp.json();
+
+  const token = await getAuthToken();
+  const params = new URLSearchParams({ verificationId: String(verificationId) });
+  const response = await fetch(
+    `${getBaseUrl()}/verification/v3/send?${params.toString()}`,
+    { method: "POST", headers: { authToken: token } },
+  );
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`Message Central resend OTP failed: ${response.status} ${body}`);
+  }
+
+  return response.json();
 };
 
 export default {
+  getSmsOtpStatus,
   requestSmsOtp,
   verifySmsOtp,
-  sendTransactionalOtpSms,
   resendSmsOtp,
 };

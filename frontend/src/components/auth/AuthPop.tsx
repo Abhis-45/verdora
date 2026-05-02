@@ -116,9 +116,9 @@ export default function AuthPopup({
         setMessageType("success");
         setCountdown(30); // start 30s timer
         
-        // Capture verificationId and provider for SMS flows
-        if (data.verificationId) {
-          setVerificationId(data.verificationId);
+        // Capture Message Central verification id for SMS flows.
+        if (data.verificationId || data.requestId) {
+          setVerificationId(data.verificationId || data.requestId);
         }
         if (data.provider) {
           setSmsProvider(data.provider);
@@ -170,8 +170,11 @@ export default function AuthPopup({
         identifier: payloadIdentifier,
       };
 
-      // If MessageCentrals SMS provider, use verificationId + code
-      if (smsProvider === "messagecentrals" && verificationId) {
+      // If Message Central is used, the provider verifies the SMS OTP.
+      if (
+        (smsProvider === "messagecentral" || smsProvider === "messagecentrals") &&
+        verificationId
+      ) {
         requestBody.verificationId = verificationId;
         requestBody.code = otp.trim();
       } else {

@@ -1110,7 +1110,7 @@ export default function VendorDashboard() {
             </p>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
               <p className="text-sm text-blue-800">
-                <strong>Note:</strong> The customer will receive the OTP via SMS/Email. They must verify it to mark the delivery as complete.
+                <strong>Note:</strong> Share the delivery OTP with the customer only when the item is delivered. Customer notifications are sent by email.
               </p>
             </div>
             <div className="flex gap-3">

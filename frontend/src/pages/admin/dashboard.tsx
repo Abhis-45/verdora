@@ -162,14 +162,11 @@ type ModalType =
 export default function AdminDashboard() {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("overview");
-  const [adminName, setAdminName] = useState<string>("Admin");
-
-  useEffect(() => {
-    const storedName = localStorage.getItem("adminName");
-    if (storedName) {
-      setAdminName(storedName);
-    }
-  }, []);
+  const [adminName] = useState<string>(() =>
+    typeof window !== "undefined"
+      ? localStorage.getItem("adminName") || "Admin"
+      : "Admin",
+  );
   const [stats, setStats] = useState<AdminStats>({
     totalProducts: 0,
     totalUsers: 0,
@@ -188,20 +185,9 @@ export default function AdminDashboard() {
   const [selectedItem, setSelectedItem] = useState<
     ManageItem | OrderItem | null
   >(null);
-  const [token, setToken] = useState<string>("");
-  const [authChecked, setAuthChecked] = useState<boolean>(false);
-
-  useEffect(() => {
-    const storedName = localStorage.getItem("adminName");
-    if (storedName) {
-      setAdminName(storedName);
-    }
-    const storedToken = localStorage.getItem("adminToken");
-    if (storedToken) {
-      setToken(storedToken);
-    }
-    setAuthChecked(true);
-  }, []);
+  const [token] = useState<string>(() =>
+    typeof window !== "undefined" ? localStorage.getItem("adminToken") || "" : "",
+  );
   const [, setDeleteLoading] = useState(false);
   const [vendorRequestData, setVendorRequestData] = useState<VendorPrefillData | null>(null);
   const [vendorRequestId, setVendorRequestId] = useState<string | null>(null);
@@ -334,8 +320,6 @@ export default function AdminDashboard() {
   }, []);
 
   useEffect(() => {
-    if (!authChecked) return;
-
     const role = localStorage.getItem("role");
     if (!token || role === "vendor") {
       router.push("/admin/login");
@@ -353,7 +337,6 @@ export default function AdminDashboard() {
 
     void loadManagementData();
   }, [
-    authChecked,
     router,
     token,
     fetchStats,

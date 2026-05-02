@@ -3,11 +3,6 @@ import jwt from "jsonwebtoken";
 import Admin from "../models/Admin.js";
 import Vendor from "../models/Vendor.js";
 import { sendOtpEmail } from "../services/emailService.js";
-import {
-  sendTransactionalOtpSms,
-  requestSmsOtp,
-  verifySmsOtp,
-} from "../services/smsFallbackService.js";
 
 const router = express.Router();
 
@@ -476,7 +471,7 @@ export { vendorAuthMiddleware } from "../middleware/auth.js";
 
 // ✅ PASSWORD RESET - REQUEST OTP (Public - no token required)
 router.post("/forgot-password", async (req, res) => {
-  const { email, method = "email" } = req.body; // method: "email" or "sms"
+  const { email } = req.body;
 
   if (!email) {
     return res.status(400).json({ message: "Email is required" });
@@ -491,43 +486,7 @@ router.post("/forgot-password", async (req, res) => {
       return res.status(404).json({ message: "Email not found. Please check and try again." });
     }
 
-    // If SMS provider is external (MessageCentrals), delegate send/verify to provider for SMS
-    const smsProvider = process.env.SMS_OTP_PROVIDER || 'local';
-
-    if (method === "sms" && smsProvider === 'messagecentrals') {
-      const user = admin || vendor;
-      const phoneNumber = user.mobileNumber || user.phone || user.businessPhone;
-      if (phoneNumber) {
-        try {
-          const resp = await requestSmsOtp(phoneNumber);
-          if (!global.otpStore) global.otpStore = {};
-          // store mapping from email -> requestId so we can create reset token after verification
-          global.otpStore[email] = {
-            email,
-            requestId: resp.requestId,
-            userType: admin ? 'admin' : 'vendor',
-            expiresAt: new Date(Date.now() + 15 * 60 * 1000),
-          };
-
-          const masked = String(phoneNumber)
-            .replace(/\D/g, "")
-            .replace(/(\d{2})\d+(\d{2})$/, "$1******$2");
-
-          return res.json({
-            message: "OTP requested for your phone number",
-            method: "sms",
-            maskedPhone: masked,
-            requestId: resp.requestId,
-          });
-        } catch (err) {
-          console.error('MessageCentrals request failed:', err.message);
-          return res.status(500).json({ message: 'Failed to request SMS OTP' });
-        }
-      }
-      // fall through to email if phone missing
-    }
-
-    // Generate OTP (6 digits) for email or local flows
+    // Admin/vendor password reset OTPs are sent by email only.
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // Valid for 10 minutes
 
@@ -563,33 +522,9 @@ router.post("/forgot-password", async (req, res) => {
 
 // ✅ PASSWORD RESET - VERIFY OTP
 router.post("/verify-otp", async (req, res) => {
-  const { email, otp, requestId, code } = req.body;
+  const { email, otp } = req.body;
 
   try {
-    // If requestId & code provided (MessageCentrals flow)
-    if (requestId && code) {
-      try {
-        const resp = await verifySmsOtp(requestId, code);
-        // find email mapping stored earlier
-        const mapped = (global.otpStore || {})[email];
-        if (!mapped || mapped.requestId !== requestId) {
-          return res.status(400).json({ message: 'OTP request not found or mismatched' });
-        }
-
-        const resetToken = jwt.sign(
-          { email, userType: mapped.userType, purpose: 'password-reset' },
-          process.env.JWT_SECRET,
-          { expiresIn: '15m' },
-        );
-
-        delete global.otpStore[email];
-        return res.json({ message: 'OTP verified successfully', resetToken, email });
-      } catch (err) {
-        return res.status(400).json({ message: 'SMS OTP verification failed', error: err.message });
-      }
-    }
-
-    // Fallback/local email OTP flow
     if (!email || !otp) {
       return res.status(400).json({ message: 'Email and OTP are required' });
     }

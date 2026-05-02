@@ -70,7 +70,7 @@ export const apiHelper = {
   },
 
   // Update vendor profile
-  async updateVendorProfile(token: string, data: any) {
+  async updateVendorProfile(token: string, data: Record<string, unknown>) {
     const response = await fetch(`${BACKEND_URL}/api/vendor/profile`, {
       method: "PUT",
       headers: {

@@ -1,6 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-import { useState, useEffect } from "react";
 import styles from "./OtpInput.module.css";
 
 interface OtpInputProps {
@@ -20,13 +18,7 @@ export default function OtpInput({
   onChange,
   disabled = false,
 }: OtpInputProps) {
-  const [otp, setOtp] = useState<string[]>(Array(length).fill(""));
-
-  // Update otp array when value changes
-  useEffect(() => {
-    const newOtp = value.padEnd(length, "").split("").slice(0, length);
-    setOtp(newOtp);
-  }, [value, length]);
+  const otp = value.padEnd(length, "").split("").slice(0, length);
 
   const handleChange = (index: number, val: string) => {
     if (disabled) return;
@@ -41,7 +33,6 @@ export default function OtpInput({
       for (let i = 0; i < paste.length && index + i < length; i++) {
         newOtp[index + i] = paste[i];
       }
-      setOtp(newOtp);
       onChange(newOtp.join(""));
 
       // Focus last filled input
@@ -57,7 +48,6 @@ export default function OtpInput({
 
     const newOtp = [...otp];
     newOtp[index] = digit;
-    setOtp(newOtp);
     onChange(newOtp.join(""));
 
     // Move to next input

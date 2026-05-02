@@ -16,7 +16,7 @@ interface CacheOptions {
 }
 
 class APICache {
-  private cache: Map<string, CacheEntry<any>> = new Map();
+  private cache: Map<string, CacheEntry<unknown>> = new Map();
   private defaultTTL: number = 5 * 60 * 1000; // 5 minutes in milliseconds
   private maxTTL: number = 10 * 60 * 1000; // 10 minutes maximum
   private cleanupInterval: NodeJS.Timeout | null = null;
