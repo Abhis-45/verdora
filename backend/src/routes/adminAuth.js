@@ -3,7 +3,11 @@ import jwt from "jsonwebtoken";
 import Admin from "../models/Admin.js";
 import Vendor from "../models/Vendor.js";
 import { sendOtpEmail } from "../services/emailService.js";
-import { sendTransactionalOtpSms } from "../services/enhancedTwoFactorService.js";
+import {
+  sendTransactionalOtpSms,
+  requestSmsOtp,
+  verifySmsOtp,
+} from "../services/smsFallbackService.js";
 
 const router = express.Router();
 
@@ -49,7 +53,7 @@ router.post("/login", async (req, res) => {
       // Check vendor status - MUST be active to login
       if (vendor.status === "pending") {
         return res.status(403).json({ 
-          message: "Your account is pending admin approval. Please wait for approval email. Contact support@verdora.com if you have questions.",
+          message: "Your account is pending admin approval. Please wait for approval email. Contact support@verdora.in if you have questions.",
           status: "pending",
           email: vendor.email 
         });
@@ -57,7 +61,7 @@ router.post("/login", async (req, res) => {
       
       if (vendor.status === "inactive") {
         return res.status(403).json({ 
-          message: "Your account has been deactivated. Please contact support@verdora.com for more information.",
+          message: "Your account has been deactivated. Please contact support@verdora.in for more information.",
           status: "inactive",
           email: vendor.email 
         });
@@ -487,7 +491,43 @@ router.post("/forgot-password", async (req, res) => {
       return res.status(404).json({ message: "Email not found. Please check and try again." });
     }
 
-    // Generate OTP (6 digits)
+    // If SMS provider is external (MessageCentrals), delegate send/verify to provider for SMS
+    const smsProvider = process.env.SMS_OTP_PROVIDER || 'local';
+
+    if (method === "sms" && smsProvider === 'messagecentrals') {
+      const user = admin || vendor;
+      const phoneNumber = user.mobileNumber || user.phone || user.businessPhone;
+      if (phoneNumber) {
+        try {
+          const resp = await requestSmsOtp(phoneNumber);
+          if (!global.otpStore) global.otpStore = {};
+          // store mapping from email -> requestId so we can create reset token after verification
+          global.otpStore[email] = {
+            email,
+            requestId: resp.requestId,
+            userType: admin ? 'admin' : 'vendor',
+            expiresAt: new Date(Date.now() + 15 * 60 * 1000),
+          };
+
+          const masked = String(phoneNumber)
+            .replace(/\D/g, "")
+            .replace(/(\d{2})\d+(\d{2})$/, "$1******$2");
+
+          return res.json({
+            message: "OTP requested for your phone number",
+            method: "sms",
+            maskedPhone: masked,
+            requestId: resp.requestId,
+          });
+        } catch (err) {
+          console.error('MessageCentrals request failed:', err.message);
+          return res.status(500).json({ message: 'Failed to request SMS OTP' });
+        }
+      }
+      // fall through to email if phone missing
+    }
+
+    // Generate OTP (6 digits) for email or local flows
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // Valid for 10 minutes
 
@@ -499,49 +539,19 @@ router.post("/forgot-password", async (req, res) => {
       userType: admin ? "admin" : "vendor",
     };
 
-    // In production, store this in Redis or database
-    // For now, we'll store it in memory (won't persist across server restarts)
     if (!global.otpStore) {
       global.otpStore = {};
     }
     global.otpStore[email] = otpData;
 
-    // Send OTP via email or SMS
+    // Send OTP via email (default or fallback)
     try {
-      if (method === "sms") {
-        // Send via SMS - requires phone number
-        const user = admin || vendor;
-        const phoneNumber = user.mobileNumber || user.phone || user.businessPhone;
-        if (phoneNumber) {
-          // Get user's display name for SMS template
-          const userName = vendor?.businessName || vendor?.vendorName || admin?.username || user?.username || "User";
-          await sendTransactionalOtpSms(phoneNumber, otp, userName);
-          const masked = String(phoneNumber)
-            .replace(/\D/g, "")
-            .replace(/(\d{2})\d+(\d{2})$/, "$1******$2");
-          return res.json({
-            message: "OTP sent to your phone number",
-            method: "sms",
-            maskedPhone: masked,
-          });
-        } else {
-          // Fall back to email if phone is not valid
-          await sendOtpEmail(email, otp);
-          return res.json({
-            message: "OTP sent to your email",
-            method: "email",
-            maskedEmail: email.replace(/(?<=.{2})(.*)(?=.{2})/, (m) => "*".repeat(m.length)),
-          });
-        }
-      } else {
-        // Send via email (default)
-        await sendOtpEmail(email, otp);
-        return res.json({
-          message: "OTP sent to your email",
-          method: "email",
-          maskedEmail: email.replace(/(?<=.{2})(.*)(?=.{2})/, (m) => "*".repeat(m.length)),
-        });
-      }
+      await sendOtpEmail(email, otp);
+      return res.json({
+        message: "OTP sent to your email",
+        method: "email",
+        maskedEmail: email.replace(/(?<=.{2})(.*)(?=.{2})/, (m) => "*".repeat(m.length)),
+      });
     } catch (emailError) {
       console.error("Failed to send OTP:", emailError);
       return res.status(500).json({ message: "Failed to send OTP. Please try again." });
@@ -553,48 +563,63 @@ router.post("/forgot-password", async (req, res) => {
 
 // ✅ PASSWORD RESET - VERIFY OTP
 router.post("/verify-otp", async (req, res) => {
-  const { email, otp } = req.body;
-
-  if (!email || !otp) {
-    return res.status(400).json({ message: "Email and OTP are required" });
-  }
+  const { email, otp, requestId, code } = req.body;
 
   try {
-    // Check if OTP exists and is valid
+    // If requestId & code provided (MessageCentrals flow)
+    if (requestId && code) {
+      try {
+        const resp = await verifySmsOtp(requestId, code);
+        // find email mapping stored earlier
+        const mapped = (global.otpStore || {})[email];
+        if (!mapped || mapped.requestId !== requestId) {
+          return res.status(400).json({ message: 'OTP request not found or mismatched' });
+        }
+
+        const resetToken = jwt.sign(
+          { email, userType: mapped.userType, purpose: 'password-reset' },
+          process.env.JWT_SECRET,
+          { expiresIn: '15m' },
+        );
+
+        delete global.otpStore[email];
+        return res.json({ message: 'OTP verified successfully', resetToken, email });
+      } catch (err) {
+        return res.status(400).json({ message: 'SMS OTP verification failed', error: err.message });
+      }
+    }
+
+    // Fallback/local email OTP flow
+    if (!email || !otp) {
+      return res.status(400).json({ message: 'Email and OTP are required' });
+    }
+
     if (!global.otpStore || !global.otpStore[email]) {
-      return res.status(400).json({ message: "OTP expired or not found. Please request a new OTP." });
+      return res.status(400).json({ message: 'OTP expired or not found. Please request a new OTP.' });
     }
 
     const otpData = global.otpStore[email];
 
-    // Check if OTP is expired
     if (new Date() > otpData.expiresAt) {
       delete global.otpStore[email];
-      return res.status(400).json({ message: "OTP has expired. Please request a new OTP." });
+      return res.status(400).json({ message: 'OTP has expired. Please request a new OTP.' });
     }
 
-    // Check if OTP matches
     if (otpData.otp !== otp) {
-      return res.status(400).json({ message: "Invalid OTP. Please try again." });
+      return res.status(400).json({ message: 'Invalid OTP. Please try again.' });
     }
 
-    // Generate temporary token for password reset (valid for 15 minutes)
     const resetToken = jwt.sign(
-      { email, userType: otpData.userType, purpose: "password-reset" },
+      { email, userType: otpData.userType, purpose: 'password-reset' },
       process.env.JWT_SECRET,
-      { expiresIn: "15m" }
+      { expiresIn: '15m' },
     );
 
-    // Delete OTP after verification
     delete global.otpStore[email];
 
-    res.json({
-      message: "OTP verified successfully",
-      resetToken,
-      email,
-    });
+    res.json({ message: 'OTP verified successfully', resetToken, email });
   } catch (err) {
-    res.status(500).json({ message: "Failed to verify OTP", error: err.message });
+    res.status(500).json({ message: 'Failed to verify OTP', error: err.message });
   }
 });
 

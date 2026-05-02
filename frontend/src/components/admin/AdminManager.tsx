@@ -31,13 +31,13 @@ export default function AdminManager() {
           {
             id: "1",
             name: "Super Admin",
-            email: "super@verdora.com",
+            email: "support@verdora.in",
             role: "Super Admin",
           },
           {
             id: "2",
             name: "John Doe",
-            email: "john@verdora.com",
+            email: "support@verdora.in",
             role: "Admin",
           },
         ]);

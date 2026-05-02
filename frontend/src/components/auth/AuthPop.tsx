@@ -51,6 +51,8 @@ export default function AuthPopup({
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState<"success" | "error">("error");
   const [countdown, setCountdown] = useState(0);
+  const [verificationId, setVerificationId] = useState<string | null>(null);
+  const [smsProvider, setSmsProvider] = useState<string | null>(null);
   const { login } = useUser();
   const [loading, setLoading] = useState(false);
 
@@ -113,6 +115,14 @@ export default function AuthPopup({
         setMessage(data.message || "OTP sent successfully");
         setMessageType("success");
         setCountdown(30); // start 30s timer
+        
+        // Capture verificationId and provider for SMS flows
+        if (data.verificationId) {
+          setVerificationId(data.verificationId);
+        }
+        if (data.provider) {
+          setSmsProvider(data.provider);
+        }
       } else {
         setMessage(data.message || "Failed to send OTP");
         setMessageType("error");
@@ -153,14 +163,26 @@ export default function AuthPopup({
 
       console.log(`🔐 [Frontend] Verifying OTP for: ${payloadIdentifier}`);
       console.log(`🔐 [Frontend] OTP entered: ${otp}`);
+      console.log(`🔐 [Frontend] SMS Provider: ${smsProvider}, VerificationId: ${verificationId}`);
+
+      // Build request body based on provider
+      const requestBody: any = {
+        identifier: payloadIdentifier,
+      };
+
+      // If MessageCentrals SMS provider, use verificationId + code
+      if (smsProvider === "messagecentrals" && verificationId) {
+        requestBody.verificationId = verificationId;
+        requestBody.code = otp.trim();
+      } else {
+        // Otherwise use standard otp field
+        requestBody.otp = otp.trim();
+      }
 
       const res = await fetch(`${BACKEND_URL}/api/auth/verify-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          identifier: payloadIdentifier,
-          otp: otp.trim(),
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       const data = await res.json();

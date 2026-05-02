@@ -60,7 +60,7 @@ router.post("/", async (req, res) => {
 
     // ✅ Send admin notification email
     try {
-      const adminEmail = process.env.ADMIN_EMAIL || "admin@verdora.com";
+      const adminEmail = process.env.ADMIN_EMAIL || "support@verdora.in";
       await sendAdminContactNotificationEmail(adminEmail, {
         name,
         email,

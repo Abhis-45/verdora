@@ -3,16 +3,14 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import User from "../models/User.js";
 import {
-  sendOtpSMS as sendOtpSMSVia2FA,
-  verifyOtp,
-  verifyOtpByPhone,
-  sendWelcomeSMS,
-} from "../services/enhancedTwoFactorService.js";
-import {
   sendOtpEmail,
   sendWelcomeEmail,
   verifyEmailTransporter,
 } from "../services/emailService.js";
+import {
+  requestSmsOtp,
+  verifySmsOtp,
+} from "../services/smsFallbackService.js";
 import { sanitizeUser } from "../utils/validators.js";
 const router = express.Router();
 const otpStore = new Map();
@@ -227,9 +225,49 @@ router.post("/send-otp", async (req, res) => {
       return res.json({ message: "OTP sent to email successfully" });
     }
 
-    // For SMS: send a generated OTP with 2Factor custom SMS API and verify locally
-    console.log(`📲 Attempting to send OTP via SMS...`);
+    // For SMS: check if external SMS provider is configured
+    const smsProvider = process.env.SMS_OTP_PROVIDER || 'local';
+    
+    if (smsProvider === 'messagecentrals') {
+      console.log(`📲 Attempting to send OTP via MessageCentrals...`);
+      try {
+        const resp = await requestSmsOtp(normalizedIdentifier, 6);
+        const verificationId = resp?.data?.verificationId || resp?.verificationId;
+        if (!verificationId) {
+          throw new Error('MessageCentrals response missing verificationId');
+        }
+        
+        // Store mapping from phone -> verificationId for later verification
+        if (!global.otpStore) global.otpStore = {};
+        global.otpStore[normalizedIdentifier] = {
+          verificationId,
+          channel: 'sms',
+          expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+        };
 
+        const masked = String(normalizedIdentifier)
+          .replace(/\D/g, "")
+          .replace(/(\d{2})\d+(\d{2})$/, "$1******$2");
+
+        console.info(`✅ OTP requested via MessageCentrals for ${normalizedIdentifier}`);
+        return res.json({
+          message: "OTP sent to mobile successfully",
+          channel: "sms",
+          provider: "messagecentrals",
+          verificationId,
+          maskedPhone: masked,
+        });
+      } catch (mcErr) {
+        console.error(`❌ MessageCentrals failed: ${mcErr.message}`);
+        return res.status(500).json({
+          message: "Failed to send SMS OTP. Please try again.",
+          error: debug ? mcErr.message : undefined,
+        });
+      }
+    }
+
+    // Fallback: use legacy 2FA service for SMS
+    console.log(`📲 Attempting to send OTP via SMS (legacy 2FA)...`);
     try {
       const otp = generateOtp();
       const sendResult = await sendOtpSMSVia2FA(normalizedIdentifier, otp);
@@ -275,35 +313,69 @@ router.post("/send-otp", async (req, res) => {
 });
 
 router.post("/verify-otp", async (req, res) => {
-  const { identifier, otp } = req.body;
+  const { identifier, otp, verificationId, code } = req.body;
   const normalizedIdentifier = normalizeIdentifier(identifier);
 
   console.log(`\n🔐 [OTP Verify Request] Starting verification for: ${normalizedIdentifier}`);
-  console.log(`Provided OTP: ${otp}`);
+  console.log(`Provided OTP: ${otp}, VerificationId: ${verificationId}, Code: ${code}`);
 
-  if (!normalizedIdentifier || !otp) {
-    console.log(`❌ Missing required fields: identifier=${!!normalizedIdentifier}, otp=${!!otp}`);
-    return res.status(400).json({ message: "Email/mobile and OTP are required" });
-  }
-
-  // Validate OTP format
-  if (!/^\d{6}$/.test(String(otp).trim())) {
-    console.log(`❌ Invalid OTP format: ${otp}`);
-    return res.status(400).json({ message: "OTP must be 6 digits" });
+  if (!normalizedIdentifier) {
+    console.log(`❌ Missing identifier`);
+    return res.status(400).json({ message: "Email/mobile is required" });
   }
 
   const isEmail = normalizedIdentifier.includes("@");
-
   console.log(`Channel type: ${isEmail ? 'EMAIL' : 'SMS'}`);
 
-  if (isEmail) {
-    // For email: Use local OTP verification
+  // Check if this is a MessageCentrals verification flow
+  const smsProvider = process.env.SMS_OTP_PROVIDER || 'local';
+  if (!isEmail && smsProvider === 'messagecentrals' && (verificationId || code)) {
+    console.log(`🔐 Verifying SMS OTP via MessageCentrals for ${normalizedIdentifier}`);
+    if (!code) {
+      return res.status(400).json({ message: "Code/OTP is required" });
+    }
+    
+    try {
+      const resp = await verifySmsOtp(verificationId, code);
+      console.log(`✅ MessageCentrals verification successful`);
+      
+      // Clear stored verificationId
+      if (global.otpStore && global.otpStore[normalizedIdentifier]) {
+        delete global.otpStore[normalizedIdentifier];
+      }
+      
+      // Continue to user lookup and login
+    } catch (mcErr) {
+      console.error(`❌ MessageCentrals verification failed: ${mcErr.message}`);
+      return res.status(400).json({ message: "Invalid OTP. Please try again.", error: mcErr.message });
+    }
+  } else if (isEmail) {
+    // Email OTP verification
+    if (!otp) {
+      return res.status(400).json({ message: "Email and OTP are required" });
+    }
+    
+    if (!/^\d{6}$/.test(String(otp).trim())) {
+      console.log(`❌ Invalid OTP format: ${otp}`);
+      return res.status(400).json({ message: "OTP must be 6 digits" });
+    }
+
     const otpCheck = verifyStoredOtp(normalizedIdentifier, otp, "email");
     if (!otpCheck.valid) {
       console.warn(`❌ Email OTP verification failed: ${otpCheck.reason}`);
       return res.status(400).json({ message: otpCheck.reason });
     }
   } else {
+    // SMS OTP verification (legacy 2FA or local)
+    if (!otp) {
+      return res.status(400).json({ message: "Email/mobile and OTP are required" });
+    }
+
+    if (!/^\d{6}$/.test(String(otp).trim())) {
+      console.log(`❌ Invalid OTP format: ${otp}`);
+      return res.status(400).json({ message: "OTP must be 6 digits" });
+    }
+
     const stored = otpStore.get(normalizedIdentifier);
     if (!stored) {
       console.warn(`❌ No SMS session found for ${normalizedIdentifier}`);

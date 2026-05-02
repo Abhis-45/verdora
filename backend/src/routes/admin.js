@@ -26,15 +26,7 @@ import {
   sendVendorReadyToShipEmail,
   sendVendorOrderShippedEmail,
 } from "../services/emailService.js";
-import {
-  sendOrderShippedSMS,
-  sendOrderDeliveredSMS,
-  sendOrderCancelledSMS,
-  sendRefundProcessedSMS,
-  sendVendorApprovedSMS,
-  sendVendorRejectedSMS,
-  sendVendorRegistrationReceivedSMS,
-} from "../services/enhancedTwoFactorService.js";
+// SMS notifications are disabled for non-OTP flows per configuration
 import { adminAuthMiddleware } from "../middleware/auth.js";
 
 const router = express.Router();
@@ -225,31 +217,7 @@ router.patch(
           }
         }
 
-        // Send SMS notification
-        if (user.mobile && status !== "accepted") {
-          const formattedMobile = user.mobile.startsWith("+")
-            ? user.mobile
-            : `+91${user.mobile}`;
-
-          if (status === "shipped") {
-            await sendOrderShippedSMS(
-              formattedMobile,
-              String(order._id || ""),
-              estimatedDelivery
-            ).catch((err) => console.error("❌ Order shipped SMS failed:", err.message));
-          } else if (status === "delivered") {
-            await sendOrderDeliveredSMS(
-              formattedMobile,
-              String(order._id || "")
-            ).catch((err) => console.error("❌ Order delivered SMS failed:", err.message));
-          } else if (status === "refunded") {
-            await sendRefundProcessedSMS(
-              formattedMobile,
-              String(order._id || ""),
-              order.total || 0
-            ).catch((err) => console.error("❌ Refund SMS failed:", err.message));
-          }
-        }
+        // SMS notifications for status updates are disabled; only emails are sent.
       } catch (notificationErr) {
         console.error("Order status notification failed:", notificationErr.message);
         // Don't fail the request due to notification errors
@@ -1205,17 +1173,10 @@ router.post("/vendor-requests/:id/approve", adminAuthMiddleware, async (req, res
           vendorRequest.email,
           vendorRequest.vendorName || "Valued Vendor",
           vendorRequest.businessName || vendorRequest.shopName || "Business",
-          "https://verdora.com/vendor/login"
+          "https://verdora.in/vendor/login"
         ).catch((err) => console.error("❌ Vendor approval email failed:", err.message));
 
-        const formattedPhone = vendorRequest.phone?.startsWith("+")
-          ? vendorRequest.phone
-          : `+91${vendorRequest.phone}`;
-        
-        await sendVendorApprovedSMS(
-          formattedPhone,
-          vendorRequest.vendorName || "Valued Vendor"
-        ).catch((err) => console.error("❌ Vendor approval SMS failed:", err.message));
+        // Vendor approval SMS notifications are disabled; only emails are sent.
       }
     } catch (notificationErr) {
       console.error("Vendor approval notification failed:", notificationErr.message);
@@ -1272,14 +1233,7 @@ router.post(
             rejectionReason || "Your application does not meet our requirements at this time."
           ).catch((err) => console.error("❌ Vendor rejection email failed:", err.message));
 
-          const formattedPhone = vendorRequest.phone?.startsWith("+")
-            ? vendorRequest.phone
-            : `+91${vendorRequest.phone}`;
-          
-          await sendVendorRejectedSMS(
-            formattedPhone,
-            vendorRequest.vendorName || "Valued Vendor"
-          ).catch((err) => console.error("❌ Vendor rejection SMS failed:", err.message));
+          // Vendor rejection SMS notifications are disabled; only emails are sent.
         }
       } catch (notificationErr) {
         console.error("Vendor rejection notification failed:", notificationErr.message);

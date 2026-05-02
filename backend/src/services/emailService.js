@@ -6,12 +6,16 @@ const dnsPromises = dns.promises;
 
 dotenv.config();
 
-const EMAIL_USER = process.env.EMAIL_USER;
-const EMAIL_PASS = process.env.EMAIL_PASS;
-const EMAIL_HOST = process.env.EMAIL_HOST || "smtp.gmail.com";
-const EMAIL_PORT = Number(process.env.EMAIL_PORT || 587);
+// Recommended Hostinger SMTP defaults
+const EMAIL_HOST = process.env.EMAIL_HOST || "smtp.hostinger.com";
+const EMAIL_PORT = Number(process.env.EMAIL_PORT || 465);
 const EMAIL_SECURE = process.env.EMAIL_SECURE === "true" || EMAIL_PORT === 465;
 const EMAIL_SERVICE = process.env.EMAIL_SERVICE || undefined;
+
+// Credentials / From address
+const EMAIL_USER = process.env.EMAIL_USER || undefined;
+const EMAIL_PASS = process.env.EMAIL_PASS || undefined;
+const EMAIL_FROM = process.env.EMAIL_FROM || "support@verdora.in";
 
 // Force IPv4 first, but use resolved IPv4 address directly when possible.
 if (dns.setDefaultResultOrder) {
@@ -74,8 +78,8 @@ export const verifyEmailTransporter = async () => {
     console.error("❌ Email transporter verification failed:", err.message);
     console.error("⚠️  Solutions:");
     console.error("   1. Check EMAIL_USER and EMAIL_PASS in .env");
-    console.error("   2. If using Gmail, enable App Passwords or use an SMTP relay");
-    console.error("   3. If Gmail is blocked, set EMAIL_HOST, EMAIL_PORT, EMAIL_SECURE and EMAIL_SERVICE to an alternate SMTP provider");
+    console.error("   2. If using Hostinger, use SMTP host: smtp.hostinger.com, port: 465 (SSL) or 587 (TLS/STARTTLS) and set EMAIL_USER to the full mailbox address and EMAIL_PASS to mailbox password.");
+    console.error("   3. If using another provider, set EMAIL_HOST, EMAIL_PORT, EMAIL_SECURE and EMAIL_SERVICE accordingly");
     return false;
   }
 };
@@ -115,12 +119,12 @@ const sendEmailWithRetry = async (mailOptions, maxRetries = 3) => {
 };
 
 export const sendOtpEmail = async (email, otp) => {
-  if (!EMAIL_USER || !EMAIL_PASS) {
-    throw new Error("Email credentials are not configured");
+  if (!EMAIL_FROM) {
+    throw new Error("Email sender (EMAIL_FROM) is not configured");
   }
 
   return sendEmailWithRetry({
-    from: EMAIL_USER,
+    from: EMAIL_FROM,
     to: email,
     subject: "Your Verdora OTP",
     html: `
@@ -136,12 +140,12 @@ export const sendOtpEmail = async (email, otp) => {
 };
 
 export const sendWelcomeEmail = async (email, name) => {
-  if (!EMAIL_USER || !EMAIL_PASS) {
-    throw new Error("Email credentials are not configured");
+  if (!EMAIL_FROM) {
+    throw new Error("Email sender (EMAIL_FROM) is not configured");
   }
 
   return sendEmailWithRetry({
-    from: EMAIL_USER,
+    from: EMAIL_FROM,
     to: email,
     subject: "Welcome to Verdora!",
     html: `
@@ -155,12 +159,12 @@ export const sendWelcomeEmail = async (email, name) => {
 };
 
 export const sendAccountDeletedEmail = async (email, name) => {
-  if (!EMAIL_USER || !EMAIL_PASS) {
-    throw new Error("Email credentials are not configured");
+  if (!EMAIL_FROM) {
+    throw new Error("Email sender (EMAIL_FROM) is not configured");
   }
 
   return sendEmailWithRetry({
-    from: EMAIL_USER,
+    from: EMAIL_FROM,
     to: email,
     subject: "Account Deleted - Verdora",
     html: `
@@ -176,12 +180,12 @@ export const sendAccountDeletedEmail = async (email, name) => {
 };
 
 export const sendVendorOrderNotificationEmail = async (email, orderDetails) => {
-  if (!EMAIL_USER || !EMAIL_PASS) {
-    throw new Error("Email credentials are not configured");
+  if (!EMAIL_FROM) {
+    throw new Error("Email sender (EMAIL_FROM) is not configured");
   }
 
   return sendEmailWithRetry({
-    from: EMAIL_USER,
+    from: EMAIL_FROM,
     to: email,
     subject: `New Order #${orderDetails.orderId} - Verdora`,
     html: `
@@ -198,12 +202,12 @@ export const sendVendorOrderNotificationEmail = async (email, orderDetails) => {
 };
 
 export const sendUserOrderConfirmationEmail = async (email, orderDetails) => {
-  if (!EMAIL_USER || !EMAIL_PASS) {
-    throw new Error("Email credentials are not configured");
+  if (!EMAIL_FROM) {
+    throw new Error("Email sender (EMAIL_FROM) is not configured");
   }
 
   return sendEmailWithRetry({
-    from: EMAIL_USER,
+    from: EMAIL_FROM,
     to: email,
     subject: `Order Confirmed #${orderDetails.orderId} - Verdora`,
     html: `
@@ -224,7 +228,7 @@ export const sendOrderStatusUpdateEmail = async (email, orderDetails) => {
   }
 
   return sendEmailWithRetry({
-    from: EMAIL_USER,
+    from: EMAIL_FROM,
     to: email,
     subject: `Order Status Update #${orderDetails.orderId} - Verdora`,
     html: `
@@ -245,7 +249,7 @@ export const sendUserReturnRequestEmail = async (email, returnDetails) => {
   }
 
   return sendEmailWithRetry({
-    from: EMAIL_USER,
+    from: EMAIL_FROM,
     to: email,
     subject: `Return Request #${returnDetails.orderId} - Verdora`,
     html: `
@@ -266,7 +270,7 @@ export const sendUserOrderCancelledEmail = async (email, orderDetails) => {
   }
 
   return sendEmailWithRetry({
-    from: EMAIL_USER,
+    from: EMAIL_FROM,
     to: email,
     subject: `Order Cancelled #${orderDetails.orderId} - Verdora`,
     html: `
@@ -287,7 +291,7 @@ export const sendServiceBookingConfirmationEmail = async (email, serviceDetails)
   }
 
   return sendEmailWithRetry({
-    from: EMAIL_USER,
+    from: EMAIL_FROM,
     to: email,
     subject: `Service Booking Confirmed - Verdora`,
     html: `
@@ -309,7 +313,7 @@ export const sendAdminContactNotificationEmail = async (adminEmail, contactData)
   }
 
   return sendEmailWithRetry({
-    from: EMAIL_USER,
+    from: EMAIL_FROM,
     to: adminEmail,
     subject: "New Contact Form Submission - Verdora",
     html: `
@@ -332,7 +336,7 @@ export const sendContactFormEmail = async (userEmail, contactData) => {
   }
 
   return sendEmailWithRetry({
-    from: EMAIL_USER,
+    from: EMAIL_FROM,
     to: userEmail,
     subject: "Thank you for contacting Verdora",
     html: `
@@ -354,7 +358,7 @@ export const sendNewsletterSubscriptionEmail = async (email, name) => {
   }
 
   return sendEmailWithRetry({
-    from: EMAIL_USER,
+    from: EMAIL_FROM,
     to: email,
     subject: "Welcome to Verdora Newsletter!",
     html: `
@@ -374,7 +378,7 @@ export const sendVendorApplicationEmail = async (vendorEmail, applicationData) =
   }
 
   return sendEmailWithRetry({
-    from: EMAIL_USER,
+    from: EMAIL_FROM,
     to: vendorEmail,
     subject: "Vendor Application Received - Verdora",
     html: `
@@ -395,7 +399,7 @@ export const sendVendorApprovalEmail = async (vendorEmail, vendorData) => {
   }
 
   return sendEmailWithRetry({
-    from: EMAIL_USER,
+    from: EMAIL_FROM,
     to: vendorEmail,
     subject: "Vendor Application Approved - Verdora",
     html: `
@@ -416,7 +420,7 @@ export const sendVendorRejectionEmail = async (vendorEmail, vendorData) => {
   }
 
   return sendEmailWithRetry({
-    from: EMAIL_USER,
+    from: EMAIL_FROM,
     to: vendorEmail,
     subject: "Vendor Application Status - Verdora",
     html: `
@@ -436,7 +440,7 @@ export const sendContactEmail = async (email, contactData) => {
   }
 
   return sendEmailWithRetry({
-    from: EMAIL_USER,
+    from: EMAIL_FROM,
     to: email,
     subject: "Thank you for contacting Verdora",
     html: `
@@ -458,7 +462,7 @@ export const sendSubscriptionEmail = async (email, name) => {
   }
 
   return sendEmailWithRetry({
-    from: EMAIL_USER,
+    from: EMAIL_FROM,
     to: email,
     subject: "Welcome to Verdora Newsletter!",
     html: `
@@ -478,7 +482,7 @@ export const sendVendorRegistrationSubmittedEmail = async (vendorEmail, applicat
   }
 
   return sendEmailWithRetry({
-    from: EMAIL_USER,
+    from: EMAIL_FROM,
     to: vendorEmail,
     subject: "Vendor Application Received - Verdora",
     html: `
@@ -499,7 +503,7 @@ export const sendUserOrderShippedEmail = async (email, orderDetails) => {
   }
 
   return sendEmailWithRetry({
-    from: EMAIL_USER,
+    from: EMAIL_FROM,
     to: email,
     subject: `Order Shipped #${orderDetails.orderId} - Verdora`,
     html: `
@@ -509,7 +513,7 @@ export const sendUserOrderShippedEmail = async (email, orderDetails) => {
         <p><strong>Order ID:</strong> ${orderDetails.orderId}</p>
         <p><strong>Tracking Number:</strong> ${orderDetails.trackingNumber || 'Will be provided soon'}</p>
         <p><strong>Estimated Delivery:</strong> ${orderDetails.estimatedDelivery || '2-5 business days'}</p>
-        <p>You can track your order at https://verdora.com/orders</p>
+        <p>You can track your order at https://verdora.in/orders</p>
       </div>
     `,
   });
@@ -521,7 +525,7 @@ export const sendUserOrderDeliveredEmail = async (email, orderDetails) => {
   }
 
   return sendEmailWithRetry({
-    from: EMAIL_USER,
+    from: EMAIL_FROM,
     to: email,
     subject: `Order Delivered #${orderDetails.orderId} - Verdora`,
     html: `
@@ -543,7 +547,7 @@ export const sendUserOrderOutForDeliveryEmail = async (email, orderDetails) => {
   }
 
   return sendEmailWithRetry({
-    from: EMAIL_USER,
+    from: EMAIL_FROM,
     to: email,
     subject: `Order Out for Delivery #${orderDetails.orderId} - Verdora`,
     html: `
@@ -565,7 +569,7 @@ export const sendUserOrderReturnedEmail = async (email, orderDetails) => {
   }
 
   return sendEmailWithRetry({
-    from: EMAIL_USER,
+    from: EMAIL_FROM,
     to: email,
     subject: `Return Processed #${orderDetails.orderId} - Verdora`,
     html: `
@@ -587,7 +591,7 @@ export const sendUserOrderRefundedEmail = async (email, orderDetails) => {
   }
 
   return sendEmailWithRetry({
-    from: EMAIL_USER,
+    from: EMAIL_FROM,
     to: email,
     subject: `Refund Processed #${orderDetails.orderId} - Verdora`,
     html: `
@@ -621,7 +625,7 @@ export const sendVendorReadyToShipEmail = async (vendorEmail, orderDetails) => {
   }
 
   return sendEmailWithRetry({
-    from: EMAIL_USER,
+    from: EMAIL_FROM,
     to: vendorEmail,
     subject: `Order Ready to Ship #${orderDetails.orderId} - Verdora`,
     html: `
@@ -643,7 +647,7 @@ export const sendVendorOrderShippedEmail = async (vendorEmail, orderDetails) => 
   }
 
   return sendEmailWithRetry({
-    from: EMAIL_USER,
+    from: EMAIL_FROM,
     to: vendorEmail,
     subject: `Order Shipped Confirmation #${orderDetails.orderId} - Verdora`,
     html: `

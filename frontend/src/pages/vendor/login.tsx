@@ -62,11 +62,11 @@ export default function VendorLogin() {
           // Pending or inactive vendor
           if (data.status === "pending") {
             setError(
-              `Your account is pending admin approval. 📧 Check your email at ${data.email} for approval status. Contact support@verdora.com if you have any questions.`
+              `Your account is pending admin approval. 📧 Check your email at ${data.email} for approval status. Contact support@verdora.in if you have any questions.`
             );
           } else if (data.status === "inactive") {
             setError(
-              `Your account has been deactivated. Please contact support@verdora.com for more information.`
+              `Your account has been deactivated. Please contact support@verdora.in for more information.`
             );
           } else {
             setError(data.message || "Your account cannot access this service.");

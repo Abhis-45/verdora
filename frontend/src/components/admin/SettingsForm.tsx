@@ -75,7 +75,7 @@ export default function SettingsForm() {
             <label className="block text-sm font-medium text-gray-600">Support Email</label>
             <input
               type="email"
-              placeholder="support@verdora.com"
+              placeholder="support@verdora.in"
               className="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:ring-green-500 focus:border-green-500"
             />
           </div>

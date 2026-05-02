@@ -6,11 +6,10 @@ import Product from "../models/Product.js";
 import ServiceRequest from "../models/ServiceRequest.js";
 import upload from "../middleware/multerConfig.js";
 import {
-  sendOrderConfirmationSMS,
-  sendOrderStatusUpdateSMS,
-  sendOrderCancelledSMS,
   sendTransactionalOtpSms,
-} from "../services/enhancedTwoFactorService.js";
+  requestSmsOtp,
+  verifySmsOtp,
+} from "../services/smsFallbackService.js";
 import {
   sendOtpEmail,
   sendAccountDeletedEmail,
@@ -70,21 +69,30 @@ const verifyUserStoredOtp = (user, expectedField, otp) => {
     };
   }
 
-  if (isOtpExpired(user.otpExpiry)) {
-    return { valid: false, message: "OTP expired" };
+  // Local email OTP path
+  if (user.otp) {
+    if (isOtpExpired(user.otpExpiry)) {
+      return { valid: false, message: 'OTP expired' };
+    }
+    if (String(user.otp || '') !== String(otp || '')) {
+      return { valid: false, message: 'Invalid OTP' };
+    }
+    return { valid: true };
   }
 
-  if (String(user.otp || "") !== String(otp || "")) {
-    return { valid: false, message: "Invalid OTP" };
+  // If provider-based SMS OTP was requested, verification happens via external provider (async), so indicate caller to handle that.
+  if (user.otpRequestId) {
+    return { valid: 'external' };
   }
 
-  return { valid: true };
+  return { valid: false, message: 'OTP not found' };
 };
 
 const clearUserOtp = (user) => {
   user.otp = null;
   user.otpField = null;
   user.otpExpiry = null;
+  user.otpRequestId = null;
 };
 
 const getSafeDate = (value, fallback = new Date()) => {
@@ -365,8 +373,24 @@ router.post("/send-otp", authMiddleware, async (req, res) => {
       if (!validatePhone(targetMobile)) {
         return res.status(400).json({ message: "Invalid phone format" });
       }
-      sendPromises.push(sendTransactionalOtpSms(targetMobile, otp, user.name || "User"));
-      sentTo.push("mobile");
+
+      const smsProvider = process.env.SMS_OTP_PROVIDER || 'local';
+      if (smsProvider === 'messagecentrals') {
+        // Request OTP from external provider and store requestId on user
+        try {
+          const resp = await requestSmsOtp(targetMobile);
+          user.otpRequestId = resp.requestId;
+          user.otpField = field;
+          user.otpExpiry = new Date(Date.now() + 15 * 60 * 1000);
+          sentTo.push('mobile');
+        } catch (smsErr) {
+          console.error('Failed to request SMS OTP:', smsErr.message);
+          return res.status(500).json({ message: 'Failed to send OTP to mobile' });
+        }
+      } else {
+        sendPromises.push(sendTransactionalOtpSms(targetMobile, otp, user.name || 'User'));
+        sentTo.push('mobile');
+      }
     }
 
     if (field === "password" || field === "delete") {
@@ -375,8 +399,22 @@ router.post("/send-otp", authMiddleware, async (req, res) => {
         sentTo.push("email");
       }
       if (field === "password" && user.mobile) {
-        sendPromises.push(sendTransactionalOtpSms(normalizeMobileForOtp(user.mobile), otp, user.name || "User"));
-        sentTo.push("mobile");
+        const smsProvider = process.env.SMS_OTP_PROVIDER || 'local';
+        if (smsProvider === 'messagecentrals') {
+          try {
+            const resp = await requestSmsOtp(normalizeMobileForOtp(user.mobile));
+            user.otpRequestId = resp.requestId;
+            user.otpField = field;
+            user.otpExpiry = new Date(Date.now() + 15 * 60 * 1000);
+            sentTo.push('mobile');
+          } catch (smsErr) {
+            console.error('Failed to request SMS OTP:', smsErr.message);
+            // continue - email may have been queued
+          }
+        } else {
+          sendPromises.push(sendTransactionalOtpSms(normalizeMobileForOtp(user.mobile), otp, user.name || "User"));
+          sentTo.push("mobile");
+        }
       }
     }
 
@@ -386,10 +424,14 @@ router.post("/send-otp", authMiddleware, async (req, res) => {
 
     await Promise.all(sendPromises);
 
-    // Store OTP in database (expires in 10 minutes)
-    user.otp = otp;
-    user.otpField = field;
-    user.otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
+    // Store local email OTP if email was used
+    if (sentTo.includes('email')) {
+      user.otp = otp;
+      user.otpField = field;
+      user.otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
+    }
+
+    // otpRequestId for mobile (if set above) is already assigned on user
     await user.save();
 
     const message =
@@ -426,14 +468,20 @@ router.patch("/verify-otp-update", authMiddleware, async (req, res) => {
     if (!user) return res.status(404).json({ message: "User not found" });
 
     const otpCheck = verifyUserStoredOtp(user, field, otp);
-    if (!otpCheck.valid) {
-      return res.status(400).json({ message: otpCheck.message });
-    }
 
-    if (field === "mobile") {
-      // Mobile verification is handled by the local OTP check above
-      // 2Factor.in doesn't provide server-side verification for mobile updates
-      console.log(`Mobile number update verified locally for: ${normalizedNewValue}`);
+    if (otpCheck.valid === 'external') {
+      // External SMS provider verification (MessageCentrals)
+      try {
+        if (!user.otpRequestId) {
+          return res.status(400).json({ message: 'No external OTP request found' });
+        }
+        await verifySmsOtp(user.otpRequestId, otp);
+        // external provider verified successfully
+      } catch (err) {
+        return res.status(400).json({ message: 'External SMS OTP verification failed', error: err.message });
+      }
+    } else if (!otpCheck.valid) {
+      return res.status(400).json({ message: otpCheck.message });
     }
 
     // Check if new value already exists
@@ -488,7 +536,14 @@ router.patch("/update-password", authMiddleware, async (req, res) => {
     if (!user) return res.status(404).json({ message: "User not found" });
 
     const otpCheck = verifyUserStoredOtp(user, "password", otp);
-    if (!otpCheck.valid) {
+    if (otpCheck.valid === 'external') {
+      try {
+        if (!user.otpRequestId) return res.status(400).json({ message: 'No external OTP request found' });
+        await verifySmsOtp(user.otpRequestId, otp);
+      } catch (err) {
+        return res.status(400).json({ message: 'External SMS OTP verification failed', error: err.message });
+      }
+    } else if (!otpCheck.valid) {
       return res.status(400).json({ message: otpCheck.message });
     }
 
@@ -514,7 +569,14 @@ router.post("/delete-account", authMiddleware, async (req, res) => {
     if (!user) return res.status(404).json({ message: "User not found" });
 
     const otpCheck = verifyUserStoredOtp(user, "delete", otp);
-    if (!otpCheck.valid) {
+    if (otpCheck.valid === 'external') {
+      try {
+        if (!user.otpRequestId) return res.status(400).json({ message: 'No external OTP request found' });
+        await verifySmsOtp(user.otpRequestId, otp);
+      } catch (err) {
+        return res.status(400).json({ message: 'External SMS OTP verification failed', error: err.message });
+      }
+    } else if (!otpCheck.valid) {
       return res.status(400).json({ message: otpCheck.message });
     }
 
@@ -1000,16 +1062,8 @@ router.post("/orders", authMiddleware, async (req, res) => {
         ).catch((err) => console.error("❌ Order confirmation email failed:", err.message));
       }
 
-      if (user.mobile) {
-        const formattedMobile = user.mobile.startsWith("+")
-          ? user.mobile
-          : `+91${user.mobile}`;
-        await sendOrderConfirmationSMS(
-          formattedMobile,
-          String(user.orders[user.orders.length - 1]._id || ""),
-          order.total
-        ).catch((err) => console.error("❌ Order confirmation SMS failed:", err.message));
-      }
+      // Per configuration, non-OTP notifications are sent via email only.
+      // SMS notifications for order confirmations are disabled.
     } catch (userNotificationErr) {
       console.error("User notification failed:", userNotificationErr.message);
     }
@@ -1259,14 +1313,7 @@ router.patch(
           );
         }
 
-        if (user.mobile) {
-          const formattedPhone = user.mobile.startsWith("+")
-            ? user.mobile
-            : `+91${user.mobile}`;
-          await sendOrderCancelledSMS(formattedPhone, String(order._id)).catch(
-            (err) => console.error("❌ Order cancelled SMS failed:", err.message)
-          );
-        }
+        // SMS notifications for order cancellation are disabled; only email is used.
       } catch (notificationErr) {
         console.error(
           "Order cancellation notification failed:",

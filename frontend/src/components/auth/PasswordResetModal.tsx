@@ -22,6 +22,8 @@ export default function PasswordResetModal({ isOpen, onClose, backendUrl }: Pass
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [deliveryTarget, setDeliveryTarget] = useState("");
+  const [verificationId, setVerificationId] = useState<string | null>(null);
+  const [smsProvider, setSmsProvider] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
@@ -44,6 +46,14 @@ export default function PasswordResetModal({ isOpen, onClose, backendUrl }: Pass
         const fallbackMaskedEmail = email.replace(/(.{2})(.*)(.{2})/, "$1***$3");
         setDeliveryTarget(data.maskedPhone || data.maskedEmail || fallbackMaskedEmail);
         setStep("verify");
+        
+        // Capture verificationId and provider for SMS flows
+        if (data.verificationId) {
+          setVerificationId(data.verificationId);
+        }
+        if (data.provider) {
+          setSmsProvider(data.provider);
+        }
       } else {
         setError(data.message || "Failed to send OTP");
       }
@@ -62,10 +72,22 @@ export default function PasswordResetModal({ isOpen, onClose, backendUrl }: Pass
     setError("");
 
     try {
+      // Build request body based on provider
+      const requestBody: any = { email };
+
+      // If MessageCentrals SMS provider, use verificationId + code
+      if (smsProvider === "messagecentrals" && verificationId) {
+        requestBody.requestId = verificationId;
+        requestBody.code = otp;
+      } else {
+        // Otherwise use standard otp field
+        requestBody.otp = otp;
+      }
+
       const response = await fetch(`${backendUrl}/api/admin/verify-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, otp }),
+        body: JSON.stringify(requestBody),
       });
 
       const data = await response.json();
@@ -137,6 +159,8 @@ export default function PasswordResetModal({ isOpen, onClose, backendUrl }: Pass
     setResetToken("");
     setError("");
     setDeliveryTarget("");
+    setVerificationId(null);
+    setSmsProvider(null);
     onClose();
   };
 

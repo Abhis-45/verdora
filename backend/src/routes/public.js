@@ -9,9 +9,6 @@ import {
   sendContactEmail,
   sendAdminContactNotificationEmail,
 } from "../services/emailService.js";
-import {
-  sendVendorRegistrationReceivedSMS,
-} from "../services/enhancedTwoFactorService.js";
 
 const router = express.Router();
 
@@ -72,7 +69,7 @@ router.post("/contact", async (req, res) => {
 
     // ✅ Send admin notification email
     try {
-      const adminEmail = process.env.ADMIN_EMAIL || "admin@verdora.com";
+      const adminEmail = process.env.ADMIN_EMAIL || "support@verdora.in";
       await sendAdminContactNotificationEmail(adminEmail, {
         name,
         email,
@@ -136,13 +133,7 @@ router.post("/vendor-register", async (req, res) => {
         ).catch((err) => console.error("❌ Vendor registration email failed:", err.message));
       }
 
-      const formattedPhone = phone.startsWith("+") ? phone : `+91${phone}`;
-      if (phone) {
-        await sendVendorRegistrationReceivedSMS(
-          formattedPhone,
-          vendorName
-        ).catch((err) => console.error("❌ Vendor registration SMS failed:", err.message));
-      }
+      // Per configuration, vendor registration notifications are sent via email only.
     } catch (notificationErr) {
       console.error("Vendor registration notification failed:", notificationErr.message);
     }

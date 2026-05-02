@@ -172,7 +172,7 @@ export default function VendorSignup() {
                       Check your email: <strong>{formData.email}</strong>
                     </p>
                     <p className="text-sm text-blue-600 mb-3">
-                      If you have questions, please contact: <strong>support@verdora.com</strong>
+                      If you have questions, please contact: <strong>support@verdora.in</strong>
                     </p>
                     <p className="text-xs text-blue-500">
                       Redirecting to home page in 5 seconds...

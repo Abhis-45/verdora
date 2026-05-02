@@ -165,7 +165,7 @@ export const generateInvoicePDF = (order: Order) => {
   doc.setFont("helvetica", "normal");
   addText("Thank you for your order!", 15, yPosition);
   addText(
-    "For inquiries, contact: support@verdora.com",
+    "For inquiries, contact: support@verdora.in",
     15,
     yPosition + 5
   );
