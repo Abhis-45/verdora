@@ -7,7 +7,7 @@ dotenv.config();
 const dnsPromises = dns.promises;
 
 const EMAIL_HOST = process.env.EMAIL_HOST || "smtp.hostinger.com";
-const EMAIL_PORT = Number(process.env.EMAIL_PORT || 465);
+const EMAIL_PORT = Number(process.env.EMAIL_PORT || 587);
 const EMAIL_SECURE = process.env.EMAIL_SECURE === "true" || EMAIL_PORT === 465;
 const EMAIL_SERVICE = process.env.EMAIL_SERVICE || undefined;
 const EMAIL_USER = process.env.EMAIL_USER || "support@verdora.in";
@@ -49,18 +49,17 @@ const formatItems = (items = []) => {
   `;
 };
 
-const buildTransporterConfig = async () => {
+const buildTransporterConfig = async (overrides = {}) => {
   const config = {
     host: EMAIL_HOST,
     port: EMAIL_PORT,
     secure: EMAIL_SECURE,
-    service: EMAIL_SERVICE,
     auth: {
       user: EMAIL_USER,
       pass: EMAIL_PASS,
     },
     authMethod: "LOGIN",
-    requireTLS: !EMAIL_SECURE,
+    requireTLS: true,
     tls: {
       servername: EMAIL_HOST,
       rejectUnauthorized: false,
@@ -70,22 +69,18 @@ const buildTransporterConfig = async () => {
     connectionTimeout: 60000,
     greetingTimeout: 30000,
     socketTimeout: 60000,
-    lookup: (hostname, options, callback) => {
-      // Force IPv4 lookup on Render to avoid ENETUNREACH IPv6 errors.
-      dns.lookup(hostname, { family: 4 }, callback);
-    },
+    ...overrides,
   };
 
-  // If a service is not explicitly configured, still keep host as provided.
-  if (!EMAIL_SERVICE) {
-    config.host = EMAIL_HOST;
+  if (EMAIL_SERVICE) {
+    config.service = EMAIL_SERVICE;
   }
 
   return config;
 };
 
-const createTransporter = async () =>
-  nodemailer.createTransport(await buildTransporterConfig());
+const createTransporter = async (overrides = {}) =>
+  nodemailer.createTransport(await buildTransporterConfig(overrides));
 
 const requireEmailConfig = () => {
   if (!EMAIL_USER || !EMAIL_PASS) {
@@ -131,14 +126,18 @@ const sendEmailWithRetry = async (mailOptions, maxRetries = 3) => {
         from: EMAIL_FROM,
         ...mailOptions,
       });
-      // Close transporter after successful send
       transporter.close();
       return result;
     } catch (err) {
       lastError = err;
-      console.error(`Email send attempt ${attempt} failed:`, err.message);
+      console.error(`Email send attempt ${attempt} failed:`, {
+        message: err.message,
+        code: err.code,
+        command: err.command,
+      });
+
       if (attempt < maxRetries) {
-        const delay = attempt * 2000; // 2s, 4s, 6s delays
+        const delay = attempt * 2000;
         console.log(`Retrying email send in ${delay}ms...`);
         await new Promise((resolve) => setTimeout(resolve, delay));
       }
