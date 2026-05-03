@@ -46,6 +46,16 @@ const createEmailSession = (identifier, otp) => {
   });
 };
 
+const createJwtToken = (userId) => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error("JWT_SECRET is not configured");
+  }
+  return jwt.sign({ id: userId, role: "user" }, secret, {
+    expiresIn: "1d",
+  });
+};
+
 
 
 const verifyEmailOtp = (identifier, otp) => {
@@ -202,9 +212,7 @@ router.post("/verify-otp", async (req, res) => {
     console.warn("Welcome email failed:", notificationErr.message);
   }
 
-  const token = jwt.sign({ id: user._id, role: "user" }, process.env.JWT_SECRET, {
-    expiresIn: "1d",
-  });
+  const token = createJwtToken(user._id);
 
   return res.json({
     message: "Login successful",
@@ -230,16 +238,13 @@ router.post("/password", async (req, res) => {
     const valid = await bcrypt.compare(password, user.password || "");
     if (!valid) return res.status(400).json({ message: "Invalid password" });
 
-    const token = jwt.sign({ id: user._id, role: "user" }, process.env.JWT_SECRET, {
-      expiresIn: "1d",
-    });
+    const token = createJwtToken(user._id);
     return res.json({ message: "Login successful", token, user: sanitizeUser(user) });
   }
 
   const hashedPassword = await bcrypt.hash(password, 10);
   user = new User({
     email: normalizedEmail,
-    mobile: normalizedMobile,
     password: hashedPassword,
   });
   await user.save();
@@ -252,9 +257,7 @@ router.post("/password", async (req, res) => {
     console.warn("Welcome email failed:", notificationErr.message);
   }
 
-  const token = jwt.sign({ id: user._id, role: "user" }, process.env.JWT_SECRET, {
-    expiresIn: "1d",
-  });
+  const token = createJwtToken(user._id);
 
   return res.json({ message: "Registered successfully", token, user: sanitizeUser(user) });
 });

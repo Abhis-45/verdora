@@ -12,7 +12,7 @@ const EMAIL_SECURE = process.env.EMAIL_SECURE === "true" || EMAIL_PORT === 465;
 const EMAIL_SERVICE = process.env.EMAIL_SERVICE || undefined;
 const EMAIL_USER = process.env.EMAIL_USER || "support@verdora.in";
 const EMAIL_PASS = process.env.EMAIL_PASS || undefined;
-const EMAIL_FROM = process.env.EMAIL_FROM || "support@verdora.in";
+const EMAIL_FROM = process.env.EMAIL_FROM || EMAIL_USER;
 
 if (dns.setDefaultResultOrder) {
   dns.setDefaultResultOrder("ipv4first");
