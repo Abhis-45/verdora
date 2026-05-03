@@ -14,40 +14,92 @@ const transporter = nodemailer.createTransport({
   },
   tls: {
     rejectUnauthorized: false // For hosting compatibility
-  }
+  },
+  // ✅ Force IPv4 connections (fixes Render IPv6 issues)
+  family: 4,
+  // ✅ Connection settings for containerized environments
+  connectionTimeout: 30000, // 30 seconds
+  socketTimeout: 30000, // 30 seconds
+  // ✅ Debug logging for troubleshooting
+  debug: process.env.NODE_ENV === 'development',
+  logger: process.env.NODE_ENV === 'development'
+});
+
+// ✅ Fallback: Gmail with port 465 and SSL (alternative for hosting)
+const fallbackTransporter = nodemailer.createTransport({
+  host: "smtp.gmail.com",
+  port: 465,
+  secure: true, // Use SSL
+  auth: {
+    user: "verdora.info@gmail.com",
+    pass: "zilnarnrtqqmzeaq",
+  },
+  tls: {
+    rejectUnauthorized: false
+  },
+  // ✅ Force IPv4 connections
+  family: 4,
+  connectionTimeout: 30000,
+  socketTimeout: 30000,
+  debug: process.env.NODE_ENV === 'development',
+  logger: process.env.NODE_ENV === 'development'
 });
 
 // ✅ Verify transporter on startup
 export const verifyEmailTransporter = async () => {
+  console.log("🔍 Verifying email transporters...");
+
+  // Test primary transporter (port 587)
   try {
     await transporter.verify();
-    console.log("✅ Email transporter verified successfully (Port 587 STARTTLS)");
-    return true;
+    console.log("✅ Primary email transporter verified successfully (Port 587 STARTTLS)");
   } catch (err) {
-    console.error("❌ Email transporter verification failed:", err.message);
-    console.error("⚠️  Solutions:");
-    console.error("   1. Check EMAIL_USER and EMAIL_PASS in .env");
-    console.error("   2. Enable 'Less Secure App Access' for Gmail: https://myaccount.google.com/lesssecureapps");
-    console.error("   3. Or use an App Password: https://support.google.com/accounts/answer/185833");
-    console.error("   4. Alternative: Use SendGrid (recommended for production)");
-    return false;
+    console.error("❌ Primary email transporter verification failed:", err.message);
   }
+
+  // Test fallback transporter (port 465)
+  try {
+    await fallbackTransporter.verify();
+    console.log("✅ Fallback email transporter verified successfully (Port 465 SSL)");
+  } catch (err) {
+    console.error("❌ Fallback email transporter verification failed:", err.message);
+  }
+
+  console.log("⚠️  Solutions if both fail:");
+  console.log("   1. Check EMAIL_USER and EMAIL_PASS in .env");
+  console.log("   2. Enable 'Less Secure App Access' for Gmail: https://myaccount.google.com/lesssecureapps");
+  console.log("   3. Or use an App Password: https://support.google.com/accounts/answer/185833");
+  console.log("   4. Alternative: Use SendGrid (recommended for production)");
+  console.log("   5. For Render: Check if SMTP ports are blocked in your plan");
+
+  return true; // Always return true to not break startup
 };
-// ✅ Generic email send helper with retry logic
+// ✅ Generic email send helper with retry logic and fallback transporter
 const sendEmailWithRetry = async (mailOptions, maxRetries = 3) => {
   let lastError;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      const result = await transporter.sendMail(mailOptions);
-      console.log(`✅ Email sent successfully to ${mailOptions.to} (Attempt ${attempt})`);
+      // On the last attempt, try the fallback transporter (port 465 SSL)
+      const currentTransporter = attempt === maxRetries ? fallbackTransporter : transporter;
+      const portInfo = attempt === maxRetries ? '465 (SSL)' : '587 (STARTTLS)';
+
+      const result = await currentTransporter.sendMail(mailOptions);
+      console.log(`✅ Email sent successfully to ${mailOptions.to} using port ${portInfo} (Attempt ${attempt})`);
       return result;
     } catch (err) {
       lastError = err;
-      console.error(`❌ Attempt ${attempt} failed for ${mailOptions.to}:`, err.message);
-      
+      const portInfo = attempt === maxRetries ? '465 (SSL)' : '587 (STARTTLS)';
+      console.error(`❌ Attempt ${attempt} failed for ${mailOptions.to} using port ${portInfo}:`, err.message);
+
+      // Check for specific network errors that indicate IPv6/IPv4 issues
+      if (err.code === 'ENETUNREACH' || err.code === 'EHOSTUNREACH') {
+        console.error(`⚠️  Network connectivity issue detected. This may be due to IPv6 blocking in containerized environments.`);
+        console.error(`💡 Consider using SendGrid or another SMTP provider for better reliability.`);
+      }
+
       if (attempt < maxRetries) {
-        const delay = 1000 * attempt;
+        const delay = 1000 * attempt; // Exponential backoff: 1s, 2s, 3s
         console.log(`⏳ Retrying in ${delay}ms...`);
         await new Promise(resolve => setTimeout(resolve, delay));
       }

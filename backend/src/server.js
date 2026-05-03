@@ -16,6 +16,7 @@ import couponRoutes from "./routes/coupons.js";
 import couponUserRoutes from "./routes/coupon-user.js";
 import cartRoutes from "./routes/cart.js";
 import { connectToMongo } from "./utils/connectToMongo.js";
+import { verifyEmailTransporter } from "./services/emailService.js";
 
 
 dotenv.config();
@@ -87,6 +88,9 @@ connectToMongo()
     // Server still runs even if MongoDB fails - client can still use API
     // But data operations will fail
   });
+
+// Verify email transporters
+verifyEmailTransporter();
 
 // Graceful shutdown
 process.on("SIGTERM", () => {
