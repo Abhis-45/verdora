@@ -70,26 +70,15 @@ const buildTransporterConfig = async () => {
     connectionTimeout: 60000,
     greetingTimeout: 30000,
     socketTimeout: 60000,
-    // Remove problematic settings for render
-    // family: 4,
-    // pool: true,
-    // maxConnections: 1,
-    // maxMessages: 10,
+    lookup: (hostname, options, callback) => {
+      // Force IPv4 lookup on Render to avoid ENETUNREACH IPv6 errors.
+      dns.lookup(hostname, { family: 4 }, callback);
+    },
   };
 
-  // Skip DNS resolution on render - use direct host
-  if (!EMAIL_SERVICE && process.env.NODE_ENV === "production") {
-    // On render/production, use the host directly without DNS resolution
+  // If a service is not explicitly configured, still keep host as provided.
+  if (!EMAIL_SERVICE) {
     config.host = EMAIL_HOST;
-  } else if (!EMAIL_SERVICE) {
-    try {
-      const addresses = await dnsPromises.resolve4(EMAIL_HOST);
-      if (addresses?.length) {
-        config.host = addresses[0];
-      }
-    } catch (_err) {
-      config.host = EMAIL_HOST;
-    }
   }
 
   return config;
