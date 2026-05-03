@@ -9,11 +9,168 @@ const transporter = nodemailer.createTransport({
     user: "verdora.info@gmail.com",
     pass: "zilnarnrtqqmzeaq", // App Password for Gmail
   },
+  host: "smtp.gmail.com",
+  port: 587,
+  secure: false, // Use TLS
+  requireTLS: true,
+  connectionTimeout: 30000, // 30 seconds
+  socketTimeout: 30000, // 30 seconds
+  pool: {
+    maxConnections: 5,
+    maxMessages: 100,
+    rateDelta: 1000,
+    rateLimit: 5,
+  },
 });
+
+// Helper function for retrying email sends with exponential backoff
+const sendEmailWithRetry = async (mailOptions, retries = 3, delay = 1000) => {
+  let lastError;
+  
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      return await transporter.sendMail(mailOptions);
+    } catch (error) {
+      lastError = error;
+      console.error(`Email send attempt ${attempt} failed:`, error.message);
+      
+      if (attempt < retries) {
+        const waitTime = delay * Math.pow(2, attempt - 1);
+        console.log(`Retrying in ${waitTime}ms...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      }
+    }
+  }
+  
+  throw lastError;
+};
+
+// Helper function to escape HTML characters to prevent injection
+const escapeHtml = (text) => {
+  if (!text) return "";
+  const map = {
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;",
+  };
+  return String(text).replace(/[&<>"']/g, (char) => map[char]);
+};
+
+// Helper function to format currency
+const formatCurrency = (amount) => {
+  if (!amount && amount !== 0) return "N/A";
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+  }).format(amount);
+};
+
+// Helper function to format items list
+const formatItems = (items) => {
+  if (!items || !Array.isArray(items) || items.length === 0) {
+    return "<p><strong>Items:</strong> No items</p>";
+  }
+  
+  const itemsList = items
+    .map((item) => {
+      const name = escapeHtml(item.name || item.productName || "Item");
+      const quantity = item.quantity || 1;
+      const price = item.price || 0;
+      return `<li>${name} (Qty: ${quantity}) - ${formatCurrency(price * quantity)}</li>`;
+    })
+    .join("");
+  
+  return `<p><strong>Items:</strong></p><ul>${itemsList}</ul>`;
+};
+
+// Helper function to create email template layout
+const layout = (title, content) => {
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <style>
+        body {
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          line-height: 1.6;
+          color: #333;
+          background-color: #f5f5f5;
+        }
+        .container {
+          max-width: 600px;
+          margin: 20px auto;
+          background-color: #fff;
+          padding: 30px;
+          border-radius: 8px;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .header {
+          border-bottom: 3px solid #22c55e;
+          padding-bottom: 15px;
+          margin-bottom: 20px;
+        }
+        .header h1 {
+          color: #22c55e;
+          margin: 0;
+          font-size: 28px;
+        }
+        .content {
+          margin-bottom: 20px;
+        }
+        .footer {
+          border-top: 1px solid #eee;
+          padding-top: 15px;
+          margin-top: 20px;
+          text-align: center;
+          font-size: 12px;
+          color: #888;
+        }
+        a {
+          color: #22c55e;
+          text-decoration: none;
+        }
+        a:hover {
+          text-decoration: underline;
+        }
+        .button {
+          display: inline-block;
+          padding: 10px 20px;
+          margin: 10px 0;
+          background-color: #22c55e;
+          color: white;
+          border-radius: 4px;
+          text-decoration: none;
+        }
+        .button:hover {
+          background-color: #16a34a;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>${escapeHtml(title)}</h1>
+        </div>
+        <div class="content">
+          ${content}
+        </div>
+        <div class="footer">
+          <p>© 2026 Verdora. All rights reserved.</p>
+          <p>If you have questions, please contact us at <a href="mailto:support@verdora.in">support@verdora.in</a></p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+};
 
 // ✅ Send OTP for verification
 export const sendOtpEmail = async (email, otp) => {
-  return transporter.sendMail({
+  return sendEmailWithRetry({
     from: "verdora.info@gmail.com",
     to: email,
     subject: "Your Verdora OTP",
