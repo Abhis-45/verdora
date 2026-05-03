@@ -115,29 +115,27 @@ router.get("/email-status", async (_req, res) => {
 
 
 
-router.get("/test-otp-system", async (_req, res) => {
-  let emailStatus = false;
-
+router.get("/test-email-send", async (req, res) => {
   try {
-    emailStatus = await verifyEmailTransporter();
-  } catch (_err) {
-    emailStatus = false;
-  }
+    const testEmail = req.query.email || "test@example.com";
+    const testOtp = "123456";
 
-  res.json({
-    status:
-      mongoose.connection.readyState === 1 && emailStatus
-        ? "healthy"
-        : "issues detected",
-    services: {
+    console.log("Testing email send to:", testEmail);
+    await sendOtpEmail(testEmail, testOtp);
+
+    res.json({
+      success: true,
+      message: `Test email sent to ${testEmail}`,
       timestamp: new Date().toISOString(),
-      database: mongoose.connection.readyState === 1 ? "connected" : "disconnected",
-      email: emailStatus ? "working" : "failed",
-    },
-    recommendation: emailStatus
-      ? "System ready for email OTP"
-      : "Configure Hostinger email credentials: EMAIL_USER, EMAIL_PASS, EMAIL_HOST, EMAIL_FROM.",
-  });
+    });
+  } catch (err) {
+    console.error("Test email failed:", err);
+    res.status(500).json({
+      success: false,
+      error: err.message,
+      timestamp: new Date().toISOString(),
+    });
+  }
 });
 
 router.post("/send-otp", async (req, res) => {
@@ -154,15 +152,27 @@ router.post("/send-otp", async (req, res) => {
   }
 
   try {
+    console.log("Sending OTP to:", normalizedIdentifier, "Environment:", process.env.NODE_ENV);
+
     const otp = generateOtp();
+    console.log("Generated OTP:", otp);
+
     await sendOtpEmail(normalizedIdentifier, otp);
     createEmailSession(normalizedIdentifier, otp);
 
+    console.log("OTP sent successfully to:", normalizedIdentifier);
     return res.json({
       message: "OTP sent to email successfully",
       channel: "email",
     });
   } catch (err) {
+    console.error("Failed to send OTP email:", {
+      error: err.message,
+      stack: err.stack,
+      email: normalizedIdentifier,
+      env: process.env.NODE_ENV,
+    });
+
     return res.status(500).json({
       message: "Failed to send email OTP. Please try again later.",
       error: debug || process.env.NODE_ENV === "development" ? err.message : undefined,

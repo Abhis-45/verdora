@@ -65,17 +65,23 @@ const buildTransporterConfig = async () => {
       servername: EMAIL_HOST,
       rejectUnauthorized: false,
       minVersion: "TLSv1.2",
+      ciphers: "HIGH:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!MD5:!PSK:!SRP:!CAMELLIA",
     },
-    connectionTimeout: 30000,
+    connectionTimeout: 60000,
     greetingTimeout: 30000,
     socketTimeout: 60000,
-    family: 4,
-    pool: true,
-    maxConnections: 1,
-    maxMessages: 10,
+    // Remove problematic settings for render
+    // family: 4,
+    // pool: true,
+    // maxConnections: 1,
+    // maxMessages: 10,
   };
 
-  if (!EMAIL_SERVICE) {
+  // Skip DNS resolution on render - use direct host
+  if (!EMAIL_SERVICE && process.env.NODE_ENV === "production") {
+    // On render/production, use the host directly without DNS resolution
+    config.host = EMAIL_HOST;
+  } else if (!EMAIL_SERVICE) {
     try {
       const addresses = await dnsPromises.resolve4(EMAIL_HOST);
       if (addresses?.length) {
@@ -101,11 +107,26 @@ const requireEmailConfig = () => {
 export const verifyEmailTransporter = async () => {
   try {
     requireEmailConfig();
+    console.log("Verifying email transporter with config:", {
+      host: EMAIL_HOST,
+      port: EMAIL_PORT,
+      secure: EMAIL_SECURE,
+      user: EMAIL_USER,
+      from: EMAIL_FROM,
+      env: process.env.NODE_ENV,
+    });
     const transporter = await createTransporter();
     await transporter.verify();
+    transporter.close();
+    console.log("Email transporter verification successful");
     return true;
   } catch (err) {
-    console.error("Email transporter verification failed:", err.message);
+    console.error("Email transporter verification failed:", {
+      message: err.message,
+      code: err.code,
+      command: err.command,
+      stack: err.stack,
+    });
     return false;
   }
 };
@@ -117,19 +138,25 @@ const sendEmailWithRetry = async (mailOptions, maxRetries = 3) => {
   for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
     try {
       const transporter = await createTransporter();
-      return await transporter.sendMail({
+      const result = await transporter.sendMail({
         from: EMAIL_FROM,
         ...mailOptions,
       });
+      // Close transporter after successful send
+      transporter.close();
+      return result;
     } catch (err) {
       lastError = err;
+      console.error(`Email send attempt ${attempt} failed:`, err.message);
       if (attempt < maxRetries) {
-        await new Promise((resolve) => setTimeout(resolve, attempt * 1500));
+        const delay = attempt * 2000; // 2s, 4s, 6s delays
+        console.log(`Retrying email send in ${delay}ms...`);
+        await new Promise((resolve) => setTimeout(resolve, delay));
       }
     }
   }
 
-  throw new Error(`Failed to send email: ${lastError?.message || "unknown error"}`);
+  throw new Error(`Failed to send email after ${maxRetries} attempts: ${lastError?.message || "unknown error"}`);
 };
 
 const layout = (title, body) => `
