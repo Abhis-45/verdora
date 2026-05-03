@@ -16,7 +16,7 @@ import couponRoutes from "./routes/coupons.js";
 import couponUserRoutes from "./routes/coupon-user.js";
 import cartRoutes from "./routes/cart.js";
 import { connectToMongo } from "./utils/connectToMongo.js";
-import { verifyEmailTransporter } from "./services/emailService.js";
+
 
 dotenv.config();
 const app = express();

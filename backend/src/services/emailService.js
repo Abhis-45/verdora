@@ -1,178 +1,33 @@
 import nodemailer from "nodemailer";
-import dns from "dns";
 import dotenv from "dotenv";
 
 dotenv.config();
 
-const dnsPromises = dns.promises;
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: "verdora.info@gmail.com",
+    pass: "zilnarnrtqqmzeaq", // App Password for Gmail
+  },
+});
 
-const EMAIL_HOST = process.env.EMAIL_HOST || "smtp.hostinger.com";
-const EMAIL_PORT = Number(process.env.EMAIL_PORT || 587);
-const EMAIL_USER = process.env.EMAIL_USER || "support@verdora.in";
-const EMAIL_PASS = process.env.EMAIL_PASS || undefined;
-const EMAIL_FROM = process.env.EMAIL_FROM || EMAIL_USER;
-const EMAIL_SERVICE = process.env.EMAIL_SERVICE || undefined;
-
-const escapeHtml = (value = "") =>
-  String(value)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-
-const formatCurrency = (value) =>
-  `Rs. ${Number(value || 0).toLocaleString("en-IN", {
-    maximumFractionDigits: 2,
-  })}`;
-
-const formatItems = (items = []) => {
-  const safeItems = Array.isArray(items) ? items : [];
-  if (!safeItems.length) return "<p>No item details provided.</p>";
-
-  return `
-    <ul>
-      ${safeItems
-        .map(
-          (item) =>
-            `<li>${escapeHtml(item.title || item.name || "Item")} x ${escapeHtml(
-              item.quantity || 1,
-            )}</li>`,
-        )
-        .join("")}
-    </ul>
-  `;
-};
-
-const buildTransporterConfig = async (overrides = {}) => {
-  let resolvedHost = EMAIL_HOST;
-
-  if (!EMAIL_SERVICE) {
-    try {
-      const addresses = await dnsPromises.lookup(EMAIL_HOST, { family: 4, all: true });
-      if (addresses?.length) {
-        resolvedHost = addresses[0].address;
-      }
-    } catch (_err) {
-      resolvedHost = EMAIL_HOST;
-    }
-  }
-
-  return {
-    host: resolvedHost,
-    port: EMAIL_PORT,
-    secure: EMAIL_PORT === 465,
-    auth: {
-      user: EMAIL_USER,
-      pass: EMAIL_PASS,
-    },
-    authMethod: "LOGIN",
-    requireTLS: EMAIL_PORT !== 465,
-    tls: {
-      servername: EMAIL_HOST,
-      rejectUnauthorized: false,
-      minVersion: "TLSv1.2",
-      ciphers: "HIGH:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!MD5:!PSK:!SRP:!CAMELLIA",
-    },
-    connectionTimeout: 60000,
-    greetingTimeout: 30000,
-    socketTimeout: 60000,
-    lookup: (hostname, options, callback) => dns.lookup(hostname, { family: 4 }, callback),
-    ...overrides,
-  };
-};
-
-const createTransporter = async (overrides = {}) =>
-  nodemailer.createTransport(await buildTransporterConfig(overrides));
-
-const requireEmailConfig = () => {
-  if (!EMAIL_USER || !EMAIL_PASS) {
-    throw new Error("Email credentials are not configured");
-  }
-};
-
-export const verifyEmailTransporter = async () => {
-  try {
-    requireEmailConfig();
-    console.log("Verifying email transporter with config:", {
-      host: EMAIL_HOST,
-      port: EMAIL_PORT,
-      secure: EMAIL_SECURE,
-      user: EMAIL_USER,
-      from: EMAIL_FROM,
-      env: process.env.NODE_ENV,
-    });
-    const transporter = await createTransporter();
-    await transporter.verify();
-    transporter.close();
-    console.log("Email transporter verification successful");
-    return true;
-  } catch (err) {
-    console.error("Email transporter verification failed:", {
-      message: err.message,
-      code: err.code,
-      command: err.command,
-      stack: err.stack,
-    });
-    return false;
-  }
-};
-
-const sendEmailWithRetry = async (mailOptions, maxRetries = 3) => {
-  requireEmailConfig();
-  let lastError;
-
-  for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
-    try {
-      const transporter = await createTransporter();
-      const result = await transporter.sendMail({
-        from: EMAIL_FROM,
-        ...mailOptions,
-      });
-      transporter.close();
-      return result;
-    } catch (err) {
-      lastError = err;
-      console.error(`Email send attempt ${attempt} failed:`, {
-        message: err.message,
-        code: err.code,
-        command: err.command,
-      });
-
-      if (attempt < maxRetries) {
-        const delay = attempt * 2000;
-        console.log(`Retrying email send in ${delay}ms...`);
-        await new Promise((resolve) => setTimeout(resolve, delay));
-      }
-    }
-  }
-
-  throw new Error(`Failed to send email after ${maxRetries} attempts: ${lastError?.message || "unknown error"}`);
-};
-
-const layout = (title, body) => `
-  <div style="font-family:Arial,sans-serif;max-width:640px;margin:0 auto;color:#1f2937;line-height:1.6">
-    <h2 style="color:#16a34a;margin-bottom:16px">${escapeHtml(title)}</h2>
-    ${body}
-    <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0" />
-    <p style="font-size:12px;color:#6b7280">Verdora Support: support@verdora.in</p>
-  </div>
-`;
-
-export const sendOtpEmail = async (email, otp) =>
-  sendEmailWithRetry({
+// ✅ Send OTP for verification
+export const sendOtpEmail = async (email, otp) => {
+  return transporter.sendMail({
+    from: "verdora.info@gmail.com",
     to: email,
     subject: "Your Verdora OTP",
-    html: layout(
-      "Verdora Verification Code",
-      `
-        <p>Your one-time password is:</p>
-        <p style="font-size:32px;font-weight:700;color:#16a34a;letter-spacing:4px">${escapeHtml(otp)}</p>
-        <p>This OTP is valid for 10 minutes.</p>
-        <p>If you did not request this, you can ignore this email.</p>
-      `,
-    ),
+    html: `
+      <h2>Verdora - Verification Code</h2>
+      <p>Your One-Time Password (OTP) is:</p>
+      <h1 style="color: #22c55e; font-size: 32px; font-weight: bold;">${otp}</h1>
+      <p>This OTP is valid for 10 minutes.</p>
+      <p>If you didn't request this, please ignore this email.</p>
+      <hr>
+      <p style="color: #888; font-size: 12px;">© 2026 Verdora. All rights reserved.</p>
+    `,
   });
+};
 
 export const sendWelcomeEmail = async (email, name = "Guest") =>
   sendEmailWithRetry({
@@ -668,5 +523,4 @@ export default {
   sendUserOrderReturnedEmail,
   sendUserOrderRefundedEmail,
   sendUserRefundProcessedEmail,
-  verifyEmailTransporter,
 };

@@ -6,7 +6,6 @@ import User from "../models/User.js";
 import {
   sendOtpEmail,
   sendWelcomeEmail,
-  verifyEmailTransporter,
 } from "../services/emailService.js";
 import { sanitizeUser } from "../utils/validators.js";
 
