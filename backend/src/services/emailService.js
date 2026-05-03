@@ -1,14 +1,17 @@
 import nodemailer from "nodemailer";
+import dns from "dns";
 import dotenv from "dotenv";
 
 dotenv.config();
 
+const dnsPromises = dns.promises;
+
 const EMAIL_HOST = process.env.EMAIL_HOST || "smtp.hostinger.com";
 const EMAIL_PORT = Number(process.env.EMAIL_PORT || 587);
-const EMAIL_SECURE = process.env.EMAIL_SECURE === "true" || EMAIL_PORT === 465;
 const EMAIL_USER = process.env.EMAIL_USER || "support@verdora.in";
 const EMAIL_PASS = process.env.EMAIL_PASS || undefined;
 const EMAIL_FROM = process.env.EMAIL_FROM || EMAIL_USER;
+const EMAIL_SERVICE = process.env.EMAIL_SERVICE || undefined;
 
 const escapeHtml = (value = "") =>
   String(value)
@@ -42,16 +45,29 @@ const formatItems = (items = []) => {
 };
 
 const buildTransporterConfig = async (overrides = {}) => {
+  let resolvedHost = EMAIL_HOST;
+
+  if (!EMAIL_SERVICE) {
+    try {
+      const addresses = await dnsPromises.lookup(EMAIL_HOST, { family: 4, all: true });
+      if (addresses?.length) {
+        resolvedHost = addresses[0].address;
+      }
+    } catch (_err) {
+      resolvedHost = EMAIL_HOST;
+    }
+  }
+
   return {
-    host: EMAIL_HOST,
+    host: resolvedHost,
     port: EMAIL_PORT,
-    secure: EMAIL_SECURE,
+    secure: EMAIL_PORT === 465,
     auth: {
       user: EMAIL_USER,
       pass: EMAIL_PASS,
     },
     authMethod: "LOGIN",
-    requireTLS: true,
+    requireTLS: EMAIL_PORT !== 465,
     tls: {
       servername: EMAIL_HOST,
       rejectUnauthorized: false,
@@ -61,6 +77,7 @@ const buildTransporterConfig = async (overrides = {}) => {
     connectionTimeout: 60000,
     greetingTimeout: 30000,
     socketTimeout: 60000,
+    lookup: (hostname, options, callback) => dns.lookup(hostname, { family: 4 }, callback),
     ...overrides,
   };
 };
