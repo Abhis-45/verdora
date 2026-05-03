@@ -139,43 +139,28 @@ router.get("/test-email-send", async (req, res) => {
 });
 
 router.post("/send-otp", async (req, res) => {
-  const { identifier, debug } = req.body;
+  const { identifier } = req.body;
   const normalizedIdentifier = normalizeIdentifier(identifier);
 
   if (!normalizedIdentifier) {
     return res.status(400).json({ message: "Email is required" });
   }
 
-  // Only email login allowed
   if (!normalizedIdentifier.includes("@")) {
     return res.status(400).json({ message: "Please use email for login" });
   }
 
   try {
-    console.log("Sending OTP to:", normalizedIdentifier, "Environment:", process.env.NODE_ENV);
-
     const otp = generateOtp();
-    console.log("Generated OTP:", otp);
-
     await sendOtpEmail(normalizedIdentifier, otp);
     createEmailSession(normalizedIdentifier, otp);
 
-    console.log("OTP sent successfully to:", normalizedIdentifier);
-    return res.json({
-      message: "OTP sent to email successfully",
-      channel: "email",
-    });
+    return res.json({ message: "OTP sent to email successfully", channel: "email" });
   } catch (err) {
-    console.error("Failed to send OTP email:", {
-      error: err.message,
-      stack: err.stack,
-      email: normalizedIdentifier,
-      env: process.env.NODE_ENV,
-    });
-
+    console.error("Failed to send OTP email:", err);
     return res.status(500).json({
-      message: "Failed to send email OTP. Please try again later.",
-      error: debug || process.env.NODE_ENV === "development" ? err.message : undefined,
+      message: "Failed to send OTP email. Please try again later.",
+      error: err.message,
     });
   }
 });

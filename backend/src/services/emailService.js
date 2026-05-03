@@ -1,22 +1,14 @@
 import nodemailer from "nodemailer";
-import dns from "dns";
 import dotenv from "dotenv";
 
 dotenv.config();
 
-const dnsPromises = dns.promises;
-
 const EMAIL_HOST = process.env.EMAIL_HOST || "smtp.hostinger.com";
 const EMAIL_PORT = Number(process.env.EMAIL_PORT || 587);
 const EMAIL_SECURE = process.env.EMAIL_SECURE === "true" || EMAIL_PORT === 465;
-const EMAIL_SERVICE = process.env.EMAIL_SERVICE || undefined;
 const EMAIL_USER = process.env.EMAIL_USER || "support@verdora.in";
 const EMAIL_PASS = process.env.EMAIL_PASS || undefined;
 const EMAIL_FROM = process.env.EMAIL_FROM || EMAIL_USER;
-
-if (dns.setDefaultResultOrder) {
-  dns.setDefaultResultOrder("ipv4first");
-}
 
 const escapeHtml = (value = "") =>
   String(value)
@@ -50,7 +42,7 @@ const formatItems = (items = []) => {
 };
 
 const buildTransporterConfig = async (overrides = {}) => {
-  const config = {
+  return {
     host: EMAIL_HOST,
     port: EMAIL_PORT,
     secure: EMAIL_SECURE,
@@ -71,12 +63,6 @@ const buildTransporterConfig = async (overrides = {}) => {
     socketTimeout: 60000,
     ...overrides,
   };
-
-  if (EMAIL_SERVICE) {
-    config.service = EMAIL_SERVICE;
-  }
-
-  return config;
 };
 
 const createTransporter = async (overrides = {}) =>
