@@ -6,11 +6,6 @@ import Product from "../models/Product.js";
 import ServiceRequest from "../models/ServiceRequest.js";
 import upload from "../middleware/multerConfig.js";
 import {
-  getSmsOtpStatus,
-  requestSmsOtp,
-  verifySmsOtp,
-} from "../services/smsFallbackService.js";
-import {
   sendOtpEmail,
   sendAccountDeletedEmail,
   sendVendorOrderNotificationEmail,
@@ -53,13 +48,7 @@ const ORDER_STATUSES = [
 const CUSTOMER_RETURN_STATUSES = ["returned", "replaced"];
 const RETURN_WINDOW_DAYS = 3;
 
-const normalizeMobileForOtp = (value) => {
-  const digits = String(value || "").replace(/\D/g, "");
-  if (digits.length === 10) return `+91${digits}`;
-  if (digits.length === 11 && digits.startsWith("0")) return `+91${digits.slice(1)}`;
-  if (digits.length >= 11 && digits.length <= 15) return `+${digits}`;
-  return String(value || "").trim();
-};
+
 
 const verifyUserStoredOtp = (user, expectedField, otp) => {
   if (String(user.otpField || "") !== String(expectedField || "")) {
@@ -69,23 +58,18 @@ const verifyUserStoredOtp = (user, expectedField, otp) => {
     };
   }
 
-  // Local email OTP path
+  // Email OTP verification
   if (user.otp) {
     if (isOtpExpired(user.otpExpiry)) {
-      return { valid: false, message: 'OTP expired' };
+      return { valid: false, message: "OTP expired" };
     }
-    if (String(user.otp || '') !== String(otp || '')) {
-      return { valid: false, message: 'Invalid OTP' };
+    if (String(user.otp || "") !== String(otp || "")) {
+      return { valid: false, message: "Invalid OTP" };
     }
     return { valid: true };
   }
 
-  // If provider-based SMS OTP was requested, verification happens via external provider (async), so indicate caller to handle that.
-  if (user.otpRequestId) {
-    return { valid: 'external' };
-  }
-
-  return { valid: false, message: 'OTP not found' };
+  return { valid: false, message: "OTP not found" };
 };
 
 const clearUserOtp = (user) => {
@@ -336,11 +320,10 @@ router.delete("/address/:addressId", authMiddleware, async (req, res) => {
   }
 });
 
-// Send OTP for email/mobile update, password update, or account deletion.
-// Email OTPs are generated locally. Mobile OTPs are generated and verified by Message Central.
+// Send OTP for email update, password update, or account deletion (email-only)
 router.post("/send-otp", authMiddleware, async (req, res) => {
-  const { field, newValue } = req.body; // "email", "mobile", "password", or "delete"
-  if (!["email", "mobile", "password", "delete"].includes(field)) {
+  const { field, newValue } = req.body; // "email", "password", or "delete"
+  if (!["email", "password", "delete"].includes(field)) {
     return res.status(400).json({ message: "Invalid OTP request field" });
   }
 
@@ -350,152 +333,89 @@ router.post("/send-otp", authMiddleware, async (req, res) => {
     const user = await User.findById(req.userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    const sendPromises = [];
-    const sentTo = [];
+    let targetEmail = null;
 
     if (field === "email") {
-      const targetEmail = String(newValue || user.email || "").trim().toLowerCase();
+      targetEmail = String(newValue || user.email || "").trim().toLowerCase();
       if (!targetEmail) {
         return res.status(400).json({ message: "User email not found" });
       }
       if (!validateEmail(targetEmail)) {
         return res.status(400).json({ message: "Invalid email format" });
       }
-      sendPromises.push(sendOtpEmail(targetEmail, otp));
-      sentTo.push("email");
-    }
-
-    if (field === "mobile") {
-      const targetMobile = normalizeMobileForOtp(newValue || user.mobile);
-      if (!targetMobile) {
-        return res.status(400).json({ message: "User mobile not found" });
-      }
-      if (!validatePhone(targetMobile)) {
-        return res.status(400).json({ message: "Invalid phone format" });
-      }
-
-      if (!getSmsOtpStatus().configured) {
-        return res.status(503).json({ message: "SMS OTP is not configured" });
-      }
-
-      try {
-        const resp = await requestSmsOtp(targetMobile, 6);
-        user.otpRequestId = resp.verificationId || resp.requestId;
-        user.otpField = field;
-        user.otp = null;
-        user.otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
-        sentTo.push("mobile");
-      } catch (smsErr) {
-        console.error("Failed to request SMS OTP:", smsErr.message);
-        return res.status(500).json({ message: "Failed to send OTP to mobile" });
+    } else if (field === "password" || field === "delete") {
+      targetEmail = String(user.email || "").trim().toLowerCase();
+      if (!targetEmail) {
+        return res.status(400).json({ message: "User email not found" });
       }
     }
 
-    if (field === "password" || field === "delete") {
-      if (user.email) {
-        sendPromises.push(sendOtpEmail(String(user.email).trim().toLowerCase(), otp));
-        sentTo.push("email");
-      }
+    if (!targetEmail) {
+      return res.status(400).json({ message: "No valid email found to send OTP" });
     }
 
-    if (!sentTo.length) {
-      return res.status(400).json({ message: "No valid contact found to send OTP" });
-    }
-
-    await Promise.all(sendPromises);
-
-    if (sentTo.includes('email')) {
-      user.otp = otp;
-      user.otpField = field;
-      user.otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
-    }
-
+    await sendOtpEmail(targetEmail, otp);
+    user.otp = otp;
+    user.otpField = field;
+    user.otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
     await user.save();
 
-    const message =
-      sentTo.length === 2
-        ? `OTP sent to email and mobile`
-        : `OTP sent to ${sentTo[0]}`;
-    res.json({ message });
+    res.json({ message: "OTP sent to email successfully" });
   } catch (err) {
     res.status(500).json({ message: "Failed to send OTP", error: err.message });
   }
 });
 
-// ✅ Verify OTP and update email/mobile
+// ✅ Verify OTP and update email
 router.patch("/verify-otp-update", authMiddleware, async (req, res) => {
-  const { otp, newValue, field } = req.body; // field: "email" or "mobile"
+  const { otp, newValue, field } = req.body; // field: "email" only
 
-  if (!["email", "mobile"].includes(field)) {
-    return res.status(400).json({ message: "Invalid field" });
+  if (field !== "email") {
+    return res.status(400).json({ message: "Only email updates are supported" });
   }
 
-  const normalizedNewValue =
-    field === "mobile" ? normalizeMobileForOtp(newValue) : String(newValue || "").trim().toLowerCase();
+  const normalizedNewValue = String(newValue || "").trim().toLowerCase();
 
   // Validate new value format
-  if (field === "email" && !validateEmail(normalizedNewValue)) {
+  if (!validateEmail(normalizedNewValue)) {
     return res.status(400).json({ message: "Invalid email format" });
-  }
-  if (field === "mobile" && !validatePhone(normalizedNewValue)) {
-    return res.status(400).json({ message: "Invalid phone format" });
   }
 
   try {
     const user = await User.findById(req.userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    const otpCheck = verifyUserStoredOtp(user, field, otp);
-
-    if (otpCheck.valid === 'external') {
-      // External SMS provider verification (Message Central)
-      try {
-        if (!user.otpRequestId) {
-          return res.status(400).json({ message: 'No external OTP request found' });
-        }
-        await verifySmsOtp(user.otpRequestId, otp, normalizedNewValue);
-        // external provider verified successfully
-      } catch (err) {
-        return res.status(400).json({ message: 'External SMS OTP verification failed', error: err.message });
-      }
-    } else if (!otpCheck.valid) {
+    const otpCheck = verifyUserStoredOtp(user, "email", otp);
+    if (!otpCheck.valid) {
       return res.status(400).json({ message: otpCheck.message });
     }
 
-    // Check if new value already exists
-    if (field === "email") {
-      const existingUser = await User.findOne({
-        email: normalizedNewValue,
-        _id: { $ne: req.userId },
-      });
-      if (existingUser)
-        return res.status(400).json({ message: "Email already in use" });
-    } else if (field === "mobile") {
-      const existingUser = await User.findOne({
-        mobile: normalizedNewValue,
-        _id: { $ne: req.userId },
-      });
-      if (existingUser)
-        return res.status(400).json({ message: "Mobile already in use" });
+    // Check if new email already exists
+    const existingUser = await User.findOne({
+      email: normalizedNewValue,
+      _id: { $ne: req.userId },
+    });
+    if (existingUser) {
+      return res.status(400).json({ message: "Email already in use" });
     }
 
-    // Update field
-    user[field] = normalizedNewValue;
+    // Update email
+    user.email = normalizedNewValue;
     clearUserOtp(user);
     await user.save();
 
     res.json({
-      message: `${field} updated successfully`,
+      message: "Email updated successfully",
       user: sanitizeUser(user),
     });
   } catch (err) {
     res
       .status(500)
-      .json({ message: "Failed to update field", error: err.message });
+      .json({ message: "Failed to update email", error: err.message });
   }
 });
 
-// ✅ Update password (OTP-based)
+// ✅ Update password (OTP-based, email verification)
 router.patch("/update-password", authMiddleware, async (req, res) => {
   const { newPassword, otp } = req.body;
 
@@ -514,14 +434,7 @@ router.patch("/update-password", authMiddleware, async (req, res) => {
     if (!user) return res.status(404).json({ message: "User not found" });
 
     const otpCheck = verifyUserStoredOtp(user, "password", otp);
-    if (otpCheck.valid === 'external') {
-      try {
-        if (!user.otpRequestId) return res.status(400).json({ message: 'No external OTP request found' });
-        await verifySmsOtp(user.otpRequestId, otp, user.mobile);
-      } catch (err) {
-        return res.status(400).json({ message: 'External SMS OTP verification failed', error: err.message });
-      }
-    } else if (!otpCheck.valid) {
+    if (!otpCheck.valid) {
       return res.status(400).json({ message: otpCheck.message });
     }
 
@@ -547,14 +460,7 @@ router.post("/delete-account", authMiddleware, async (req, res) => {
     if (!user) return res.status(404).json({ message: "User not found" });
 
     const otpCheck = verifyUserStoredOtp(user, "delete", otp);
-    if (otpCheck.valid === 'external') {
-      try {
-        if (!user.otpRequestId) return res.status(400).json({ message: 'No external OTP request found' });
-        await verifySmsOtp(user.otpRequestId, otp, user.mobile);
-      } catch (err) {
-        return res.status(400).json({ message: 'External SMS OTP verification failed', error: err.message });
-      }
-    } else if (!otpCheck.valid) {
+    if (!otpCheck.valid) {
       return res.status(400).json({ message: otpCheck.message });
     }
 

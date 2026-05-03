@@ -30,8 +30,6 @@ export default function OtpVerification({
   const [messageType, setMessageType] = useState<"success" | "error">("error");
   const [countdown, setCountdown] = useState(0);
   const [canResend, setCanResend] = useState(false);
-  const [verificationId, setVerificationId] = useState<string | null>(null);
-  const [smsProvider, setSmsProvider] = useState<string | null>(null);
 
   // Countdown timer for resend
   useEffect(() => {
@@ -78,14 +76,6 @@ export default function OtpVerification({
         setCountdown(30);
         setCanResend(false);
         setOtp("");
-        
-        // Capture Message Central verification id for SMS flows.
-        if (data.verificationId || data.requestId) {
-          setVerificationId(data.verificationId || data.requestId);
-        }
-        if (data.provider) {
-          setSmsProvider(data.provider);
-        }
       } else {
         setMessage(data.message || "Failed to resend OTP");
         setMessageType("error");
@@ -118,24 +108,11 @@ export default function OtpVerification({
 
       console.log(`🔐 [OtpVerification] Verifying OTP for: ${identifier}`);
       console.log(`🔐 [OtpVerification] OTP entered: ${otp}`);
-      console.log(`🔐 [OtpVerification] SMS Provider: ${smsProvider}, VerificationId: ${verificationId}`);
 
-      // Build request body based on provider
-      const requestBody: any = {
+      const requestBody = {
         identifier,
+        otp,
       };
-
-      // If Message Central is used, the provider verifies the SMS OTP.
-      if (
-        (smsProvider === "messagecentral" || smsProvider === "messagecentrals") &&
-        verificationId
-      ) {
-        requestBody.verificationId = verificationId;
-        requestBody.code = otp;
-      } else {
-        // Otherwise use standard otp field
-        requestBody.otp = otp;
-      }
 
       const res = await fetch(`${BACKEND_URL}/api/auth/verify-otp`, {
         method: "POST",

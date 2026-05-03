@@ -3,7 +3,6 @@
 "use client";
 import { useUser } from "@/context/UserContext";
 import { useState, useEffect } from "react";
-import { ensurePlus91 } from "@/utils/phone";
 import Spinner from "../shared/Spinner";
 
 type AuthPopupProps = {
@@ -30,13 +29,6 @@ const validateOtp = (otp: string): boolean => {
   return /^\d{6}$/.test(otp);
 };
 
-const validateIdentifier = (identifier: string): boolean => {
-  if (identifier.includes("@")) {
-    return validateEmail(identifier);
-  }
-  return validatePhone(identifier);
-};
-
 export default function AuthPopup({
   onClose,
   onLogin,
@@ -51,8 +43,6 @@ export default function AuthPopup({
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState<"success" | "error">("error");
   const [countdown, setCountdown] = useState(0);
-  const [verificationId, setVerificationId] = useState<string | null>(null);
-  const [smsProvider, setSmsProvider] = useState<string | null>(null);
   const { login } = useUser();
   const [loading, setLoading] = useState(false);
 
@@ -78,15 +68,15 @@ export default function AuthPopup({
 
   // ✅ Send OTP
   const sendOtp = async () => {
-    // Validate identifier
+    // Validate identifier - email only
     if (!identifier.trim()) {
-      setMessage("Please enter email or phone number");
+      setMessage("Please enter email");
       setMessageType("error");
       return;
     }
 
-    if (!validateIdentifier(identifier)) {
-      setMessage("Please enter a valid email or 10-digit phone number");
+    if (!validateEmail(identifier.trim())) {
+      setMessage("Please enter a valid email address");
       setMessageType("error");
       return;
     }
@@ -95,9 +85,6 @@ export default function AuthPopup({
     setMessage("");
 
     try {
-      const payloadIdentifier = identifier.includes("@")
-        ? identifier.trim()
-        : ensurePlus91(identifier.trim());
       const BACKEND_URL =
         typeof window !== "undefined"
           ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
@@ -105,24 +92,16 @@ export default function AuthPopup({
       const res = await fetch(`${BACKEND_URL}/api/auth/send-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ identifier: payloadIdentifier }),
+        body: JSON.stringify({ identifier: identifier.trim() }),
       });
       const data = await res.json();
       setLoading(false);
 
       if (res.ok) {
         setOtpSent(true);
-        setMessage(data.message || "OTP sent successfully");
+        setMessage(data.message || "OTP sent to your email");
         setMessageType("success");
         setCountdown(30); // start 30s timer
-        
-        // Capture Message Central verification id for SMS flows.
-        if (data.verificationId || data.requestId) {
-          setVerificationId(data.verificationId || data.requestId);
-        }
-        if (data.provider) {
-          setSmsProvider(data.provider);
-        }
       } else {
         setMessage(data.message || "Failed to send OTP");
         setMessageType("error");
@@ -153,49 +132,24 @@ export default function AuthPopup({
     setMessage("");
 
     try {
-      const payloadIdentifier = identifier.includes("@")
-        ? identifier.trim()
-        : ensurePlus91(identifier.trim());
       const BACKEND_URL =
         typeof window !== "undefined"
           ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
           : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
 
-      console.log(`🔐 [Frontend] Verifying OTP for: ${payloadIdentifier}`);
-      console.log(`🔐 [Frontend] OTP entered: ${otp}`);
-      console.log(`🔐 [Frontend] SMS Provider: ${smsProvider}, VerificationId: ${verificationId}`);
-
-      // Build request body based on provider
-      const requestBody: any = {
-        identifier: payloadIdentifier,
-      };
-
-      // If Message Central is used, the provider verifies the SMS OTP.
-      if (
-        (smsProvider === "messagecentral" || smsProvider === "messagecentrals") &&
-        verificationId
-      ) {
-        requestBody.verificationId = verificationId;
-        requestBody.code = otp.trim();
-      } else {
-        // Otherwise use standard otp field
-        requestBody.otp = otp.trim();
-      }
-
       const res = await fetch(`${BACKEND_URL}/api/auth/verify-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(requestBody),
+        body: JSON.stringify({
+          identifier: identifier.trim(),
+          otp: otp.trim(),
+        }),
       });
 
       const data = await res.json();
       setLoading(false);
 
-      console.log(`🔐 [Frontend] Verify OTP response status: ${res.status}`);
-      console.log(`🔐 [Frontend] Response data:`, data);
-
       if (res.ok) {
-        console.log(`✅ [Frontend] OTP verification successful, logging in user`);
         login(data.user, data.token);
         setMessage("Login successful!");
         setMessageType("success");
@@ -205,31 +159,28 @@ export default function AuthPopup({
           setTimeout(() => onClose(), 500);
         }
       } else {
-        console.log(`❌ [Frontend] OTP verification failed: ${data.message}`);
         setMessage(data.message || "Invalid OTP");
         setMessageType("error");
-        // Clear OTP on failure to prevent reuse
         setOtp("");
       }
     } catch (err) {
       setLoading(false);
-      console.error(`❌ [Frontend] OTP verification error:`, err);
       setMessage("Network error. Please try again.");
       setMessageType("error");
     }
   };
 
-  // ✅ Password Login/Register combined
+  // ✅ Password Login/Register combined (email only)
   const loginOrRegisterPassword = async () => {
-    // Validate identifier
+    // Validate identifier - email only
     if (!identifier.trim()) {
-      setMessage("Please enter email or phone number");
+      setMessage("Please enter email");
       setMessageType("error");
       return;
     }
 
-    if (!validateIdentifier(identifier)) {
-      setMessage("Please enter a valid email or 10-digit phone number");
+    if (!validateEmail(identifier.trim())) {
+      setMessage("Please enter a valid email address");
       setMessageType("error");
       return;
     }
@@ -251,9 +202,6 @@ export default function AuthPopup({
     setMessage("");
 
     try {
-      const mobilePayload = !identifier.includes("@")
-        ? ensurePlus91(identifier.trim())
-        : null;
       const BACKEND_URL =
         typeof window !== "undefined"
           ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
@@ -262,8 +210,7 @@ export default function AuthPopup({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: identifier.includes("@") ? identifier.trim() : null,
-          mobile: mobilePayload,
+          email: identifier.trim(),
           password: password.trim(),
         }),
       });
@@ -316,7 +263,7 @@ export default function AuthPopup({
         <div className="mb-3">
           <input
             type="text"
-            placeholder="Enter Email or Mobile"
+            placeholder="Enter Email"
             value={identifier}
             onChange={(e) => setIdentifier(e.target.value)}
             onKeyDown={(e) => {
@@ -332,9 +279,9 @@ export default function AuthPopup({
             className="w-full p-2 sm:p-3 text-sm sm:text-base border rounded text-white bg-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500"
             required
           />
-          {identifier && !validateIdentifier(identifier) && (
+          {identifier && !validateEmail(identifier.trim()) && (
             <p className="text-xs sm:text-sm text-red-400 mt-1">
-              Enter valid email or 10-digit phone number
+              Enter valid email address
             </p>
           )}
         </div>
@@ -346,7 +293,7 @@ export default function AuthPopup({
               <button
                 onClick={sendOtp}
                 disabled={
-                  !identifier || !validateIdentifier(identifier) || loading
+                  !identifier || !validateEmail(identifier.trim()) || loading
                 }
                 className="w-full py-2 sm:py-3 text-sm sm:text-base bg-green-600 text-white rounded hover:bg-green-700 transition disabled:bg-gray-600 disabled:cursor-not-allowed"
               >
@@ -435,7 +382,7 @@ export default function AuthPopup({
               onClick={loginOrRegisterPassword}
               disabled={
                 !identifier ||
-                !validateIdentifier(identifier) ||
+                !validateEmail(identifier.trim()) ||
                 !password ||
                 !validatePassword(password) ||
                 loading

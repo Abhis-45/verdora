@@ -41,9 +41,6 @@ This project consists of a Next.js frontend with React and a Node.js backend usi
    EMAIL_USER=support@verdora.in
    EMAIL_FROM=support@verdora.in
    EMAIL_PASS=your_hostinger_mail_password
-   SMS_OTP_PROVIDER=messagecentral
-   MESSAGE_CENTRAL_CUSTOMER_ID=your_message_central_customer_id
-   MESSAGE_CENTRAL_KEY=your_message_central_base64_key
    ```
 
 5. Start the backend server:
@@ -88,8 +85,8 @@ const data = await response.json();
 - **Frontend**: Next.js, React, TypeScript, Tailwind CSS
 - **Backend**: Node.js, Express.js, Mongoose
 - **Database**: MongoDB Atlas
-- **Authentication**: JWT + OTP (Email & SMS)
-- **Services**: Nodemailer with Hostinger SMTP, Message Central VerifyNow
+- **Authentication**: JWT + Email OTP
+- **Services**: Nodemailer with Hostinger SMTP for all communications
 
 ---
 
@@ -111,7 +108,7 @@ const data = await response.json();
 - See `PROFILE_TEST_CASES.md` for comprehensive testing
 
 ### Security Features
-- Login/register OTP sent via email or SMS (Message Central for SMS)
+- Login/register OTP sent via Hostinger email
 - 10-minute OTP expiration
 - bcryptjs password hashing
 - JWT token validation
@@ -119,8 +116,9 @@ const data = await response.json();
 
 ### What's New
 - **Password Update**: Request OTP → Verify → Update (no current password needed)
-- **Email/Mobile Update**: Email OTP through Hostinger, mobile OTP through Message Central
+- **Email Update**: OTP sent through Hostinger email service
 - **Address Selection**: Radio buttons with default auto-selection
 - **Auth Flow**: Show login popup when accessing profile without token
 - **Modal Theme**: All modals use green-900 theme with white text
 - **Responsive**: Works seamlessly on mobile, tablet, and desktop
+- **Email-Only Authentication**: All communications via Hostinger SMTP
