@@ -382,9 +382,9 @@ export default function VendorDashboard() {
     title: string;
     value: number | string;
   }) => (
-    <div className="bg-linear-to-br from-emerald-50 to-emerald-100 rounded-lg p-6 border border-emerald-200">
-      <p className="text-emerald-600 text-sm font-semibold">{title}</p>
-      <p className="text-3xl font-bold text-emerald-700 mt-2">{value}</p>
+    <div className="rounded-xl border border-emerald-100 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{title}</p>
+      <p className="mt-3 text-2xl font-bold text-emerald-700 sm:text-3xl">{value}</p>
     </div>
   );
 
@@ -423,45 +423,48 @@ export default function VendorDashboard() {
   }, [orderSort, vendorOrders]);
 
   return (
-        <div className="min-h-screen bg-linear-to-b from-emerald-50 to-teal-50 pt-10 lg:pt-16">
+    <div className="min-h-screen bg-slate-50">
       {/* HEADER */}
-      <div className="fixed top-0 left-0 right-0 z-40 bg-linear-to-r from-emerald-700 to-teal-600 text-white shadow-xl">
-        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-6 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
+      <div className="sticky top-0 z-40 border-b border-emerald-900/10 bg-gradient-to-r from-emerald-800 to-teal-700 text-white shadow-lg">
+        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
           <div>
-            <h1 className="text-2xl font-bold sm:text-3xl">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-100">
+              Verdora partner
+            </p>
+            <h1 className="mt-1 text-xl font-bold sm:text-2xl lg:text-3xl">
               Verdora Vendor Dashboard
             </h1>
-            <p className="text-emerald-100 mt-1">
-              Welcome, {vendorProfile?.username}
+            <p className="mt-1 text-sm text-emerald-100">
+              Welcome, {vendorProfile?.username || "Vendor"}
             </p>
           </div>
-          <div className="flex flex-wrap gap-3">
+          <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:justify-end">
             <Link
               href="/vendor/settings"
-              className="flex items-center gap-2 rounded-lg bg-blue-500 px-4 py-2 font-semibold text-white transition hover:bg-blue-600"
+              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-white/15 px-3 text-sm font-semibold text-white transition hover:bg-white/25"
             >
-              <CogIcon className="w-5 h-5" /> Settings
+              <CogIcon className="h-5 w-5" /> <span className="hidden min-[420px]:inline">Settings</span>
             </Link>
             <button
               onClick={handleHomeClick}
-              className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 font-semibold text-emerald-700 transition hover:bg-emerald-50"
+              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-white px-3 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50"
             >
-              <HomeIcon className="w-5 h-5" /> Home
+              <HomeIcon className="h-5 w-5" /> <span className="hidden min-[420px]:inline">Home</span>
             </button>
             <button
               onClick={handleLogout}
-              className="flex items-center gap-2 rounded-lg bg-red-500 px-4 py-2 font-semibold text-white transition hover:bg-red-600"
+              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-red-500 px-3 text-sm font-semibold text-white transition hover:bg-red-600"
             >
-              <ArrowLeftOnRectangleIcon className="w-5 h-5" /> Logout
+              <ArrowLeftOnRectangleIcon className="h-5 w-5" /> <span className="hidden min-[420px]:inline">Logout</span>
             </button>
           </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-10">
+      <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-8 lg:px-8">
         {/* Statistics Section */}
-        <div className="mb-10 grid grid-cols-1 gap-6 md:grid-cols-2">
+        <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <StatCard title="Total Products" value={stats?.totalProducts || 0} />
           <StatCard
             title="Total Revenue"
@@ -470,48 +473,53 @@ export default function VendorDashboard() {
         </div>
 
         {/* Business Profile Section */}
-        <div className="mb-10 rounded-lg bg-white p-5 shadow-lg sm:p-8">
+        <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
           <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h2 className="text-2xl font-bold text-emerald-700">
-              Business Profile
-            </h2>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+                Store profile
+              </p>
+              <h2 className="mt-1 text-xl font-bold text-slate-950 sm:text-2xl">
+                Business Profile
+              </h2>
+            </div>
             <button
               onClick={() => setShowProfileModal(true)}
-              className="flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 font-semibold text-white transition hover:bg-teal-700"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-teal-600 px-4 text-sm font-semibold text-white transition hover:bg-teal-700"
             >
               <PencilIcon className="w-5 h-5" /> Edit Profile
             </button>
           </div>
 
           {vendorProfile && (
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div>
-                <p className="text-gray-600 text-sm">Business Name</p>
-                <p className="text-lg font-semibold text-gray-900">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <div className="rounded-xl bg-slate-50 p-4">
+                <p className="text-xs font-semibold uppercase text-gray-500">Business Name</p>
+                <p className="mt-1 text-base font-semibold text-gray-900">
                   {vendorProfile.businessName || "N/A"}
                 </p>
               </div>
-              <div>
-                <p className="text-gray-600 text-sm">Business Phone</p>
-                <p className="text-lg font-semibold text-gray-900">
+              <div className="rounded-xl bg-slate-50 p-4">
+                <p className="text-xs font-semibold uppercase text-gray-500">Business Phone</p>
+                <p className="mt-1 text-base font-semibold text-gray-900">
                   {vendorProfile.businessPhone || "N/A"}
                 </p>
               </div>
-              <div className="md:col-span-2">
-                <p className="text-gray-600 text-sm">Business Description</p>
-                <p className="text-lg font-semibold text-gray-900">
+              <div className="rounded-xl bg-slate-50 p-4 md:col-span-2">
+                <p className="text-xs font-semibold uppercase text-gray-500">Business Description</p>
+                <p className="mt-1 text-base font-semibold leading-6 text-gray-900">
                   {vendorProfile.businessDescription || "N/A"}
                 </p>
               </div>
-              <div>
-                <p className="text-gray-600 text-sm">Location</p>
-                <p className="text-lg font-semibold text-gray-900">
+              <div className="rounded-xl bg-slate-50 p-4">
+                <p className="text-xs font-semibold uppercase text-gray-500">Location</p>
+                <p className="mt-1 text-base font-semibold text-gray-900">
                   {vendorProfile.businessLocation || "N/A"}
                 </p>
               </div>
-              <div>
-                <p className="text-gray-600 text-sm">Website</p>
-                <p className="text-lg font-semibold text-gray-900">
+              <div className="rounded-xl bg-slate-50 p-4">
+                <p className="text-xs font-semibold uppercase text-gray-500">Website</p>
+                <p className="mt-1 break-words text-base font-semibold text-gray-900">
                   {vendorProfile.businessWebsite || "N/A"}
                 </p>
               </div>
@@ -520,11 +528,18 @@ export default function VendorDashboard() {
         </div>
 
         {/* Products Section */}
-        <div className="rounded-lg bg-white p-5 shadow-lg sm:p-8">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
           <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h2 className="text-2xl font-bold text-emerald-700">My Products</h2>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+                Catalog
+              </p>
+              <h2 className="mt-1 text-xl font-bold text-slate-950 sm:text-2xl">
+                My Products
+              </h2>
+            </div>
             <Link href="/vendor/add-product">
-              <button className="flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 font-semibold text-white transition hover:bg-teal-700">
+              <button className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-teal-600 px-4 text-sm font-semibold text-white transition hover:bg-teal-700">
                 <PlusIcon className="w-5 h-5" /> Add Product
               </button>
             </Link>
@@ -536,18 +551,18 @@ export default function VendorDashboard() {
               placeholder="Search products..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="flex-1 rounded-lg border border-emerald-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="min-h-11 flex-1 rounded-lg border border-slate-200 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
             <button
               onClick={handleSearch}
-              className="flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-6 py-2 font-semibold text-white transition hover:bg-emerald-700"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-emerald-600 px-6 text-sm font-semibold text-white transition hover:bg-emerald-700"
             >
               <MagnifyingGlassIcon className="w-5 h-5" /> Search
             </button>
             <select
               value={productSort}
               onChange={(event) => setProductSort(event.target.value)}
-              className="rounded-lg border border-emerald-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="min-h-11 rounded-lg border border-slate-200 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             >
               <option value="latest">Sort: Default</option>
               <option value="name">Name A-Z</option>
@@ -746,10 +761,13 @@ export default function VendorDashboard() {
           )}
         </div>
 
-        <div className="mt-10 rounded-lg bg-white p-5 shadow-lg sm:p-8">
+        <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
           <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-2xl font-bold text-emerald-700">
+              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+                Fulfillment
+              </p>
+              <h2 className="mt-1 text-xl font-bold text-slate-950 sm:text-2xl">
                 Manage Orders
               </h2>
               <p className="mt-1 text-sm text-gray-500">
@@ -761,7 +779,7 @@ export default function VendorDashboard() {
               <select
                 value={orderSort}
                 onChange={(event) => setOrderSort(event.target.value)}
-                className="rounded-lg border border-emerald-200 px-4 py-2 text-sm font-semibold text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="min-h-11 rounded-lg border border-slate-200 px-4 text-sm font-semibold text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
               >
                 <option value="latest">Newest first</option>
                 <option value="oldest">Oldest first</option>
@@ -784,9 +802,9 @@ export default function VendorDashboard() {
               {sortedVendorOrders.map((order) => (
                 <div
                   key={order.id}
-                  className="rounded-2xl border border-emerald-100 p-4"
+                  className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
                 >
-                  <div className="flex flex-col gap-3 border-b border-emerald-100 pb-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="grid gap-3 border-b border-emerald-100 pb-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
                     <div>
                       <p className="text-sm font-bold text-emerald-800">
                         Order #{order.id.slice(-6)}
@@ -813,7 +831,7 @@ export default function VendorDashboard() {
                         })}
                       </p>
                     </div>
-                    <div className="space-y-2">
+                    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
                       <div className="rounded-lg bg-blue-50 p-3 border border-blue-200">
                         <p className="text-xs font-semibold text-blue-600 mb-2">
                           📍 Shipping Address
@@ -846,10 +864,10 @@ export default function VendorDashboard() {
                     {order.items.map((item) => (
                       <div
                         key={item.itemId}
-                        className="rounded-xl bg-emerald-50/60 p-3"
+                        className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-3"
                       >
                         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                      <div className="flex gap-3">
+                          <div className="flex gap-3">
                             <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-white border border-gray-200">
                               {item.image ? (
                                 <img
@@ -926,7 +944,7 @@ export default function VendorDashboard() {
                             </div>
                           </div>
 
-                          <div className="flex w-full flex-col gap-2 md:w-auto">
+                          <div className="flex w-full flex-col gap-2 md:w-80">
                             <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-3">
                               {["accepted", "shipped", "delivered"].map(
                                 (status) => (

@@ -26,7 +26,8 @@ import {
   sendVendorReadyToShipEmail,
   sendVendorOrderShippedEmail,
 } from "../services/emailService.js";
-// SMS notifications are disabled for non-OTP flows per configuration
+// ✅ Email-only notifications: All non-OTP notifications (orders, status, vendor messages) use email only
+// SMS OTP: Use otpService for SMS OTP via MessageCentral API
 import { adminAuthMiddleware } from "../middleware/auth.js";
 
 const router = express.Router();
@@ -217,7 +218,7 @@ router.patch(
           }
         }
 
-        // SMS notifications for status updates are disabled; only emails are sent.
+        // ✅ EMAIL-ONLY POLICY: All notifications (order status, etc) are sent via email to support@verdora.in
       } catch (notificationErr) {
         console.error("Order status notification failed:", notificationErr.message);
         // Don't fail the request due to notification errors
@@ -1176,7 +1177,7 @@ router.post("/vendor-requests/:id/approve", adminAuthMiddleware, async (req, res
           "https://verdora.in/vendor/login"
         ).catch((err) => console.error("❌ Vendor approval email failed:", err.message));
 
-        // Vendor approval SMS notifications are disabled; only emails are sent.
+        // ✅ EMAIL-ONLY: Vendor approvals sent via email only
       }
     } catch (notificationErr) {
       console.error("Vendor approval notification failed:", notificationErr.message);
@@ -1233,7 +1234,7 @@ router.post(
             rejectionReason || "Your application does not meet our requirements at this time."
           ).catch((err) => console.error("❌ Vendor rejection email failed:", err.message));
 
-          // Vendor rejection SMS notifications are disabled; only emails are sent.
+          // ✅ EMAIL-ONLY: Vendor rejections sent via email only
         }
       } catch (notificationErr) {
         console.error("Vendor rejection notification failed:", notificationErr.message);

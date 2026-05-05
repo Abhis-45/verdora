@@ -15,6 +15,11 @@ import {
   sendUserOrderCancelledEmail,
   sendServiceBookingConfirmationEmail,
 } from "../services/emailService.js";
+import {
+  sendOtpViaSms,
+  verifySmsOtp,
+  normalizePhoneForUser,
+} from "../services/otpService.js";
 import { uploadToCloudinary } from "../services/cloudinaryService.js";
 import {
   generateOtp,
@@ -320,10 +325,10 @@ router.delete("/address/:addressId", authMiddleware, async (req, res) => {
   }
 });
 
-// Send OTP for email update, password update, or account deletion (email-only)
+// Send OTP for email update, mobile update, password update, or account deletion.
 router.post("/send-otp", authMiddleware, async (req, res) => {
-  const { field, newValue } = req.body; // "email", "password", or "delete"
-  if (!["email", "password", "delete"].includes(field)) {
+  const { field, newValue } = req.body; // "email", "mobile", "password", or "delete"
+  if (!["email", "mobile", "password", "delete"].includes(field)) {
     return res.status(400).json({ message: "Invalid OTP request field" });
   }
 
@@ -334,6 +339,7 @@ router.post("/send-otp", authMiddleware, async (req, res) => {
     if (!user) return res.status(404).json({ message: "User not found" });
 
     let targetEmail = null;
+    let targetMobile = null;
 
     if (field === "email") {
       targetEmail = String(newValue || user.email || "").trim().toLowerCase();
@@ -343,11 +349,38 @@ router.post("/send-otp", authMiddleware, async (req, res) => {
       if (!validateEmail(targetEmail)) {
         return res.status(400).json({ message: "Invalid email format" });
       }
+    } else if (field === "mobile") {
+      targetMobile = normalizePhoneForUser(newValue || user.mobile || "");
+      if (!targetMobile) {
+        return res.status(400).json({ message: "Mobile number is required" });
+      }
+      if (!validatePhone(targetMobile)) {
+        return res.status(400).json({ message: "Invalid mobile number" });
+      }
     } else if (field === "password" || field === "delete") {
       targetEmail = String(user.email || "").trim().toLowerCase();
       if (!targetEmail) {
         return res.status(400).json({ message: "User email not found" });
       }
+    }
+
+    if (field === "mobile") {
+      const result = await sendOtpViaSms(targetMobile);
+      if (!result.success) {
+        return res.status(400).json({ message: result.error || "Failed to send OTP" });
+      }
+
+      user.otp = null;
+      user.otpField = field;
+      user.otpRequestId = result.verificationId || null;
+      user.otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
+      await user.save();
+
+      return res.json({
+        message: "OTP sent to mobile successfully",
+        provider: "sms",
+        verificationId: result.verificationId,
+      });
     }
 
     if (!targetEmail) {
@@ -368,50 +401,76 @@ router.post("/send-otp", authMiddleware, async (req, res) => {
 
 // ✅ Verify OTP and update email
 router.patch("/verify-otp-update", authMiddleware, async (req, res) => {
-  const { otp, newValue, field } = req.body; // field: "email" only
+  const { otp, newValue, field } = req.body; // field: "email" or "mobile"
 
-  if (field !== "email") {
-    return res.status(400).json({ message: "Only email updates are supported" });
+  if (!["email", "mobile"].includes(field)) {
+    return res.status(400).json({ message: "Only email and mobile updates are supported" });
   }
 
-  const normalizedNewValue = String(newValue || "").trim().toLowerCase();
+  const normalizedNewValue =
+    field === "mobile"
+      ? normalizePhoneForUser(newValue)
+      : String(newValue || "").trim().toLowerCase();
 
   // Validate new value format
-  if (!validateEmail(normalizedNewValue)) {
+  if (field === "email" && !validateEmail(normalizedNewValue)) {
     return res.status(400).json({ message: "Invalid email format" });
+  }
+  if (field === "mobile" && !validatePhone(normalizedNewValue)) {
+    return res.status(400).json({ message: "Invalid mobile number" });
   }
 
   try {
     const user = await User.findById(req.userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    const otpCheck = verifyUserStoredOtp(user, "email", otp);
+    let otpCheck;
+    if (field === "mobile") {
+      if (String(user.otpField || "") !== "mobile") {
+        return res.status(400).json({ message: "OTP was not requested for this action" });
+      }
+      if (isOtpExpired(user.otpExpiry)) {
+        clearUserOtp(user);
+        await user.save();
+        return res.status(400).json({ message: "OTP expired" });
+      }
+      otpCheck = await verifySmsOtp(normalizedNewValue, otp, user.otpRequestId);
+    } else {
+      otpCheck = verifyUserStoredOtp(user, "email", otp);
+    }
+
     if (!otpCheck.valid) {
       return res.status(400).json({ message: otpCheck.message });
     }
 
-    // Check if new email already exists
-    const existingUser = await User.findOne({
-      email: normalizedNewValue,
-      _id: { $ne: req.userId },
-    });
+    const existingUser = await User.findOne(
+      field === "mobile"
+        ? { mobile: normalizedNewValue, _id: { $ne: req.userId } }
+        : { email: normalizedNewValue, _id: { $ne: req.userId } },
+    );
     if (existingUser) {
-      return res.status(400).json({ message: "Email already in use" });
+      return res.status(400).json({
+        message: field === "mobile" ? "Mobile number already in use" : "Email already in use",
+      });
     }
 
-    // Update email
-    user.email = normalizedNewValue;
+    if (field === "mobile") {
+      user.mobile = normalizedNewValue;
+    } else {
+      user.email = normalizedNewValue;
+    }
+
     clearUserOtp(user);
     await user.save();
 
     res.json({
-      message: "Email updated successfully",
+      message: field === "mobile" ? "Mobile updated successfully" : "Email updated successfully",
       user: sanitizeUser(user),
     });
   } catch (err) {
     res
       .status(500)
-      .json({ message: "Failed to update email", error: err.message });
+      .json({ message: "Failed to update profile", error: err.message });
   }
 });
 
@@ -924,7 +983,7 @@ router.post("/orders", authMiddleware, async (req, res) => {
       console.error("Vendor notification email failed:", emailErr);
     }
 
-    // ✅ SEND USER ORDER CONFIRMATION EMAIL & SMS
+    // ✅ SEND USER ORDER CONFIRMATION EMAIL ONLY
     try {
       const deliveryEstimateString = new Date(
         deliveryEstimate.estimatedDeliveryDate,
@@ -946,8 +1005,8 @@ router.post("/orders", authMiddleware, async (req, res) => {
         ).catch((err) => console.error("❌ Order confirmation email failed:", err.message));
       }
 
-      // Per configuration, non-OTP notifications are sent via email only.
-      // SMS notifications for order confirmations are disabled.
+      // ✅ EMAIL-ONLY POLICY: All non-OTP notifications sent to customers via email
+      // SMS is only used for OTP verification via MessageCentral API
     } catch (userNotificationErr) {
       console.error("User notification failed:", userNotificationErr.message);
     }
@@ -1197,7 +1256,7 @@ router.patch(
           );
         }
 
-        // SMS notifications for order cancellation are disabled; only email is used.
+        // ✅ EMAIL-ONLY: Order cancellation notifications sent via email only
       } catch (notificationErr) {
         console.error(
           "Order cancellation notification failed:",

@@ -3,41 +3,37 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-// ✅ Primary: Gmail with port 587 and STARTTLS (works better on hosting)
+// ✅ Hostinger SMTP Configuration with support@verdora.in
 const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false, // Use STARTTLS instead of SSL
+  host: process.env.EMAIL_HOST || "smtpro.verdora.in",
+  port: process.env.EMAIL_PORT || 465,
+  secure: true, // Use SSL
   auth: {
-    user: "verdora.info@gmail.com",
-    pass: "zilnarnrtqqmzeaq",
+    user: process.env.EMAIL_USER || "support@verdora.in",
+    pass: process.env.EMAIL_PASS,
   },
   tls: {
-    rejectUnauthorized: false // For hosting compatibility
+    rejectUnauthorized: false,
   },
-  // ✅ Force IPv4 connections (fixes Render IPv6 issues)
   family: 4,
-  // ✅ Connection settings for containerized environments
-  connectionTimeout: 30000, // 30 seconds
-  socketTimeout: 30000, // 30 seconds
-  // ✅ Debug logging for troubleshooting
+  connectionTimeout: 30000,
+  socketTimeout: 30000,
   debug: process.env.NODE_ENV === 'development',
   logger: process.env.NODE_ENV === 'development'
 });
 
-// ✅ Fallback: Gmail with port 465 and SSL (alternative for hosting)
+// ✅ Fallback transporter with alternative settings
 const fallbackTransporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 465,
-  secure: true, // Use SSL
+  host: process.env.EMAIL_HOST || "smtpro.verdora.in",
+  port: process.env.EMAIL_PORT_ALT || 587,
+  secure: false,
   auth: {
-    user: "verdora.info@gmail.com",
-    pass: "zilnarnrtqqmzeaq",
+    user: process.env.EMAIL_USER || "support@verdora.in",
+    pass: process.env.EMAIL_PASS,
   },
   tls: {
-    rejectUnauthorized: false
+    rejectUnauthorized: false,
   },
-  // ✅ Force IPv4 connections
   family: 4,
   connectionTimeout: 30000,
   socketTimeout: 30000,
@@ -47,59 +43,53 @@ const fallbackTransporter = nodemailer.createTransport({
 
 // ✅ Verify transporter on startup
 export const verifyEmailTransporter = async () => {
-  console.log("🔍 Verifying email transporters...");
+  console.log("🔍 Verifying Hostinger email transporter (support@verdora.in)...");
 
-  // Test primary transporter (port 587)
+  // Test primary transporter (port 465 SSL)
   try {
     await transporter.verify();
-    console.log("✅ Primary email transporter verified successfully (Port 587 STARTTLS)");
+    console.log("✅ Primary email transporter verified successfully (Port 465 SSL - Hostinger)");
   } catch (err) {
     console.error("❌ Primary email transporter verification failed:", err.message);
   }
 
-  // Test fallback transporter (port 465)
+  // Test fallback transporter (port 587)
   try {
     await fallbackTransporter.verify();
-    console.log("✅ Fallback email transporter verified successfully (Port 465 SSL)");
+    console.log("✅ Fallback email transporter verified successfully (Port 587 STARTTLS - Hostinger)");
   } catch (err) {
     console.error("❌ Fallback email transporter verification failed:", err.message);
   }
 
-  console.log("⚠️  Solutions if both fail:");
-  console.log("   1. Check EMAIL_USER and EMAIL_PASS in .env");
-  console.log("   2. Enable 'Less Secure App Access' for Gmail: https://myaccount.google.com/lesssecureapps");
-  console.log("   3. Or use an App Password: https://support.google.com/accounts/answer/185833");
-  console.log("   4. Alternative: Use SendGrid (recommended for production)");
-  console.log("   5. For Render: Check if SMTP ports are blocked in your plan");
+  console.log("📧 Email Configuration: support@verdora.in via Hostinger SMTP");
 
-  return true; // Always return true to not break startup
+  return true;
 };
 // ✅ Generic email send helper with retry logic and fallback transporter
 const sendEmailWithRetry = async (mailOptions, maxRetries = 3) => {
   let lastError;
 
+  // Set default 'from' if not specified
+  if (!mailOptions.from) {
+    mailOptions.from = process.env.EMAIL_FROM || "support@verdora.in";
+  }
+
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      // On the last attempt, try the fallback transporter (port 465 SSL)
+      // On the last attempt, try the fallback transporter (port 587)
       const currentTransporter = attempt === maxRetries ? fallbackTransporter : transporter;
-      const portInfo = attempt === maxRetries ? '465 (SSL)' : '587 (STARTTLS)';
+      const portInfo = attempt === maxRetries ? '587 (STARTTLS)' : '465 (SSL)';
 
       const result = await currentTransporter.sendMail(mailOptions);
       console.log(`✅ Email sent successfully to ${mailOptions.to} using port ${portInfo} (Attempt ${attempt})`);
       return result;
     } catch (err) {
       lastError = err;
-      const portInfo = attempt === maxRetries ? '465 (SSL)' : '587 (STARTTLS)';
+      const portInfo = attempt === maxRetries ? '587 (STARTTLS)' : '465 (SSL)';
       console.error(`❌ Attempt ${attempt} failed for ${mailOptions.to} using port ${portInfo}:`, err.message);
 
-      // Check for specific network errors that indicate IPv6/IPv4 issues
-      if (err.code === 'ENETUNREACH' || err.code === 'EHOSTUNREACH') {
-        console.error(`⚠️  Network connectivity issue detected. This may be due to IPv6 blocking in containerized environments.`);
-        console.error(`💡 Consider using SendGrid or another SMTP provider for better reliability.`);
-      }
-
       if (attempt < maxRetries) {
-        const delay = 1000 * attempt; // Exponential backoff: 1s, 2s, 3s
+        const delay = 1000 * attempt;
         console.log(`⏳ Retrying in ${delay}ms...`);
         await new Promise(resolve => setTimeout(resolve, delay));
       }
@@ -109,19 +99,101 @@ const sendEmailWithRetry = async (mailOptions, maxRetries = 3) => {
   throw new Error(`Failed after ${maxRetries} attempts: ${lastError?.message}`);
 };
 
+// ✅ Helper functions for email formatting
+const escapeHtml = (text) => {
+  if (!text) return "";
+  const map = {
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;",
+  };
+  return String(text).replace(/[&<>"']/g, (char) => map[char]);
+};
+
+const formatCurrency = (amount) => {
+  if (!amount) return "₹0.00";
+  return `₹${Number(amount).toFixed(2)}`;
+};
+
+const formatItems = (items = []) => {
+  if (!Array.isArray(items) || items.length === 0) return "";
+  
+  const itemsList = items
+    .map(
+      (item) =>
+        `<tr>
+          <td>${escapeHtml(item.productName || item.name || "Item")}</td>
+          <td>Qty: ${item.quantity || 1}</td>
+          <td>${formatCurrency(item.price || item.productPrice)}</td>
+        </tr>`
+    )
+    .join("");
+
+  return `<table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+    <thead style="background-color: #f0f0f0;">
+      <tr>
+        <th style="text-align: left; padding: 8px;">Product</th>
+        <th style="text-align: left; padding: 8px;">Quantity</th>
+        <th style="text-align: right; padding: 8px;">Price</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${itemsList}
+    </tbody>
+  </table>`;
+};
+
+const layout = (title, content) => `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body { font-family: Arial, sans-serif; color: #333; line-height: 1.6; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; }
+    .header { background-color: #22c55e; color: white; padding: 20px; border-radius: 5px; margin-bottom: 20px; }
+    .header h1 { margin: 0; font-size: 24px; }
+    .content { background-color: white; padding: 20px; border-radius: 5px; border: 1px solid #e0e0e0; margin-bottom: 20px; }
+    .footer { text-align: center; color: #888; font-size: 12px; margin-top: 20px; }
+    table { width: 100%; border-collapse: collapse; }
+    th { background-color: #f0f0f0; padding: 10px; text-align: left; font-weight: bold; }
+    td { padding: 10px; border-bottom: 1px solid #e0e0e0; }
+    a { color: #22c55e; text-decoration: none; }
+    .button { display: inline-block; background-color: #22c55e; color: white; padding: 10px 20px; border-radius: 5px; text-decoration: none; margin: 10px 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Verdora</h1>
+      <p>${escapeHtml(title)}</p>
+    </div>
+    <div class="content">
+      ${content}
+    </div>
+    <div class="footer">
+      <p>© 2026 Verdora. All rights reserved.</p>
+      <p>If you have any questions, contact us at support@verdora.in</p>
+    </div>
+  </div>
+</body>
+</html>
+`;
+
 // ✅ Send OTP for verification with retry logic
 export const sendOtpEmail = async (email, otp) => {
   return sendEmailWithRetry({
-    from: process.env.EMAIL_USER,
     to: email,
-    subject: "Your Verdora OTP",
+    subject: "Your Verdora OTP - Valid for 10 minutes",
     html: `
       <h2>Verdora - Verification Code</h2>
       <p>Your One-Time Password (OTP) is:</p>
-      <h1 style="color: #22c55e; font-size: 32px; font-weight: bold;">${otp}</h1>
+      <h1 style="color: #22c55e; font-size: 32px; font-weight: bold; letter-spacing: 2px;">${otp}</h1>
       <p>This OTP is valid for 10 minutes.</p>
-      <p>If you didn't request this, please ignore this email.</p>
-      <hr>
+      <p style="color: #666;">If you didn't request this OTP, please ignore this email.</p>
+      <hr style="border: none; border-top: 1px solid #e0e0e0;">
       <p style="color: #888; font-size: 12px;">© 2026 Verdora. All rights reserved.</p>
     `,
   });

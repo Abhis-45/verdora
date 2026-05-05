@@ -77,7 +77,8 @@ export const sendOtp = async (
  */
 export const verifyOtp = async (
   identifier: string,
-  otp: string
+  otp: string,
+  verificationId?: string
 ): Promise<VerifyOtpResponse> => {
   try {
     const BACKEND_URL =
@@ -93,6 +94,7 @@ export const verifyOtp = async (
       body: JSON.stringify({
         identifier,
         otp,
+        verificationId,
       }),
     });
 
@@ -152,5 +154,43 @@ export const otpLogin = async (identifier: string): Promise<VerifyOtpResponse> =
  * @returns Promise with send status
  */
 export const resendOtp = async (identifier: string): Promise<SendOtpResponse> => {
-  return sendOtp(identifier);
+  try {
+    const BACKEND_URL =
+      typeof window !== "undefined"
+        ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
+        : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+
+    const response = await fetch(`${BACKEND_URL}/api/auth/resend-otp`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ identifier }),
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      return {
+        success: true,
+        message: data.message || "OTP sent successfully",
+        provider: data.provider,
+        verificationId: data.verificationId || data.requestId,
+      };
+    }
+
+    return {
+      success: false,
+      error: data.message || "Failed to resend OTP",
+    };
+  } catch (error: unknown) {
+    console.error("Resend OTP Error:", error);
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Network error while resending OTP",
+    };
+  }
 };

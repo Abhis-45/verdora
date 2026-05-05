@@ -30,6 +30,7 @@ export default function OtpVerification({
   const [messageType, setMessageType] = useState<"success" | "error">("error");
   const [countdown, setCountdown] = useState(0);
   const [canResend, setCanResend] = useState(false);
+  const [verificationId, setVerificationId] = useState("");
 
   // Countdown timer for resend
   useEffect(() => {
@@ -47,6 +48,7 @@ export default function OtpVerification({
     if (isOpen) {
       setOtp("");
       setMessage("");
+      setVerificationId("");
       setCountdown(30);
       setCanResend(false);
     }
@@ -71,6 +73,7 @@ export default function OtpVerification({
       const data = await res.json();
 
       if (res.ok) {
+        setVerificationId(data.verificationId || "");
         setMessage("OTP resent successfully");
         setMessageType("success");
         setCountdown(30);
@@ -112,6 +115,7 @@ export default function OtpVerification({
       const requestBody = {
         identifier,
         otp,
+        verificationId: verificationId || undefined,
       };
 
       const res = await fetch(`${BACKEND_URL}/api/auth/verify-otp`, {

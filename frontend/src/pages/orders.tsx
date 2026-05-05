@@ -7,7 +7,15 @@ import { useRouter } from "next/router";
 import Layout from "@/components/common/layout";
 import { useCart } from "@/context/CartContext";
 import { useUser } from "@/context/UserContext";
-import { ArrowLeftIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import {
+  ArrowLeftIcon,
+  CheckCircleIcon,
+  ClipboardDocumentListIcon,
+  CurrencyRupeeIcon,
+  ShoppingBagIcon,
+  TruckIcon,
+  XMarkIcon,
+} from "@heroicons/react/24/outline";
 import Head from "next/head";
 import Spinner from "@/components/shared/Spinner";
 import RefreshButton from "@/components/shared/RefreshButton";
@@ -323,6 +331,26 @@ export default function OrdersPage() {
     return ORDER_FLOW.indexOf(status) + 1;
   }, [selectedOrder]);
 
+  const orderStats = useMemo(() => {
+    const totalSpent = orders.reduce(
+      (sum, order) => sum + Number(order.total || 0),
+      0,
+    );
+    const delivered = orders.filter(
+      (order) => order.status === "delivered",
+    ).length;
+    const inTransit = orders.filter((order) =>
+      ["accepted", "shipped"].includes(order.status),
+    ).length;
+
+    return {
+      totalOrders: orders.length,
+      delivered,
+      inTransit,
+      totalSpent,
+    };
+  }, [orders]);
+
   if (loading) {
     return (
       <Layout>
@@ -366,31 +394,79 @@ export default function OrdersPage() {
         <title>Order History | Verdora</title>
       </Head>
       <Layout>
-        <div className="mx-auto max-w-5xl p-4 sm:p-6">
-          <div className="mb-6 flex flex-wrap items-center gap-2 sm:gap-4">
+        <div className="mx-auto max-w-7xl px-3 py-4 sm:px-6 lg:px-8">
+          <div className="mb-5 flex flex-wrap items-center gap-2 sm:gap-4">
             <button
               onClick={() => router.back()}
-              className="flex items-center gap-1 sm:gap-2 font-semibold text-green-600 transition hover:text-green-700 whitespace-nowrap text-sm sm:text-base"
+              className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-emerald-100 bg-white px-3 text-sm font-semibold text-emerald-700 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50"
               aria-label="Go back"
             >
-              <ArrowLeftIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+              <ArrowLeftIcon className="h-4 w-4" />
               <span className="hidden sm:inline">Back</span>
             </button>
-            <div className="text-xs sm:text-sm">
+            <div className="min-w-0 text-xs sm:text-sm">
               <Breadcrumb />
             </div>
           </div>
 
-          <div className="mb-8 flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <h1 className="text-3xl font-bold text-green-900">My Orders</h1>
-              <p className="mt-1 text-sm text-gray-600">
-                Track delivery, write reviews after delivery, and request a
-                return or replacement within 3 days.
-              </p>
+          <section className="mb-6 overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-900 via-emerald-700 to-teal-700 text-white shadow-xl shadow-emerald-900/15">
+            <div className="flex flex-col gap-5 p-5 sm:p-6 lg:flex-row lg:items-end lg:justify-between lg:p-8">
+              <div className="max-w-2xl">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-100">
+                  Verdora orders
+                </p>
+                <h1 className="mt-2 text-2xl font-bold sm:text-3xl lg:text-4xl">
+                  My Orders
+                </h1>
+                <p className="mt-3 text-sm leading-6 text-emerald-50">
+                  Track delivery, review delivered products, and manage return
+                  or replacement requests from one responsive view.
+                </p>
+              </div>
+              <RefreshButton onClick={loadOrders} />
             </div>
-            <RefreshButton onClick={loadOrders} />
-          </div>
+          </section>
+
+          {orders.length > 0 && (
+            <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <div className="rounded-xl border border-emerald-100 bg-white p-4 shadow-sm">
+                <ClipboardDocumentListIcon className="h-6 w-6 text-emerald-600" />
+                <p className="mt-3 text-xs font-semibold uppercase text-slate-500">
+                  Total orders
+                </p>
+                <p className="mt-1 text-2xl font-bold text-slate-950">
+                  {orderStats.totalOrders}
+                </p>
+              </div>
+              <div className="rounded-xl border border-blue-100 bg-white p-4 shadow-sm">
+                <TruckIcon className="h-6 w-6 text-blue-600" />
+                <p className="mt-3 text-xs font-semibold uppercase text-slate-500">
+                  In transit
+                </p>
+                <p className="mt-1 text-2xl font-bold text-slate-950">
+                  {orderStats.inTransit}
+                </p>
+              </div>
+              <div className="rounded-xl border border-green-100 bg-white p-4 shadow-sm">
+                <CheckCircleIcon className="h-6 w-6 text-green-600" />
+                <p className="mt-3 text-xs font-semibold uppercase text-slate-500">
+                  Delivered
+                </p>
+                <p className="mt-1 text-2xl font-bold text-slate-950">
+                  {orderStats.delivered}
+                </p>
+              </div>
+              <div className="rounded-xl border border-amber-100 bg-white p-4 shadow-sm">
+                <CurrencyRupeeIcon className="h-6 w-6 text-amber-600" />
+                <p className="mt-3 text-xs font-semibold uppercase text-slate-500">
+                  Total spent
+                </p>
+                <p className="mt-1 text-xl font-bold text-slate-950 sm:text-2xl">
+                  Rs. {orderStats.totalSpent.toFixed(2)}
+                </p>
+              </div>
+            </div>
+          )}
 
           {error ? (
             <div className="mx-auto max-w-md py-12 text-center">
@@ -405,38 +481,41 @@ export default function OrdersPage() {
               </div>
             </div>
           ) : orders.length === 0 ? (
-            <div className="py-20 text-center">
-              <h2 className="mb-4 text-2xl font-bold text-green-900 sm:text-3xl">
+            <div className="rounded-2xl border border-dashed border-emerald-200 bg-white px-4 py-16 text-center shadow-sm">
+              <ShoppingBagIcon className="mx-auto h-12 w-12 text-emerald-500" />
+              <h2 className="mt-4 text-2xl font-bold text-green-900 sm:text-3xl">
                 No Orders Yet
               </h2>
-              <p className="mb-6 text-gray-600">
+              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-gray-600">
                 You have not placed any orders yet.
               </p>
               <button
                 onClick={() => router.push("/products")}
-                className="rounded-lg bg-green-600 px-6 py-2 font-semibold text-white transition hover:bg-green-700"
+                className="mt-6 rounded-lg bg-green-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-green-700"
               >
                 Start Shopping
               </button>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="grid gap-4 lg:grid-cols-2">
               {orders.map((order) => {
                 const reviewItem = firstReviewableItem(order);
                 const returnableItem = firstReturnableItem(order);
+                const totalItems =
+                  (order.items?.length || 0) + (order.services?.length || 0);
 
                 return (
                   <div
                     key={order._id}
-                    className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm transition hover:shadow-md"
+                    className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-lg"
                   >
                     <button
                       type="button"
                       onClick={() => setSelectedOrder(order)}
                       className="w-full text-left"
                     >
-                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                        <div className="flex gap-2">
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-[auto_minmax(0,1fr)]">
+                        <div className="flex -space-x-3">
                           {order.items.slice(0, 3).map((item, index) => (
                             <button
                               key={`${item.id}-${index}`}
@@ -444,7 +523,7 @@ export default function OrdersPage() {
                               onClick={() =>
                                 router.push(`/productpage/${item.id}`)
                               }
-                              className="h-16 w-16 shrink-0 overflow-hidden rounded bg-gray-100 cursor-pointer transition hover:shadow-md hover:ring-2 hover:ring-blue-300"
+                              className="h-16 w-16 shrink-0 cursor-pointer overflow-hidden rounded-xl border-2 border-white bg-gray-100 shadow-sm transition hover:z-10 hover:shadow-md hover:ring-2 hover:ring-emerald-300"
                               title="View product"
                             >
                               {item.image ? (
@@ -461,19 +540,19 @@ export default function OrdersPage() {
                             </button>
                           ))}
                           {order.services && order.services.length > 0 && (
-                            <div className="h-16 w-16 shrink-0 rounded bg-purple-100 flex items-center justify-center text-purple-600 font-semibold text-xs text-center px-1" title="Service booking">
+                            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border-2 border-white bg-purple-100 px-1 text-center text-xs font-semibold text-purple-700 shadow-sm" title="Service booking">
                               📋<br/>Service
                             </div>
                           )}
                         </div>
 
-                        <div>
-                          <div className="text-sm font-semibold text-gray-900">
+                        <div className="min-w-0">
+                          <div className="truncate text-base font-bold text-slate-950">
                             {order.items?.[0]?.title || order.services?.[0]?.packageName || "Items"}
                           </div>
-                          <div className="mt-1 text-xs text-gray-600">
-                            {(order.items?.length || 0) + (order.services?.length || 0)} item
-                            {(order.items?.length || 0) + (order.services?.length || 0) !== 1 ? "s" : ""}
+                          <div className="mt-1 text-xs text-gray-500">
+                            Order #{order._id.slice(-6)} · {totalItems} item
+                            {totalItems !== 1 ? "s" : ""}
                             {order.services && order.services.length > 0 && (
                               <span className="ml-1 inline-block">
                                 (incl. {order.services.length} service{order.services.length !== 1 ? 's' : ''})
@@ -481,7 +560,7 @@ export default function OrdersPage() {
                             )}
                           </div>
                           {order.deliveryEstimate?.estimatedDeliveryDate && (
-                            <div className="mt-1 text-xs text-blue-700">
+                            <div className="mt-2 inline-flex rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700">
                               ETA{" "}
                               {formatDeliveryDate(
                                 order.deliveryEstimate.estimatedDeliveryDate,
@@ -490,7 +569,7 @@ export default function OrdersPage() {
                           )}
                         </div>
 
-                        <div>
+                        <div className="rounded-xl bg-emerald-50 px-3 py-2">
                           <div className="text-lg font-bold text-green-900">
                             Rs. {(order.total || 0).toFixed(2)}
                           </div>
@@ -505,7 +584,7 @@ export default function OrdersPage() {
                         </div>
 
                         <div className="text-left sm:text-right">
-                          <div className="text-xs text-gray-600">
+                          <div className="text-xs font-medium text-gray-600">
                             {formatDate(order.date)}
                           </div>
                           <span className="mt-2 inline-block text-sm font-semibold text-green-600">
@@ -516,12 +595,12 @@ export default function OrdersPage() {
                     </button>
 
                     {(reviewItem || returnableItem) && (
-                      <div className="mt-4 flex flex-wrap gap-2 border-t border-gray-100 pt-4">
+                      <div className="mt-4 flex flex-col gap-2 border-t border-gray-100 pt-4 min-[420px]:flex-row min-[420px]:flex-wrap">
                         {reviewItem && (
                           <button
                             type="button"
                             onClick={() => openReviewModal(order, reviewItem)}
-                            className="rounded-lg bg-blue-100 px-3 py-2 text-xs font-semibold text-blue-700 transition hover:bg-blue-200"
+                            className="rounded-lg bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 transition hover:bg-blue-100"
                           >
                             Write Review
                           </button>
@@ -537,7 +616,7 @@ export default function OrdersPage() {
                                   "returned",
                                 )
                               }
-                              className="rounded-lg bg-red-100 px-3 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-200"
+                              className="rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-100"
                             >
                               Return Item
                             </button>
@@ -550,7 +629,7 @@ export default function OrdersPage() {
                                   "replaced",
                                 )
                               }
-                              className="rounded-lg bg-purple-100 px-3 py-2 text-xs font-semibold text-purple-700 transition hover:bg-purple-200"
+                              className="rounded-lg bg-purple-50 px-3 py-2 text-xs font-semibold text-purple-700 transition hover:bg-purple-100"
                             >
                               Replace Item
                             </button>
@@ -570,23 +649,30 @@ export default function OrdersPage() {
               onClick={() => setSelectedOrder(null)}
             >
               <div
-                className="app-modal-card w-full max-w-3xl rounded-2xl bg-white shadow-2xl"
+                className="app-modal-card w-full max-w-5xl overflow-hidden rounded-2xl bg-white shadow-2xl"
                 onClick={(event) => event.stopPropagation()}
               >
-                <div className="sticky top-0 flex items-center justify-between border-b border-gray-200 bg-white p-4 sm:p-6">
-                  <h2 className="text-lg font-bold text-green-900 sm:text-xl">
-                    Order #{selectedOrder._id.slice(-6)}
-                  </h2>
+                <div className="sticky top-0 z-10 flex items-center justify-between border-b border-emerald-100 bg-white/95 p-4 backdrop-blur sm:p-6">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
+                      Order details
+                    </p>
+                    <h2 className="mt-1 text-lg font-bold text-green-900 sm:text-xl">
+                      Order #{selectedOrder._id.slice(-6)}
+                    </h2>
+                  </div>
                   <button
                     onClick={() => setSelectedOrder(null)}
-                    className="text-gray-500 transition hover:text-gray-700"
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-gray-500 transition hover:bg-red-50 hover:text-red-600"
+                    aria-label="Close order details"
                   >
                     <XMarkIcon className="h-6 w-6" />
                   </button>
                 </div>
 
-                <div className="space-y-6 p-4 sm:p-6">
-                  <div className="rounded-lg border border-amber-100 bg-amber-50 p-4">
+                <div className="grid gap-5 p-4 sm:p-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+                  <div className="space-y-5">
+                  <div className="rounded-xl border border-amber-100 bg-amber-50 p-4">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div>
                         <p className="text-sm font-semibold text-gray-800">
@@ -623,7 +709,7 @@ export default function OrdersPage() {
                     )}
                   </div>
 
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-3 gap-3 rounded-xl border border-slate-100 bg-white p-3 shadow-sm">
                     {ORDER_FLOW.map((step, index) => {
                       const active = index < orderProgress;
                       return (
@@ -645,7 +731,7 @@ export default function OrdersPage() {
                     })}
                   </div>
 
-                  <div className="rounded-lg bg-gray-50 p-4">
+                  <div className="rounded-xl bg-gray-50 p-4">
                     <h3 className="mb-3 font-bold text-gray-900">
                       Customer Information
                     </h3>
@@ -972,7 +1058,10 @@ export default function OrdersPage() {
                     </div>
                   )}
 
-                  <div className="rounded-lg bg-gray-50 p-4">
+                  </div>
+
+                  <div className="space-y-5">
+                  <div className="rounded-xl bg-gray-50 p-4">
                     <h3 className="mb-3 font-bold text-gray-900">
                       Order Summary
                     </h3>
@@ -1011,7 +1100,7 @@ export default function OrdersPage() {
                     </div>
                   </div>
 
-                  <div className="space-y-3">
+                  <div className="space-y-3 rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
                     {selectedOrder.status === "accepted" && (
                       <button
                         onClick={() => handleCancelOrder(selectedOrder._id)}
@@ -1041,6 +1130,7 @@ export default function OrdersPage() {
                       Close
                     </button>
                   </div>
+                </div>
                 </div>
               </div>
             </div>
