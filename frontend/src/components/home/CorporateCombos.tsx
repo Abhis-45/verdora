@@ -31,8 +31,8 @@ export default function CorporateCombos({
         try {
           const BACKEND_URL =
             typeof window !== "undefined"
-              ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-              : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+              ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in"
+              : process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
           const res = await fetch(`${BACKEND_URL}/api/products/featured/corporate?limit=8`);
 
           if (!res.ok) {
@@ -122,3 +122,4 @@ export default function CorporateCombos({
     </section>
   );
 }
+

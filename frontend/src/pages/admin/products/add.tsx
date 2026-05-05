@@ -62,8 +62,8 @@ export default function AddProduct() {
       try {
         const BACKEND_URL =
           typeof window !== "undefined"
-            ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-            : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+            ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in"
+            : process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
         const response = await fetch(`${BACKEND_URL}/api/products`);
         if (!response.ok) return;
 
@@ -146,8 +146,8 @@ export default function AddProduct() {
       const token = localStorage.getItem("adminToken");
       const BACKEND_URL =
         typeof window !== "undefined"
-          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
       const response = await fetch(`${BACKEND_URL}/api/admin/manage/products`, {
         method: "POST",
         headers: {

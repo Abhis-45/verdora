@@ -82,8 +82,8 @@ export default function DynamicTestimonials() {
       // Fetch trending products first to get product IDs
       const BACKEND_URL =
         typeof window !== "undefined"
-          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+            ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in"
+            : process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
       const trendingResponse = await fetch(
         `${BACKEND_URL}/api/products/featured/trending?limit=5`,
         {

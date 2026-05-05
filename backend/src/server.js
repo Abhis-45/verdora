@@ -25,9 +25,7 @@ const app = express();
 // Configure CORS to allow frontend origin
 const allowedOrigins = [
   "http://localhost:3000",
-  "http://localhost:3001",
-  "https://verdora-two.vercel.app",
-  "https://verdora-3ahq50zb3-abhishe-kumars-projects.vercel.app",
+  "https://verdora.in",
   "https://www.verdora.in",
   process.env.FRONTEND_URL_1,
   process.env.FRONTEND_URL_2,

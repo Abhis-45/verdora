@@ -91,9 +91,8 @@ export default function ServicesList({
     try {
       const BACKEND_URL =
         typeof window !== "undefined"
-          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
-
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
       const payload = {
         serviceSlug: selectedService.slug,
         packageId: selectedPackage.id || selectedPackage._id,

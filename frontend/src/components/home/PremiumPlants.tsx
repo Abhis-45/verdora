@@ -39,8 +39,8 @@ export default function PremiumPlants({
         try {
           const BACKEND_URL =
             typeof window !== "undefined"
-              ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-              : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+              ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in"
+              : process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
           const premiumTag = encodeURIComponent("premium");
           const res = await fetch(`${BACKEND_URL}/api/products?tag=${premiumTag}&limit=8`);
 

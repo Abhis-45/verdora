@@ -101,7 +101,7 @@ export function useServices() {
         setError(null);
 
         const backendUrl =
-          process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+          process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
 
         const response = await fetch(`${backendUrl}/api/services`, {
           signal: AbortSignal.timeout(5000),

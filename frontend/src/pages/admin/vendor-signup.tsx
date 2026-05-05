@@ -38,7 +38,7 @@ export default function AdminVendorSignup() {
   // Get backend URL
   useEffect(() => {
     if (typeof window !== "undefined") {
-      setBackendUrl(process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com");
+      setBackendUrl(process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in");
     }
   }, []);
 

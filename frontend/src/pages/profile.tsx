@@ -119,8 +119,8 @@ export default function ProfilePage() {
 
       const BACKEND_URL =
         typeof window !== "undefined"
-          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
       const fetchPromise = fetch(`${BACKEND_URL}/api/profile`, {
         headers: { Authorization: `Bearer ${authToken}` },
       });
@@ -199,8 +199,8 @@ export default function ProfilePage() {
     try {
       const BACKEND_URL =
         typeof window !== "undefined"
-          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
       const res = await fetch(`${BACKEND_URL}/api/profile/update-field`, {
         method: "PATCH",
         headers: {
@@ -237,8 +237,8 @@ export default function ProfilePage() {
 
       const BACKEND_URL =
         typeof window !== "undefined"
-          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
       const url = `${BACKEND_URL}${endpoint}`;
 
       const res = await fetch(url, {
@@ -286,8 +286,8 @@ export default function ProfilePage() {
     try {
       const BACKEND_URL =
         typeof window !== "undefined"
-          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
       const res = await fetch(`${BACKEND_URL}/api/profile/address/${addressId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
@@ -314,8 +314,8 @@ export default function ProfilePage() {
     try {
       const BACKEND_URL =
         typeof window !== "undefined"
-          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
       const res = await fetch(`${BACKEND_URL}/api/profile/address/${addressId}`, {
         method: "PATCH",
         headers: {
@@ -412,8 +412,8 @@ export default function ProfilePage() {
     try {
       const BACKEND_URL =
         typeof window !== "undefined"
-          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
       const res = await fetch(`${BACKEND_URL}/api/profile/update-password`, {
         method: "PATCH",
         headers: {
@@ -458,8 +458,8 @@ export default function ProfilePage() {
 
       const BACKEND_URL =
         typeof window !== "undefined"
-          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
       const res = await fetch(`${BACKEND_URL}/api/profile/send-otp`, {
         method: "POST",
         headers: {
@@ -497,8 +497,8 @@ export default function ProfilePage() {
 
       const BACKEND_URL =
         typeof window !== "undefined"
-          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
 
       const res = await fetch(`${BACKEND_URL}/api/profile/verify-otp-update`, {
         method: "PATCH",
@@ -541,8 +541,8 @@ export default function ProfilePage() {
     try {
       const BACKEND_URL =
         typeof window !== "undefined"
-          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
 
       const res = await fetch(`${BACKEND_URL}/api/profile/delete-account`, {
         method: "POST",

@@ -38,8 +38,8 @@ export default function TopCategories() {
 
       const BACKEND_URL =
         typeof window !== "undefined"
-          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
       const fetchPromise = fetch(`${BACKEND_URL}/api/products/featured/categories`);
       const response = (await Promise.race([
         fetchPromise,

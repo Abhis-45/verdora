@@ -25,7 +25,7 @@ export type ApiPostalResponse = {
 };
 
 const getBackendUrl = () =>
-  process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+  process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
 
 /**
  * Fetch location details from pincode using Postal Pincode API

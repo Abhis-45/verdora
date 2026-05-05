@@ -20,8 +20,8 @@ export default function Footer() {
     try {
       const BACKEND_URL =
         typeof window !== "undefined"
-          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
       const res = await fetch(`${BACKEND_URL}/api/subscribe`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -211,3 +211,4 @@ export default function Footer() {
     </footer>
   );
 }
+

@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   /* config options here */
   devIndicators: false,
-  allowedDevOrigins: ["http://localhost:3000", "https://verdora-two.vercel.app"],
+  allowedDevOrigins: ["http://localhost:3000", "https://verdora.in"],
   onDemandEntries: {
     maxInactiveAge: 60 * 1000,
     pagesBufferLength: 5,

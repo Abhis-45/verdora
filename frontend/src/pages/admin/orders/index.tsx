@@ -20,8 +20,8 @@ export default function OrdersPage() {
     try {
       const BACKEND_URL =
         typeof window !== "undefined"
-          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
       const response = await fetch(`${BACKEND_URL}/api/admin/manage/orders`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -111,3 +111,4 @@ export default function OrdersPage() {
     </div>
   );
 }
+

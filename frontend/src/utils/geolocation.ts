@@ -18,7 +18,7 @@ export type ReverseGeocodeResult = {
 };
 
 const getBackendUrl = () =>
-  process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+  process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
 
 const normalizeIndianPostcode = (value?: string) => {
   const normalized = value?.replace(/\D/g, "").slice(0, 6) || "";

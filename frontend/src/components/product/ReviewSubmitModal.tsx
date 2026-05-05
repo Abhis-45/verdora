@@ -64,13 +64,13 @@ export default function ReviewSubmitModal({
       const uploadedImages = await uploadImages({
         files: images.map((image) => image.file),
         token,
-        endpoint: "https://verdora.onrender.com/api/reviews/upload-images",
+        endpoint: "https://backend.verdora.in/api/reviews/upload-images",
       });
 
       const BACKEND_URL =
         typeof window !== "undefined"
-          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
       const response = await fetch(`${BACKEND_URL}/api/reviews`, {
         method: "POST",
         headers: {
@@ -302,3 +302,4 @@ export default function ReviewSubmitModal({
     </div>
   );
 }
+

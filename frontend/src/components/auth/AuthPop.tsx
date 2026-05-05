@@ -33,7 +33,7 @@ type AuthUser = {
 };
 
 const BACKEND_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+  process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
 
 const validateEmail = (email: string): boolean => {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);

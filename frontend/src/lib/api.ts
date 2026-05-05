@@ -36,8 +36,8 @@ export interface Vendor {
 
 // Get backend URL from environment or use direct API endpoint
 const BACKEND_URL = typeof window !== "undefined" 
-  ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-  : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+  ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in"
+  : process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
 
 const BASE_URL = `${BACKEND_URL}/api`;
 const DEFAULT_TIMEOUT = 10000;

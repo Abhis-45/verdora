@@ -32,8 +32,8 @@ export default function VendorLogin() {
     try {
       const BACKEND_URL =
         typeof window !== "undefined"
-          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
       const res = await fetch(`${BACKEND_URL}/api/admin/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -191,7 +191,7 @@ export default function VendorLogin() {
       <PasswordResetModal
         isOpen={isResetModalOpen}
         onClose={() => setIsResetModalOpen(false)}
-        backendUrl={typeof window !== "undefined" ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com" : "https://verdora.onrender.com"}
+        backendUrl={typeof window !== "undefined" ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in" : "https://backend.verdora.in"}
       />
     </>
   );

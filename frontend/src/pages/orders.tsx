@@ -104,8 +104,8 @@ export default function OrdersPage() {
 
       const BACKEND_URL =
         typeof window !== "undefined"
-          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
 
       const response = (await Promise.race([
         fetch(`${BACKEND_URL}/api/profile/orders`, {
@@ -298,8 +298,8 @@ export default function OrdersPage() {
     try {
       const BACKEND_URL =
         typeof window !== "undefined"
-          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
 
       const response = await fetch(`${BACKEND_URL}/api/profile/orders/${orderId}/cancel`, {
         method: "PATCH",
@@ -1284,3 +1284,4 @@ export default function OrdersPage() {
     </>
   );
 }
+

@@ -95,9 +95,9 @@ export default function ProductDetailPage() {
         const BACKEND_URL =
           typeof window !== "undefined"
             ? process.env.NEXT_PUBLIC_BACKEND_URL ||
-              "https://verdora.onrender.com"
+              "https://backend.verdora.in"
             : process.env.NEXT_PUBLIC_BACKEND_URL ||
-              "https://verdora.onrender.com";
+              "https://backend.verdora.in";
         const response = await fetch(`${BACKEND_URL}/api/products/${id}`);
         if (!response.ok) {
           router.push("/products");

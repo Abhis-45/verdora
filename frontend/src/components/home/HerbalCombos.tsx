@@ -37,8 +37,8 @@ export default function HerbalCombos({
           // ✅ Fetch products with herbal/combo tag
           const BACKEND_URL =
             typeof window !== "undefined"
-              ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-              : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+              ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in"
+              : process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
           const res = await fetch(
             `${BACKEND_URL}/api/products/featured/by-characteristics?characteristics=herbal,combo&limit=8`,
           );

@@ -24,8 +24,8 @@ export default function BulkOrderForm() {
     (async () => {
       const BACKEND_URL =
         typeof window !== "undefined"
-          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
       const res = await fetch(`${BACKEND_URL}/api/products`);
       const data = await res.json();
       const normalized = (Array.isArray(data) ? data : data.products || []).map(
@@ -105,8 +105,8 @@ export default function BulkOrderForm() {
     };
     const BACKEND_URL =
       typeof window !== "undefined"
-        ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-        : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+        ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in"
+        : process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
     await fetch(`${BACKEND_URL}/api/sendCorporateInquiry`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

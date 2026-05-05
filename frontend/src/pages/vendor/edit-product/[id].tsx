@@ -50,8 +50,8 @@ export default function EditProduct() {
       try {
         const BACKEND_URL =
           typeof window !== "undefined"
-            ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-            : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+            ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in"
+            : process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
         const response = await fetch(`${BACKEND_URL}/api/products/${id}`);
         if (!response.ok) throw new Error("Failed to fetch product");
 
@@ -108,8 +108,8 @@ export default function EditProduct() {
       try {
         const BACKEND_URL =
           typeof window !== "undefined"
-            ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-            : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+            ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in"
+            : process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
         const response = await fetch(`${BACKEND_URL}/api/products`);
         if (!response.ok) return;
         const data = await response.json();
@@ -200,8 +200,8 @@ export default function EditProduct() {
       const adminToken = localStorage.getItem("adminToken");
       const BACKEND_URL =
         typeof window !== "undefined"
-          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
       const response = await fetch(`${BACKEND_URL}/api/products/${id}`, {
         method: "PATCH",
         headers: {
@@ -242,8 +242,8 @@ export default function EditProduct() {
       const token = localStorage.getItem("vendorToken");
       const BACKEND_URL =
         typeof window !== "undefined"
-          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
       const response = await fetch(`${BACKEND_URL}/api/products/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },

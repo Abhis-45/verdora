@@ -196,8 +196,8 @@ export default function AdminDashboard() {
     try {
       const BACKEND_URL =
         typeof window !== "undefined"
-          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
       const res = await fetch(`${BACKEND_URL}/api/admin/manage/stats`, {
         headers: { Authorization: `Bearer ${authToken}` },
       });
@@ -215,8 +215,8 @@ export default function AdminDashboard() {
       try {
         const BACKEND_URL =
           typeof window !== "undefined"
-            ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-            : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+            ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in"
+            : process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
         const res = await fetch(
           `${BACKEND_URL}/api/admin/manage/products?search=${searchTerm}`,
           { headers: { Authorization: `Bearer ${authToken}` } },
@@ -237,8 +237,8 @@ export default function AdminDashboard() {
     try {
       const BACKEND_URL =
         typeof window !== "undefined"
-          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
       const res = await fetch(`${BACKEND_URL}/api/admin/manage/users?search=${searchTerm}`, {
         headers: { Authorization: `Bearer ${authToken}` },
       });
@@ -257,8 +257,8 @@ export default function AdminDashboard() {
       try {
         const BACKEND_URL =
           typeof window !== "undefined"
-            ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-            : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+            ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in"
+            : process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
         const res = await fetch(`${BACKEND_URL}/api/admin/manage/vendors?search=${searchTerm}`, {
           headers: { Authorization: `Bearer ${authToken}` },
         });
@@ -282,8 +282,8 @@ export default function AdminDashboard() {
       try {
         const BACKEND_URL =
           typeof window !== "undefined"
-            ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-            : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+            ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in"
+            : process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
         const res = await fetch(`${BACKEND_URL}/api/admin/manage/admins?search=${searchTerm}`, {
           headers: { Authorization: `Bearer ${authToken}` },
         });
@@ -306,8 +306,8 @@ export default function AdminDashboard() {
     try {
       const BACKEND_URL =
         typeof window !== "undefined"
-          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
       const res = await fetch(`${BACKEND_URL}/api/admin/manage/orders`, {
         headers: { Authorization: `Bearer ${authToken}` },
       });
@@ -382,8 +382,8 @@ export default function AdminDashboard() {
     try {
       const BACKEND_URL =
         typeof window !== "undefined"
-          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
 
       const endpoint = {
         product: `${BACKEND_URL}/api/admin/manage/products/${id}`,
@@ -684,8 +684,8 @@ export default function AdminDashboard() {
             backendUrl={
               typeof window !== "undefined"
                 ? process.env.NEXT_PUBLIC_BACKEND_URL ||
-                  "https://verdora.onrender.com"
-                : "https://verdora.onrender.com"
+                  "https://backend.verdora.in"
+                : "https://backend.verdora.in"
             }
           />
         )}
@@ -696,8 +696,8 @@ export default function AdminDashboard() {
             backendUrl={
               typeof window !== "undefined"
                 ? process.env.NEXT_PUBLIC_BACKEND_URL ||
-                  "https://verdora.onrender.com"
-                : "https://verdora.onrender.com"
+                  "https://backend.verdora.in"
+                : "https://backend.verdora.in"
             }
           />
         )}
@@ -1413,8 +1413,8 @@ function EditUserForm({
 
       const BACKEND_URL =
         typeof window !== "undefined"
-          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
       const res = await fetch(`${BACKEND_URL}/api/admin/manage/users/${user._id}`, {
         method: "PUT",
         headers: {
@@ -1530,8 +1530,8 @@ function EditVendorForm({
 
       const BACKEND_URL =
         typeof window !== "undefined"
-          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
       const res = await fetch(`${BACKEND_URL}/api/admin/manage/vendors/${vendor._id}`, {
         method: "PUT",
         headers: {
@@ -1714,8 +1714,8 @@ function EditAdminForm({
 
       const BACKEND_URL =
         typeof window !== "undefined"
-          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
       const res = await fetch(`${BACKEND_URL}/api/admin/manage/admins/${admin._id}`, {
         method: "PUT",
         headers: {
@@ -1851,8 +1851,8 @@ function CreateUserForm({
 
       const BACKEND_URL =
         typeof window !== "undefined"
-          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
       const res = await fetch(`${BACKEND_URL}/api/admin/manage/users`, {
         method: "POST",
         headers: {
@@ -1989,8 +1989,8 @@ function CreateVendorForm({
 
       const BACKEND_URL =
         typeof window !== "undefined"
-          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
       
       const endpoint = vendorRequestId 
         ? `${BACKEND_URL}/api/admin/vendor-requests/${vendorRequestId}/accept-with-vendor`
@@ -2170,8 +2170,8 @@ function CreateAdminForm({
 
       const BACKEND_URL =
         typeof window !== "undefined"
-          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
       const res = await fetch(`${BACKEND_URL}/api/admin/manage/admins`, {
         method: "POST",
         headers: {
@@ -2266,3 +2266,4 @@ function CreateAdminForm({
     </form>
   );
 }
+

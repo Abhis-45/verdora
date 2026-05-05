@@ -56,8 +56,8 @@ export default function DiscountSaleProducts() {
 
       const BACKEND_URL =
         typeof window !== "undefined"
-          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+            ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in"
+            : process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
       const discountFilter = encodeURIComponent("discountPercentage>50");
       const fetchPromise = fetch(`${BACKEND_URL}/api/products?filter=${discountFilter}&limit=8`, {
         method: "GET",

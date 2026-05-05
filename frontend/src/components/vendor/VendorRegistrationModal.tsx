@@ -40,8 +40,8 @@ export default function VendorRegistrationModal({
       const BACKEND_URL =
         typeof window !== "undefined"
           ? process.env.NEXT_PUBLIC_BACKEND_URL ||
-            "https://verdora.onrender.com"
-          : "https://verdora.onrender.com";
+            "https://backend.verdora.in"
+          : "https://backend.verdora.in";
 
       const response = await fetch(
         `${BACKEND_URL}/api/public/vendor-register`,

@@ -77,8 +77,8 @@ export default function VendorSettings() {
     try {
       const BACKEND_URL =
         typeof window !== "undefined"
-          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
 
       const res = await fetch(`${BACKEND_URL}/api/vendor/profile`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -134,8 +134,8 @@ export default function VendorSettings() {
       const token = localStorage.getItem("vendorToken");
       const BACKEND_URL =
         typeof window !== "undefined"
-          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
 
       const res = await fetch(`${BACKEND_URL}/api/vendor/profile`, {
         method: "PUT",
@@ -171,8 +171,8 @@ export default function VendorSettings() {
       const token = localStorage.getItem("adminToken");
       const BACKEND_URL =
         typeof window !== "undefined"
-          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
 
       const res = await fetch(`${BACKEND_URL}/api/vendor/profile`, {
         method: "PUT",
@@ -227,8 +227,8 @@ export default function VendorSettings() {
       const token = localStorage.getItem("adminToken");
       const BACKEND_URL =
         typeof window !== "undefined"
-          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
 
       const res = await fetch(`${BACKEND_URL}/api/vendor/update-password`, {
         method: "POST",

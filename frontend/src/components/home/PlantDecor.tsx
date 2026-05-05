@@ -36,8 +36,8 @@ export default function PlantDecor({
         try {
           const BACKEND_URL =
             typeof window !== "undefined"
-              ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-              : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+              ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in"
+              : process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
           const res = await fetch(`${BACKEND_URL}/api/products?category=Pots%20%26%20Planters&limit=8`);
 
           if (!res.ok) {

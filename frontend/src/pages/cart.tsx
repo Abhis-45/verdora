@@ -104,9 +104,8 @@ export default function CartPage() {
 
     const BACKEND_URL =
       typeof window !== "undefined"
-        ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-        : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
-
+        ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in"
+        : process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
     Promise.race([
       fetch(`${BACKEND_URL}/api/profile`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -193,8 +192,8 @@ export default function CartPage() {
     try {
       const BACKEND_URL =
         typeof window !== "undefined"
-          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
       const response = await fetch(`${BACKEND_URL}/api/coupon-user/validate`, {
         method: "POST",
         headers: {
@@ -287,8 +286,8 @@ export default function CartPage() {
     try {
       const BACKEND_URL =
         typeof window !== "undefined"
-          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+          ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in"
+          : process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
       const response = await fetch(`${BACKEND_URL}/api/profile/orders`, {
         method: "POST",
         headers: {
@@ -456,8 +455,8 @@ export default function CartPage() {
                   backendUrl={
                     typeof window !== "undefined"
                       ? process.env.NEXT_PUBLIC_BACKEND_URL ||
-                        "https://verdora.onrender.com"
-                      : "https://verdora.onrender.com"
+                        "https://backend.verdora.in"
+                      : "https://backend.verdora.in"
                   }
                   onApplyCouponFromList={(couponData) => {
                     // Trigger coupon validation through the main handler
@@ -478,8 +477,8 @@ export default function CartPage() {
                         const BACKEND_URL =
                           typeof window !== "undefined"
                             ? process.env.NEXT_PUBLIC_BACKEND_URL ||
-                              "https://verdora.onrender.com"
-                            : "https://verdora.onrender.com";
+                              "https://backend.verdora.in"
+                            : "https://backend.verdora.in";
                         const response = await fetch(
                           `${BACKEND_URL}/api/coupon-user/validate`,
                           {
@@ -651,3 +650,4 @@ export default function CartPage() {
     </>
   );
 }
+

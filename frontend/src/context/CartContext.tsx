@@ -136,7 +136,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       const token = localStorage.getItem("token");
       if (token) {
-        const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+        const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
         await fetch(`${BACKEND_URL}/api/cart`, {
           method: "POST",
           headers: {
@@ -161,7 +161,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       const token = localStorage.getItem("token");
       if (token) {
-        const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+        const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
         await fetch(`${BACKEND_URL}/api/cart/${encodeURIComponent(String(id))}`, {
           method: "DELETE",
           headers: {
@@ -188,7 +188,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       const token = localStorage.getItem("token");
       if (token) {
-        const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+        const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
         await fetch(`${BACKEND_URL}/api/cart/${encodeURIComponent(String(id))}`, {
           method: "PUT",
           headers: {
@@ -276,7 +276,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       const token = localStorage.getItem("token");
       if (token) {
-        const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+        const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
         await fetch(`${BACKEND_URL}/api/cart/${encodeURIComponent(previousKey)}/size`, {
           method: "PUT",
           headers: {
@@ -360,7 +360,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
       const token = localStorage.getItem("token");
       if (token) {
         const BACKEND_URL =
-          process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+          process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
         await fetch(`${BACKEND_URL}/api/cart/${encodeURIComponent(previousKey)}/pot`, {
           method: "PUT",
           headers: {
@@ -383,7 +383,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       const token = localStorage.getItem("token");
       if (token) {
-        const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+        const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
         const response = await fetch(`${BACKEND_URL}/api/cart`, {
           headers: {
             "Authorization": `Bearer ${token}`,

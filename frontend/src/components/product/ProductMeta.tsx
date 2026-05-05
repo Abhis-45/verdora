@@ -13,8 +13,8 @@ export default function ProductMeta({
     let mounted = true;
     const BACKEND_URL =
       typeof window !== "undefined"
-        ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com"
-        : process.env.NEXT_PUBLIC_BACKEND_URL || "https://verdora.onrender.com";
+        ? process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in"
+        : process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend.verdora.in";
     fetch(`${BACKEND_URL}/api/products/${productId}/stats`, {})
       .then((r) => r.json())
       .then((d) => {
@@ -39,3 +39,4 @@ export default function ProductMeta({
     </div>
   );
 }
+
